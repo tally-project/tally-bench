@@ -10,6 +10,7 @@ random.seed(0)
 sys.path.append('workloads')
 
 from workloads.hidet.resnet import run_resnet as hidet_run_resnet
+from workloads.pytorch.imagenet.profile_imagenet import benchmark_imagenet as pytorch_benchmark_imagenet
 
 parser = argparse.ArgumentParser(prog="benchmark launcher", description="Launch a benchmark")
 
@@ -27,6 +28,9 @@ args = parser.parse_args()
 benchmark_list = {
     "hidet": {
         "resnet50": hidet_run_resnet
+    },
+    "pytorch": {
+        "resnet50": pytorch_benchmark_imagenet
     }
 }
 

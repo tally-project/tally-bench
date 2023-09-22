@@ -65,13 +65,16 @@ def launch_benchmark(benchmarks: list, use_mps=False, preload=""):
 
 if __name__ == "__main__":
 
-    bench_1 = Benchmark("hidet", "resnet50", 64, True, 10, 30)
-    bench_2 = Benchmark("hidet", "resnet50", 64, False, 10, 30)
+    bench_1 = Benchmark("hidet", "resnet50", 64, True, 10, 10)
+    bench_2 = Benchmark("hidet", "resnet50", 64, False, 10, 10)
 
-    # preload = "LD_PRELOAD=~/tally/build/libtally_client.so"
-    preload = ""
+    # bench_1 = Benchmark("pytorch", "resnet50", 64, True, 10, 10)
+    # bench_2 = Benchmark("pytorch", "resnet50", 64, False, 10, 10)
+
+    preload = "LD_PRELOAD=~/tally/build/libtally_client.so"
+    # preload = ""
 
     # launch_benchmark([bench_1], preload=preload)
 
-    launch_benchmark([bench_1, bench_2], preload=preload)
+    # launch_benchmark([bench_1, bench_2], preload=preload)
     launch_benchmark([bench_1, bench_2], use_mps=True)
