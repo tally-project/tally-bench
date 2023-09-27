@@ -1,23 +1,12 @@
-from __future__ import print_function
-import argparse
-import torch.backends.cudnn as cudnn
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
 import torch.utils.data.distributed
-import sys
-import numpy as np
-import os
-import pandas as pd
-import torchvision
+
 import time
-import models.lstm.data as data
-import models.lstm.models as models
+import workloads.pytorch.lstm.data as lstm_data
+import workloads.pytorch.lstm.models as models
 
-from torch.nn import DataParallel
-from torchvision import transforms
-
-from models.util import get_benchmark_str
+from utils.bench_util import wait_for_signal
 
 def repackage_hidden(h):
     """Wraps hidden states in new Tensors, to detach them from their history."""
@@ -27,32 +16,14 @@ def repackage_hidden(h):
     else:
         return tuple(repackage_hidden(v) for v in h)
 
+# Training
+def benchmark_lstm(model_name, batch_size, amp, warmup_iters, total_time,
+                    total_iters=None, result_dict=None, signal=False,
+                    data_dir='./data/wikitext-2', bptt=35, emsize=200,
+                    nhead=2, nhid=200, nlayers=2, dropout=0.2, tied=False):
+    device = 'cuda'
 
-# def get_batch(source, i, bptt):
-#     seq_len = min(bptt, len(source) - 1 - i)
-#     data = source[i:i+seq_len]
-#     target = source[i+1:i+1+seq_len].view(-1)
-#     return data, target
-
-
-def benchmark_lstm(model_name, batch_size, mixed_precision, gpu_id, warmup_epoch, total_time,
-                   warm_signal=None, start_signal=None, bench_id="", result_dict=None, total_iters=None,
-                   data_dir='./data/wikitext-2', bptt=35, emsize=200,
-                   nhead=2, nhid=200, nlayers=2, dropout=0.2, tied=False):
-
-    if len(gpu_id) == 1:
-        os.environ["CUDA_VISIBLE_DEVICES"] = f"{gpu_id[0]}"
-    else:
-        os.environ["CUDA_VISIBLE_DEVICES"] = ",".join(str(i) for i in gpu_id)
-
-    cudnn.benchmark = True 
-    
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
-
-    # Dataset
-    # print('==> Preparing data..')
-    corpus = data.Corpus(data_dir)
-
+    corpus = lstm_data.Corpus(data_dir)
 
     class CorpusDataset(torch.utils.data.Dataset):
         def __init__(self, data, batch_size, bptt):
@@ -90,77 +61,48 @@ def benchmark_lstm(model_name, batch_size, mixed_precision, gpu_id, warmup_epoch
                                            sampler=None,
                                            drop_last=True)
 
-    # Model
-    # print('==> Building model..')
     ntokens = len(corpus.dictionary)
     if model_name == 'Transformer':
         model = models.TransformerModel(ntokens, emsize, nhead, nhid, nlayers, dropout).to(device)
     else:
         model = models.RNNModel(model_name, ntokens, emsize, nhid, nlayers, dropout, tied).to(device)
 
-
     model = model.to(device)
 
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(), lr=0.01)
 
-    if mixed_precision:
+    if amp:
         scaler = torch.cuda.amp.GradScaler(enabled=True)
     else:
         scaler = None
 
-    if len(gpu_id) > 1:
-        model = DataParallel(model)
-    
-    t_start = time.time()
-    
-    # Train
-    def benchmark_step():
-        iter_num = 0
-        iter_warm = 0
-        warm = False
-        exit_flag = False
-        model.train()
-        ntokens = len(corpus.dictionary)
-        if model_name != 'Transformer':
-            hidden = model.init_hidden(batch_size)
-        # Prevent total batch number < warmup+benchmark situation
-        while True:
-            for data, targets in trainloader:
-                # Warm-up: previous 10 iters
-                if iter_num == warmup_epoch - 1:
-                    warm = True
-                    if warm_signal is not None:
-                        warm_signal.value = 1
-                    if start_signal is not None:
-                        while start_signal.value != 1:
-                            time.sleep(0.1)
-                    print("Measurement starts...")
-                    torch.cuda.cudart().cudaProfilerStart()
-                    t_warmend = time.time()
-                # Reach timeout: exit benchmark
-                if (warm and (time.time() - t_warmend >= total_time)) or (total_iters is not None and iter_warm == total_iters):
-                    t_end = time.time()
-                    t_pass = t_end - t_warmend
-                    exit_flag = True
-                    torch.cuda.cudart().cudaProfilerStop()
-                    break
-                data = data.t()
-                targets = targets.t()
-                optimizer.zero_grad()
-                if mixed_precision:
-                    with torch.cuda.amp.autocast():
-                        if model_name == 'Transformer':
-                            outputs = model(data)
-                            outputs = outputs.view(-1, ntokens)
-                        else:
-                            hidden = repackage_hidden(hidden)
-                            outputs, hidden = model(data, hidden)
-                        loss = criterion(outputs, targets.flatten())
-                    scaler.scale(loss).backward()
-                    scaler.step(optimizer)
-                    scaler.update()
-                else:
+    compile_options = {
+        "epilogue_fusion": True,
+        "max_autotune": True,
+        "triton.cudagraphs": False,
+    }
+    model = torch.compile(model, backend='inductor', options=compile_options)
+
+    ntokens = len(corpus.dictionary)
+    if model_name != 'Transformer':
+        hidden = model.init_hidden(batch_size)
+
+    start_time = None
+    num_iters = 0
+    warm_iters = 0
+    warm = False
+    model.train()
+
+    while True:
+        stop = False
+
+        for data, targets in trainloader:
+            data = data.t()
+            targets = targets.t()
+            optimizer.zero_grad()
+            if amp:
+                with torch.cuda.amp.autocast():
                     if model_name == 'Transformer':
                         outputs = model(data)
                         outputs = outputs.view(-1, ntokens)
@@ -168,31 +110,53 @@ def benchmark_lstm(model_name, batch_size, mixed_precision, gpu_id, warmup_epoch
                         hidden = repackage_hidden(hidden)
                         outputs, hidden = model(data, hidden)
                     loss = criterion(outputs, targets.flatten())
-                    loss.backward()
-                    optimizer.step()
-                iter_num += 1
-                if warm:
-                    iter_warm += 1
-            if exit_flag:
-                break
-        return t_pass, iter_warm
+                scaler.scale(loss).backward()
+                scaler.step(optimizer)
+                scaler.update()
+            else:
+                if model_name == 'Transformer':
+                    outputs = model(data)
+                    outputs = outputs.view(-1, ntokens)
+                else:
+                    hidden = repackage_hidden(hidden)
+                    outputs, hidden = model(data, hidden)
+                loss = criterion(outputs, targets.flatten())
+                loss.backward()
+                optimizer.step()
+            
+            # Increment iterations
+            num_iters += 1
+            if warm:
+                warm_iters += 1
 
-    benchmark_id = get_benchmark_str(model_name, batch_size, mixed_precision, bench_id)
+                # Break if reaching total iterations
+                if warm_iters == total_iters:
+                    stop = True
+                    break
 
-    try:
-        print(f'==> Training {model_name} model with {batch_size} batch size, {mixed_precision} mp..')
-        t_pass, iter_warm = benchmark_step()
-        print(f"Time: {t_pass}, Iterations: {iter_warm}")
+                # Or break if time is up
+                curr_time = time.time()
+                if curr_time - start_time >= total_time:
+                    stop = True
+                    break
+
+            if num_iters == warmup_iters:
+                warm = True
+
+                if signal:
+                    wait_for_signal()
+
+                start_time = time.time()
+                print("Measurement starts ...")
+        
+        if stop:
+            break
+
+    end_time = time.time()
+    time_elapsed = end_time - start_time
     
-        if result_dict is not None:
-            result_dict[benchmark_id] = {
-                "Time": t_pass,
-                "Iterations": iter_warm
-            }
-    except Exception as e:
-        if result_dict is not None:
-            result_dict[benchmark_id] = {
-                "Error": str(e)
-            }
-        else:
-            raise e
+    if result_dict is not None:
+        result_dict["time_elapsed"] = time_elapsed
+        result_dict["iters"] = warm_iters
+
+    return time_elapsed, warm_iters

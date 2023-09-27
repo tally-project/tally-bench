@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import torch.utils.data
 
-from models.translation.transformer import Constants
+from workloads.pytorch.translation.transformer import Constants
 
 def paired_collate_fn(insts):
     src_insts, tgt_insts = list(zip(*insts))

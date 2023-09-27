@@ -9,13 +9,14 @@ from utils.mps import shut_down_mps, start_mps
 
 class Benchmark:
 
-    def __init__(self, framework, model_name, batch_size, amp, warmup_iters, runtime):
+    def __init__(self, framework, model_name, batch_size, amp, warmup_iters, runtime, total_iters=None):
         self.framework = framework
         self.model_name = model_name
         self.batch_size = batch_size
         self.amp = amp
         self.warmup_iters = warmup_iters
         self.runtime = runtime
+        self.total_iters = total_iters
 
 def launch_benchmark(benchmarks: list, use_mps=False, preload=""):
 
@@ -35,6 +36,10 @@ def launch_benchmark(benchmarks: list, use_mps=False, preload=""):
                         f"--warmup-iters {benchmark.warmup_iters} " +
                         f"--runtime {benchmark.runtime} " +
                         f"--signal ")
+        
+        if benchmark.total_iters:
+            launch_cmd += f"--total-iters {benchmark.total_iters} "
+
         if benchmark.amp:
             launch_cmd += "--amp "
 
@@ -42,6 +47,7 @@ def launch_benchmark(benchmarks: list, use_mps=False, preload=""):
         processes.append(process)
 
         while True:
+            process.stdout.flush()
             response = process.stdout.readline()
             print(response.strip())
             if "benchmark is warm" in response:
@@ -65,16 +71,19 @@ def launch_benchmark(benchmarks: list, use_mps=False, preload=""):
 
 if __name__ == "__main__":
 
-    bench_1 = Benchmark("hidet", "resnet50", 64, True, 10, 10)
-    bench_2 = Benchmark("hidet", "resnet50", 64, False, 10, 10)
+    # bench_1 = Benchmark("hidet", "resnet50", 64, True, 10, 10)
+    # bench_2 = Benchmark("hidet", "resnet50", 64, False, 10, 10)
 
-    # bench_1 = Benchmark("pytorch", "resnet50", 64, True, 10, 10)
-    # bench_2 = Benchmark("pytorch", "resnet50", 64, False, 10, 10)
+    # bench_1 = Benchmark("hidet", "resnet50", 64, True, 10, 100000, total_iters=1000)
+    # bench_2 = Benchmark("hidet", "resnet50", 64, False, 10, 100000, total_iters=1000)
 
-    preload = "LD_PRELOAD=~/tally/build/libtally_client.so"
-    # preload = ""
+    bench_1 = Benchmark("pytorch", "resnet50", 64, True, 10, 10)
+    bench_2 = Benchmark("pytorch", "resnet50", 64, False, 10, 10)
+
+    # preload = "LD_PRELOAD=~/tally/build/libtally_client.so"
+    preload = ""
 
     # launch_benchmark([bench_1], preload=preload)
 
-    # launch_benchmark([bench_1, bench_2], preload=preload)
-    launch_benchmark([bench_1, bench_2], use_mps=True)
+    launch_benchmark([bench_1, bench_2], preload=preload)
+    # launch_benchmark([bench_1, bench_2], use_mps=True)

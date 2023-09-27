@@ -1,35 +1,23 @@
 
-from __future__ import print_function
-import argparse
 import time
 import torch
 import torch.nn as nn
-import torch.backends.cudnn as cudnn
-import torch.nn.functional as F
 import torch.optim as optim
 import torchvision.datasets as dset
 import torch.utils.data.distributed
-import sys
-import numpy as np
+
 import os
-import pandas as pd
-import torchvision
 from torch.nn import DataParallel
 from torchvision import transforms
 
-from models.util import get_benchmark_str
+from utils.bench_util import wait_for_signal
 
 # Training
-def benchmark_dcgan(model_name, batch_size, mixed_precision, gpu_id, warmup_epoch, total_time,
-                    warm_signal=None, start_signal=None, bench_id="", result_dict=None, total_iters=None,
+def benchmark_dcgan(model_name, batch_size, amp, warmup_iters, total_time,
+                    total_iters=None, result_dict=None, signal=False,
                     imageSize=64, nz=100, ngf=64, ndf=64, arg_netG='',
                     arg_netD='', lr=0.0002, beta1=0.5):
-    if len(gpu_id) == 1:
-        os.environ["CUDA_VISIBLE_DEVICES"] = f"{gpu_id[0]}"
-    else:
-        os.environ["CUDA_VISIBLE_DEVICES"] = ",".join(str(i) for i in gpu_id)
-
-    cudnn.benchmark = True
+    device = 'cuda'
 
     dataset = dset.FakeData(size=30000, image_size=(3, imageSize, imageSize),
                             transform=transforms.ToTensor())
@@ -37,7 +25,7 @@ def benchmark_dcgan(model_name, batch_size, mixed_precision, gpu_id, warmup_epoc
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=2)
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    ngpu = int(len(gpu_id))
+    ngpu = 1
     nz = int(nz)
     ngf = int(ngf)
     ndf = int(ndf)
@@ -129,10 +117,11 @@ def benchmark_dcgan(model_name, batch_size, mixed_precision, gpu_id, warmup_epoc
     if arg_netD != '':
         netD.load_state_dict(torch.load(arg_netD))
 
-    if mixed_precision:
+    if amp:
         criterion = nn.BCEWithLogitsLoss()
     else:
         criterion = nn.BCELoss()
+
     fixed_noise = torch.randn(batch_size, nz, 1, 1, device=device)
     real_label = 1
     fake_label = 0
@@ -141,135 +130,131 @@ def benchmark_dcgan(model_name, batch_size, mixed_precision, gpu_id, warmup_epoc
     optimizerD = optim.Adam(netD.parameters(), lr=lr, betas=(beta1, 0.999))
     optimizerG = optim.Adam(netG.parameters(), lr=lr, betas=(beta1, 0.999))
 
-    if mixed_precision:
+    if amp:
         scaler = torch.cuda.amp.GradScaler(enabled=True)
     else:
         scaler = None
-    
-    if len(gpu_id) > 1:
-        netD = DataParallel(netD)
 
-    def benchmark_step():
-        t_start = time.time()
-        iter_num = 0
-        iter_warm = 0
-        warm = False
-        exit_flag = False
-        # Prevent total batch number < warmup+benchmark situation
-        while True:
-            for i, data in enumerate(dataloader, 0):
-                # Warm-up: previous 10 iters
-                if iter_num == warmup_epoch - 1:
-                    warm = True
-                    if warm_signal is not None:
-                        warm_signal.value = 1
-                    if start_signal is not None:
-                        while start_signal.value != 1:
-                            time.sleep(0.1)
-                    print("Measurement starts...")
-                    torch.cuda.cudart().cudaProfilerStart()
-                    t_warmend = time.time()
-                # Reach timeout: exit benchmark
-                if (warm and (time.time() - t_warmend >= total_time)) or (total_iters is not None and iter_warm == total_iters):
-                    t_end = time.time()
-                    t_pass = t_end - t_warmend
-                    exit_flag = True
-                    torch.cuda.cudart().cudaProfilerStop()
-                    break
-                ############################
-                # (1) Update D network: maximize log(D(x)) + log(1 - D(G(z)))
-                ###########################
-                if mixed_precision:
-                    with torch.cuda.amp.autocast():
-                        # train with real
-                        netD.zero_grad()
-                        real_cpu = data[0].to(device)
-                        batch_size = real_cpu.size(0)
-                        label = torch.full((batch_size,), real_label,
-                                        dtype=real_cpu.dtype, device=device)
-                        output = netD(real_cpu)
-                        errD_real = criterion(output, label)
-                    scaler.scale(errD_real).backward()
+    compile_options = {
+        "epilogue_fusion": True,
+        "max_autotune": True,
+        "triton.cudagraphs": False,
+    }
 
-                    with torch.cuda.amp.autocast():
-                        # train with fake
-                        noise = torch.randn(batch_size, nz, 1, 1, device=device)
-                        fake = netG(noise)
-                        label.fill_(fake_label)
-                        output = netD(fake.detach())
-                        errD_fake = criterion(output, label)
-                        errD = errD_real + errD_fake
-                    scaler.scale(errD_fake).backward()
-                    scaler.step(optimizerD)
+    netG = torch.compile(netG, backend='inductor', options=compile_options)
+    netD = torch.compile(netD, backend='inductor', options=compile_options)
 
-                    with torch.cuda.amp.autocast():
-                        ############################
-                        # (2) Update G network: maximize log(D(G(z)))
-                        ###########################
-                        netG.zero_grad()
-                        label.fill_(real_label)  # fake labels are real for generator cost
-                        output = netD(fake)
-                        errG = criterion(output, label)   
-                    scaler.scale(errG).backward()    
-                    scaler.step(optimizerG)
-                    scaler.update()
-                else:
-                    ############################
-                    # (1) Update D network: maximize log(D(x)) + log(1 - D(G(z)))
-                    ###########################
+    start_time = None
+    num_iters = 0
+    warm_iters = 0
+    warm = False
+
+    while True:
+        stop = False
+
+        for i, data in enumerate(dataloader, 0):
+            if amp:
+                with torch.cuda.amp.autocast():
                     # train with real
                     netD.zero_grad()
                     real_cpu = data[0].to(device)
                     batch_size = real_cpu.size(0)
                     label = torch.full((batch_size,), real_label,
                                     dtype=real_cpu.dtype, device=device)
-
                     output = netD(real_cpu)
                     errD_real = criterion(output, label)
-                    errD_real.backward()
+                scaler.scale(errD_real).backward()
 
+                with torch.cuda.amp.autocast():
                     # train with fake
                     noise = torch.randn(batch_size, nz, 1, 1, device=device)
                     fake = netG(noise)
                     label.fill_(fake_label)
                     output = netD(fake.detach())
                     errD_fake = criterion(output, label)
-                    errD_fake.backward()
                     errD = errD_real + errD_fake
-                    optimizerD.step()
+                scaler.scale(errD_fake).backward()
+                scaler.step(optimizerD)
 
+                with torch.cuda.amp.autocast():
                     ############################
                     # (2) Update G network: maximize log(D(G(z)))
                     ###########################
                     netG.zero_grad()
                     label.fill_(real_label)  # fake labels are real for generator cost
                     output = netD(fake)
-                    errG = criterion(output, label)
-                    errG.backward()
-                    optimizerG.step()
-                iter_num += 1
-                if warm:
-                    iter_warm += 1
-            if exit_flag:
-                break
-        return t_pass, iter_warm
+                    errG = criterion(output, label)   
+                scaler.scale(errG).backward()    
+                scaler.step(optimizerG)
+                scaler.update()
+            else:
+                ############################
+                # (1) Update D network: maximize log(D(x)) + log(1 - D(G(z)))
+                ###########################
+                # train with real
+                netD.zero_grad()
+                real_cpu = data[0].to(device)
+                batch_size = real_cpu.size(0)
+                label = torch.full((batch_size,), real_label,
+                                dtype=real_cpu.dtype, device=device)
 
-    benchmark_id = get_benchmark_str(model_name, batch_size, mixed_precision, bench_id)
+                output = netD(real_cpu)
+                errD_real = criterion(output, label)
+                errD_real.backward()
 
-    try:
-        print(f'==> Training {model_name} model with {batch_size} batch size, {mixed_precision} mp..')
-        t_pass, iter_warm = benchmark_step()
-        print(f"Time: {t_pass}, Iterations: {iter_warm}")
+                # train with fake
+                noise = torch.randn(batch_size, nz, 1, 1, device=device)
+                fake = netG(noise)
+                label.fill_(fake_label)
+                output = netD(fake.detach())
+                errD_fake = criterion(output, label)
+                errD_fake.backward()
+                errD = errD_real + errD_fake
+                optimizerD.step()
+
+                ############################
+                # (2) Update G network: maximize log(D(G(z)))
+                ###########################
+                netG.zero_grad()
+                label.fill_(real_label)  # fake labels are real for generator cost
+                output = netD(fake)
+                errG = criterion(output, label)
+                errG.backward()
+                optimizerG.step()
+
+            # Increment iterations
+            num_iters += 1
+            if warm:
+                warm_iters += 1
+
+                # Break if reaching total iterations
+                if warm_iters == total_iters:
+                    stop = True
+                    break
+
+                # Or break if time is up
+                curr_time = time.time()
+                if curr_time - start_time >= total_time:
+                    stop = True
+                    break
+
+            if num_iters == warmup_iters:
+                warm = True
+
+                if signal:
+                    wait_for_signal()
+
+                start_time = time.time()
+                print("Measurement starts ...")
+        
+        if stop:
+            break
+
+    end_time = time.time()
+    time_elapsed = end_time - start_time
     
-        if result_dict is not None:
-            result_dict[benchmark_id] = {
-                "Time": t_pass,
-                "Iterations": iter_warm
-            }
-    except Exception as e:
-        if result_dict is not None:
-            result_dict[benchmark_id] = {
-                "Error": str(e)
-            }
-        else:
-            raise e
+    if result_dict is not None:
+        result_dict["time_elapsed"] = time_elapsed
+        result_dict["iters"] = warm_iters
+
+    return time_elapsed, warm_iters

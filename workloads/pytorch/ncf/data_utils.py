@@ -4,8 +4,7 @@ import scipy.sparse as sp
 
 import torch.utils.data as data
 
-import models.ncf.config as config
-
+import workloads.pytorch.ncf.config as config
 
 def load_all(test_num=100):
 	""" We load all the three file here to save time in each epoch. """

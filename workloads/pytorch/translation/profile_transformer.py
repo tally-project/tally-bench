@@ -1,23 +1,18 @@
-from __future__ import print_function
-import argparse
 import torch.backends.cudnn as cudnn
-import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import torch.utils.data.distributed
 
-import numpy as np
 import os
-import pandas as pd
 import time
-from models.translation.transformer import Constants
 from tqdm import tqdm 
 
-from models.translation.dataset import TranslationDataset, paired_collate_fn
-from models.translation.transformer.Models import Transformer
-from models.translation.transformer.Optim import ScheduledOptim
+from workloads.pytorch.translation.transformer import Constants
+from workloads.pytorch.translation.dataset import TranslationDataset, paired_collate_fn
+from workloads.pytorch.translation.transformer.Models import Transformer
+from workloads.pytorch.translation.transformer.Optim import ScheduledOptim
 
-from models.util import get_benchmark_str
+from utils.bench_util import wait_for_signal
 
 def cal_performance(pred, gold, smoothing=False):
     ''' Apply label smoothing if needed '''
@@ -86,22 +81,13 @@ def prepare_dataloaders(data, distributed, batch_size):
     return train_loader, valid_loader
 
 
-def benchmark_transformer(model_name, batch_size, mixed_precision, gpu_id, warmup_epoch, total_time, warm_signal=None, start_signal=None,
-                          bench_id="", result_dict=None, total_iters=None, data='./data/multi30k/multi30k.atok.low.pt',
-                          master_addr=None, embs_share_weight=False, proj_share_weight=True, d_k=64, d_v=64, d_model=512,
-                          d_word_vec=512, d_inner_hid=2048, n_layers=6, n_head=8, dropout=0.1,
-                          n_warmup_steps=4000, label_smoothing=True):
-    if len(gpu_id) == 1:
-        os.environ["CUDA_VISIBLE_DEVICES"] = f"{gpu_id[0]}"
-    else:
-        os.environ["CUDA_VISIBLE_DEVICES"] = ",".join(str(i) for i in gpu_id)
+# Training
+def benchmark_transformer(model_name, batch_size, amp, warmup_iters, total_time, total_iters=None, result_dict=None, signal=False,
+                    data='./data/multi30k/multi30k.atok.low.pt', master_addr=None, embs_share_weight=False, proj_share_weight=True,
+                    d_k=64, d_v=64, d_model=512, d_word_vec=512, d_inner_hid=2048, n_layers=6, n_head=8, dropout=0.1,
+                    n_warmup_steps=4000, label_smoothing=True):
+    device = 'cuda'
 
-
-    cudnn.benchmark = True 
-    
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
-
-    #========= Loading Dataset =========#
     data = torch.load(data)
     max_token_seq_len = data['settings'].max_token_seq_len
 
@@ -110,7 +96,6 @@ def benchmark_transformer(model_name, batch_size, mixed_precision, gpu_id, warmu
     src_vocab_size = training_data.dataset.src_vocab_size
     tgt_vocab_size = training_data.dataset.tgt_vocab_size
 
-    #========= Preparing Model =========#
     if embs_share_weight:
         assert training_data.dataset.src_word2idx == training_data.dataset.tgt_word2idx, \
             'The src/tgt word2idx table are different but asked to share word embedding.'
@@ -136,82 +121,79 @@ def benchmark_transformer(model_name, batch_size, mixed_precision, gpu_id, warmu
             betas=(0.9, 0.98), eps=1e-09),
             d_model, n_warmup_steps)
 
-    if mixed_precision:
+    if amp:
         scaler = torch.cuda.amp.GradScaler(enabled=True)
     else:
         scaler = None
 
-    # Train
-    def benchmark_step():
-        iter_num = 0
-        iter_warm = 0
-        warm = False
-        exit_flag = False
-        model.train()
-        t_start = time.time()
-        while True:
-            for batch in tqdm(
-                training_data, mininterval=2,
-                desc='  - (Training)   ', leave=False):
-                if iter_num == warmup_epoch - 1:
-                    warm = True
-                    if warm_signal is not None:
-                        warm_signal.value = 1
-                    if start_signal is not None:
-                        while start_signal.value != 1:
-                            time.sleep(0.1)
-                    print("Measurement starts...")
-                    torch.cuda.cudart().cudaProfilerStart()
-                    t_start = time.time()
-                if (warm and (time.time() - t_start >= total_time)) or (total_iters is not None and iter_warm == total_iters):
-                    t_end = time.time()
-                    t_pass = t_end - t_start
-                    exit_flag = True
-                    torch.cuda.cudart().cudaProfilerStop()
-                    break
-                # prepare data
-                src_seq, src_pos, tgt_seq, tgt_pos = map(lambda x: x.to(device), batch)
-                gold = tgt_seq[:, 1:]
-                optimizer.zero_grad()
-                if mixed_precision:
-                    with torch.cuda.amp.autocast():
-                        pred = model(src_seq, src_pos, tgt_seq, tgt_pos)
-                        loss, n_correct = cal_performance(pred, gold, smoothing=label_smoothing)
-                    scaler.scale(loss).backward()
-                    scaler.step(optimizer)
-                    scaler.update()
-                else:
+    compile_options = {
+        "epilogue_fusion": True,
+        "max_autotune": True,
+        "triton.cudagraphs": False,
+    }
+    model = torch.compile(model, backend='inductor', options=compile_options)
+
+    start_time = None
+    num_iters = 0
+    warm_iters = 0
+    warm = False
+    model.train()
+
+    while True:
+        stop = False
+
+        for batch in tqdm(training_data, mininterval=2, desc='  - (Training)   ', leave=False):
+            src_seq, src_pos, tgt_seq, tgt_pos = map(lambda x: x.to(device), batch)
+            gold = tgt_seq[:, 1:]
+            optimizer.zero_grad()
+            if amp:
+                with torch.cuda.amp.autocast():
                     pred = model(src_seq, src_pos, tgt_seq, tgt_pos)
-                    # backward
                     loss, n_correct = cal_performance(pred, gold, smoothing=label_smoothing)
-                    loss.backward()
-                    # update parameters
-                    optimizer.step_and_update_lr()
-                iter_num += 1
-                if warm:
-                    iter_warm += 1
+                scaler.scale(loss).backward()
+                scaler.step(optimizer)
+                scaler.update()
+            else:
+                pred = model(src_seq, src_pos, tgt_seq, tgt_pos)
+                # backward
+                loss, n_correct = cal_performance(pred, gold, smoothing=label_smoothing)
+                loss.backward()
+                # update parameters
+                optimizer.step_and_update_lr()
             
-            if exit_flag:
-                break
-            
-        return t_pass, iter_warm
+            # Increment iterations
+            num_iters += 1
+            if warm:
+                warm_iters += 1
 
-    benchmark_id = get_benchmark_str(model_name, batch_size, False, bench_id)
+                # Break if reaching total iterations
+                if warm_iters == total_iters:
+                    stop = True
+                    break
 
-    try:
-        print(f'==> Training {model_name} model with {batch_size} batch size, {mixed_precision} mp..')
-        t_pass, iter_warm = benchmark_step()
-        print(f"Time: {t_pass}, Iterations: {iter_warm}")
+                # Or break if time is up
+                curr_time = time.time()
+                if curr_time - start_time >= total_time:
+                    stop = True
+                    break
+
+            if num_iters == warmup_iters:
+                warm = True
+
+                if signal:
+                    wait_for_signal()
+
+                start_time = time.time()
+                print("Measurement starts ...")
+        
+        if stop:
+            break
+
+    end_time = time.time()
+    time_elapsed = end_time - start_time
     
-        if result_dict is not None:
-            result_dict[benchmark_id] = {
-                "Time": t_pass,
-                "Iterations": iter_warm
-            }
-    except Exception as e:
-        if result_dict is not None:
-            result_dict[benchmark_id] = {
-                "Error": str(e)
-            }
-        else:
-            raise e
+    if result_dict is not None:
+        result_dict["time_elapsed"] = time_elapsed
+        result_dict["iters"] = warm_iters
+
+    return time_elapsed, warm_iters

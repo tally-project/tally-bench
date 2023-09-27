@@ -1,36 +1,22 @@
-from __future__ import print_function
-import argparse
 import torch
-import torch.backends.cudnn as cudnn
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import torch.utils.data as data
 import os
-import pandas as pd
 import time
 
-from torchvision import transforms
-from torch.nn import DataParallel
-import models.ncf.models as models
-import models.ncf.config as config
-import models.ncf.data_utils as data_utils
+import workloads.pytorch.ncf.models as models
+import workloads.pytorch.ncf.config as config
+import workloads.pytorch.ncf.data_utils as data_utils
 
-from models.util import get_benchmark_str
+from utils.bench_util import wait_for_signal
 
-def benchmark_ncf(model_name, batch_size, mixed_precision, gpu_id, warmup_epoch, total_time,
-                  warm_signal=None, start_signal=None, bench_id="", result_dict=None, total_iters=None,
-                  num_ng=4, factor_num=32, num_layers=3, dropout=0.0, lr=0.001):
-    if len(gpu_id) == 1:
-        os.environ["CUDA_VISIBLE_DEVICES"] = f"{gpu_id[0]}"
-    else:
-        os.environ["CUDA_VISIBLE_DEVICES"] = ",".join(str(i) for i in gpu_id)
-
-    cudnn.benchmark = True 
+# Training
+def benchmark_ncf(model_name, batch_size, amp, warmup_iters, total_time,
+                    total_iters=None, result_dict=None, signal=False,
+                    num_ng=4, factor_num=32, num_layers=3, dropout=0.0, lr=0.001):
     
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
-
-    ############################## PREPARE DATASET ##########################
     train_data, test_data, user_num, item_num, train_mat = data_utils.load_all()
 
     # construct the train and test datasets
@@ -62,80 +48,80 @@ def benchmark_ncf(model_name, batch_size, mixed_precision, gpu_id, warmup_epoch,
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=5e-4)
 
-    if mixed_precision:
+    if amp:
         scaler = torch.cuda.amp.GradScaler(enabled=True)
     else:
         scaler = None
 
-    if len(gpu_id) > 1:
-        model = DataParallel(model)
-    ########################### TRAINING #####################################
+    compile_options = {
+        "epilogue_fusion": True,
+        "max_autotune": True,
+        "triton.cudagraphs": False,
+    }
+    model = torch.compile(model, backend='inductor', options=compile_options)
 
-    def benchmark_step():
-        iter_num = 0
-        iter_warm = 0
-        warm = False
-        exit_flag = False
-        model.train()
-        train_loader.dataset.ng_sample()
-        t_start = time.time()
-        while True:
-            for idx, (user, item, label) in enumerate(train_loader):
-                if iter_num == warmup_epoch - 1:
-                    warm = True
-                    if warm_signal is not None:
-                        warm_signal.value = 1
-                    if start_signal is not None:
-                        while start_signal.value != 1:
-                            time.sleep(0.1)
-                    print("Measurement starts...")
-                    torch.cuda.cudart().cudaProfilerStart()
-                    t_warmend = time.time()
-                if (warm and (time.time() - t_warmend >= total_time)) or (total_iters is not None and iter_warm == total_iters):
-                    t_end = time.time()
-                    t_pass = t_end - t_warmend
-                    exit_flag = True
-                    torch.cuda.cudart().cudaProfilerStop()
-                    break
-                user = user.cuda()
-                item = item.cuda()
-                label = label.float().cuda()
-                optimizer.zero_grad()
-                if mixed_precision:
-                    with torch.cuda.amp.autocast():
-                        prediction = model(user, item)
-                        loss = loss_function(prediction, label)
-                    scaler.scale(loss).backward()
-                    scaler.step(optimizer)
-                    scaler.update()
-                else:
+    start_time = None
+    num_iters = 0
+    warm_iters = 0
+    warm = False
+
+    model.train()
+    train_loader.dataset.ng_sample()
+
+    while True:
+        stop = False
+
+        for idx, (user, item, label) in enumerate(train_loader):
+            user = user.cuda()
+            item = item.cuda()
+            label = label.float().cuda()
+            optimizer.zero_grad()
+            if amp:
+                with torch.cuda.amp.autocast():
                     prediction = model(user, item)
                     loss = loss_function(prediction, label)
-                    loss.backward()
-                    optimizer.step()
-                iter_num += 1
-                if warm:
-                    iter_warm += 1
-            if exit_flag:
-                break
-        return t_pass, iter_warm
+                scaler.scale(loss).backward()
+                scaler.step(optimizer)
+                scaler.update()
+            else:
+                prediction = model(user, item)
+                loss = loss_function(prediction, label)
+                loss.backward()
+                optimizer.step()
+            
+            # Increment iterations
+            num_iters += 1
+            if warm:
+                warm_iters += 1
 
-    benchmark_id = get_benchmark_str(model_name, batch_size, mixed_precision, bench_id)
+                # Break if reaching total iterations
+                if warm_iters == total_iters:
+                    stop = True
+                    break
 
-    try:
-        print(f'==> Training {model_name} model with {batch_size} batch size, {mixed_precision} mp..')
-        t_pass, iter_warm = benchmark_step()
-        print(f"Time: {t_pass}, Iterations: {iter_warm}")
+                # Or break if time is up
+                curr_time = time.time()
+                if curr_time - start_time >= total_time:
+                    stop = True
+                    break
 
-        if result_dict is not None:
-            result_dict[benchmark_id] = {
-                "Time": t_pass,
-                "Iterations": iter_warm
-            }
-    except Exception as e:
-        if result_dict is not None:
-            result_dict[benchmark_id] = {
-                "Error": str(e)
-            }
-        else:
-            raise e
+            if num_iters == warmup_iters:
+                warm = True
+
+                if signal:
+                    wait_for_signal()
+
+                start_time = time.time()
+                print("Measurement starts ...")
+        
+        if stop:
+            break
+
+    end_time = time.time()
+    time_elapsed = end_time - start_time
+    
+    if result_dict is not None:
+        result_dict["time_elapsed"] = time_elapsed
+        result_dict["iters"] = warm_iters
+
+    return time_elapsed, warm_iters

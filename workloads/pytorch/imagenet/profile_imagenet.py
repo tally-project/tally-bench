@@ -1,5 +1,4 @@
 import torch
-import torch.backends.cudnn as cudnn
 import torch.nn.functional as F
 import torch.optim as optim
 import torch.utils.data.distributed
@@ -12,10 +11,15 @@ from utils.bench_util import wait_for_signal
 def benchmark_imagenet(model_name, batch_size, amp, warmup_iters, total_time,
                         total_iters=None, result_dict=None, signal=False):
 
-    cudnn.benchmark = True
-
     model = getattr(torchvision.models, model_name)()
     model = model.cuda()
+
+    compile_options = {
+        "epilogue_fusion": True,
+        "max_autotune": True,
+        "triton.cudagraphs": False,
+    }
+    model = torch.compile(model, backend='inductor', options=compile_options)
 
     data = torch.randn(batch_size, 3, 224, 224)
     target = torch.LongTensor(batch_size).random_() % 1000
@@ -32,6 +36,7 @@ def benchmark_imagenet(model_name, batch_size, amp, warmup_iters, total_time,
     num_iters = 0
     warm_iters = 0
     warm = False
+    model.train()
 
     while True:
         optimizer.zero_grad()
