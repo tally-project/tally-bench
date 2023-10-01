@@ -49,7 +49,7 @@ def launch_benchmark(benchmarks: list, use_mps=False, use_tally=False):
         if use_tally:
             launch_cmd = f"{tally_client_script} {launch_cmd}"
         
-        print(launch_cmd)
+        print(f"launch_cmd: {launch_cmd}")
 
         process = subprocess.Popen(launch_cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, universal_newlines=True)
         processes.append(process)
