@@ -1,89 +1,40 @@
-import subprocess
-import time
-import json
 import sys
+import os
 
 sys.path.append('utils')
 
-from utils.mps import shut_down_mps, start_mps
+from utils.bench import Benchmark
+from utils.bench_util import launch_benchmark
 
-class Benchmark:
-
-    def __init__(self, framework, model_name, batch_size, amp, warmup_iters, runtime, total_iters=None):
-        self.framework = framework
-        self.model_name = model_name
-        self.batch_size = batch_size
-        self.amp = amp
-        self.warmup_iters = warmup_iters
-        self.runtime = runtime
-        self.total_iters = total_iters
-
-def launch_benchmark(benchmarks: list, use_mps=False, preload=""):
-
-    shut_down_mps()
-    if use_mps:
-        start_mps()
-        assert(preload == "")
-
-    processes = []
-
-    for benchmark in benchmarks:
-        
-        launch_cmd = (f"{preload} python3 launch.py " +
-                        f"--framework {benchmark.framework} " +
-                        f"--benchmark {benchmark.model_name} " +
-                        f"--batch-size {benchmark.batch_size} " +
-                        f"--warmup-iters {benchmark.warmup_iters} " +
-                        f"--runtime {benchmark.runtime} " +
-                        f"--signal ")
-        
-        if benchmark.total_iters:
-            launch_cmd += f"--total-iters {benchmark.total_iters} "
-
-        if benchmark.amp:
-            launch_cmd += "--amp "
-
-        process = subprocess.Popen(launch_cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, universal_newlines=True)
-        processes.append(process)
-
-        while True:
-            process.stdout.flush()
-            response = process.stdout.readline()
-            print(response.strip())
-            if "benchmark is warm" in response:
-                break
-            time.sleep(0.01)
-    
-    # All benchmarks should be warm, signal start
-    print("Setting start signals ...")
-
-    for process in processes:
-        process.stdin.write("start\n")
-        process.stdin.flush()
-    
-    for process in processes:
-        process.wait()
-        output = process.communicate()[0].strip()
-        result_dict = json.loads(output.split("\n")[-1])
-
-        print(result_dict)
-
+benchmark_list = {
+    "hidet": {
+        "resnet50": 64
+    },
+    "pytorch": {
+        "resnet50": 64,
+        "bert": 16,
+        "VGG": 64,
+        "dcgan": 64,
+        "LSTM": 64,
+        "NeuMF-pre": 64,
+        "pointnet": 64,
+        "transformer": 8
+    }
+}
 
 if __name__ == "__main__":
 
-    # bench_1 = Benchmark("hidet", "resnet50", 64, True, 10, 10)
-    # bench_2 = Benchmark("hidet", "resnet50", 64, False, 10, 10)
+    curr_dir = os.getcwd()
+    os.environ["TALLY_HOME"] = f"{curr_dir}/tally"
 
-    # bench_1 = Benchmark("hidet", "resnet50", 64, True, 10, 100000, total_iters=1000)
-    # bench_2 = Benchmark("hidet", "resnet50", 64, False, 10, 100000, total_iters=1000)
+    bench_1 = Benchmark("hidet", "resnet50", 64, False, 10, 10)
+    # bench_2 = Benchmark("pytorch", "resnet50", 64, False, 10, 10)
+    # bench_3 = Benchmark("pytorch", "bert", 16, False, 10, 10)
+    # bench_4 = Benchmark("pytorch", "VGG", 64, False, 10, 10)
+    # bench_5 = Benchmark("pytorch", "dcgan", 64, False, 10, 10)
+    # bench_6 = Benchmark("pytorch", "LSTM", 64, False, 10, 10)
+    # bench_7 = Benchmark("pytorch", "NeuMF-pre", 64, False, 10, 10)
+    # bench_8 = Benchmark("pytorch", "pointnet", 64, False, 10, 10)
+    # bench_9 = Benchmark("pytorch", "transformer", 8, False, 10, 10)
 
-    bench_1 = Benchmark("pytorch", "resnet50", 64, True, 10, 10)
-    bench_2 = Benchmark("pytorch", "resnet50", 64, False, 10, 10)
-
-    # preload = "LD_PRELOAD=~/tally/build/libtally_client.so"
-    preload = ""
-
-    # launch_benchmark([bench_1], preload=preload)
-
-    launch_benchmark([bench_1, bench_2], preload=preload)
-    # launch_benchmark([bench_1, bench_2], use_mps=True)
+    launch_benchmark([bench_1], use_tally=True)

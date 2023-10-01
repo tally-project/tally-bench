@@ -1,0 +1,3 @@
+[submodule "tally"]
+	path = tally
+	url = https://github.com/tally-project/tally.git

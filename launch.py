@@ -55,9 +55,11 @@ if __name__ == "__main__":
     total_iters = args.total_iters if args.total_iters else None
     result_dict = {}
 
+    print(f"Running benchmark: {args.benchmark} Batch size: {args.batch_size} amp: {args.amp}")
+
     benchmark_func(args.benchmark, args.batch_size, args.amp, args.warmup_iters,
                    args.runtime, total_iters, result_dict, args.signal)
-        
+    
     print(f"Benchmark: {args.benchmark} Time: {result_dict['time_elapsed']} Iterations: {result_dict['iters']}")
 
     # Print json format result

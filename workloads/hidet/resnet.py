@@ -8,8 +8,6 @@ from utils.bench_util import wait_for_signal
 def run_resnet(model_name, batch_size, amp, warmup_iters, total_time,
                total_iters=None, result_dict=None, signal=False):
 
-    print(f"Running hidet model {model_name} with batch size {batch_size} and amp {amp} ...")
-
     hidet.torch.dynamo_config.use_cuda_graph(False)
 
     if amp:
