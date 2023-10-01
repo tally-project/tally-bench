@@ -69,7 +69,6 @@ def launch_benchmark(benchmarks: list, use_mps=False, use_tally=False):
 
     if abort:
         print("Detect process abort. Terminating ...")
-        time.sleep(100)
         for process in processes:
             process.terminate()
         shut_down_tally()
