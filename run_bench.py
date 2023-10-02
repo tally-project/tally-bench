@@ -5,20 +5,21 @@ sys.path.append('utils')
 
 from utils.bench import Benchmark
 from utils.bench_util import launch_benchmark
+from utils.tally import start_iox_roudi, shut_down_iox_roudi
 
 benchmark_list = {
     "hidet": {
-        "resnet50": 64
+        "resnet50": [64]
     },
     "pytorch": {
-        "resnet50": 64,
-        "bert": 16,
-        "VGG": 64,
-        "dcgan": 64,
-        "LSTM": 64,
-        "NeuMF-pre": 64,
-        "pointnet": 64,
-        "transformer": 8
+        "resnet50": [64],
+        "bert": [16],
+        "VGG": [64],
+        "dcgan": [64],
+        "LSTM": [64],
+        "NeuMF-pre": [64],
+        "pointnet": [64],
+        "transformer": [8]
     }
 }
 
@@ -28,15 +29,19 @@ if __name__ == "__main__":
     os.environ["TALLY_HOME"] = f"{curr_dir}/tally"
     os.environ["PYTHONUNBUFFERED"] = "true"
 
-    bench_1 = Benchmark("hidet", "resnet50", 64, False, 10, 10)
-    bench_2 = Benchmark("pytorch", "resnet50", 64, False, 10, 10)
-    bench_3 = Benchmark("pytorch", "bert", 16, False, 10, 10)
-    bench_4 = Benchmark("pytorch", "VGG", 64, False, 10, 10)
-    # bench_5 = Benchmark("pytorch", "dcgan", 64, False, 10, 10)
-    # bench_6 = Benchmark("pytorch", "LSTM", 64, False, 10, 10)
-    # bench_7 = Benchmark("pytorch", "NeuMF-pre", 64, False, 10, 10)
-    # bench_8 = Benchmark("pytorch", "pointnet", 64, False, 10, 10)
-    # bench_9 = Benchmark("pytorch", "transformer", 8, False, 10, 10)
+    benchmarks = []
 
-    for bench in [bench_1, bench_2, bench_3, bench_4]:
+    for framework in benchmark_list:
+        for model in benchmark_list[framework]:
+            for batch_size in benchmark_list[framework][model]:
+                for amp in [True, False]:
+                    bench = Benchmark(framework, model, batch_size, amp, warmup_iters=10, runtime=10)
+                    benchmarks.append(bench)
+    
+    shut_down_iox_roudi()
+    start_iox_roudi()
+
+    for bench in benchmarks:
         launch_benchmark([bench], use_tally=True)
+    
+    shut_down_iox_roudi()

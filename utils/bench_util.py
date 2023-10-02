@@ -2,14 +2,14 @@ import sys
 import subprocess
 import time
 import json
+from multiprocessing.connection import Listener
 
 from utils.mps import shut_down_mps, start_mps
 from utils.tally import shut_down_tally, start_tally, tally_client_script
 
 def wait_for_signal():
-    print("benchmark is warm", flush=True)
-
     while True:
+        print("benchmark is warm\n", flush=True)
         sys.stdin.flush()
         inp = sys.stdin.readline()
         if "start" in inp:
@@ -51,7 +51,8 @@ def launch_benchmark(benchmarks: list, use_mps=False, use_tally=False):
         
         print(f"launch_cmd: {launch_cmd}")
 
-        process = subprocess.Popen(launch_cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, universal_newlines=True)
+        launch_cmd_list = launch_cmd.split(" ")
+        process = subprocess.Popen(launch_cmd_list, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
         processes.append(process)
 
         while True:
@@ -71,6 +72,10 @@ def launch_benchmark(benchmarks: list, use_mps=False, use_tally=False):
         print("Detect process abort. Terminating ...")
         for process in processes:
             process.terminate()
+        std_out = process.stdout.readlines()
+        std_err = process.stderr.readlines()
+        for line in std_out + std_err:
+            print(line.strip())
         shut_down_tally()
         exit(1)
 
