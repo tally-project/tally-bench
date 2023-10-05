@@ -1,11 +1,11 @@
-import subprocess
-
-def shut_down_mps():
-    print("Shutting down MPS ...")
-    process = subprocess.Popen(f"echo quit | nvidia-cuda-mps-control", shell=True, universal_newlines=True)
-    process.wait()
+from utils.util import execute_cmd
 
 def start_mps():
     print("Starting MPS ...")
-    process = subprocess.Popen(f"CUDA_VISIBLE_DEVICES=0 nvidia-cuda-mps-control -d", shell=True, universal_newlines=True)
-    process.wait()
+    # execute_cmd("sudo nvidia-smi -i 0 -c EXCLUSIVE_PROCESS")
+    execute_cmd("nvidia-cuda-mps-control -d")
+
+def shut_down_mps():
+    print("Shutting down MPS ...")
+    execute_cmd("echo quit | nvidia-cuda-mps-control")
+    # execute_cmd("sudo nvidia-smi -i 0 -c DEFAULT")

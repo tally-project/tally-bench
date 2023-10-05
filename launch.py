@@ -58,7 +58,7 @@ if __name__ == "__main__":
     total_iters = args.total_iters if args.total_iters else None
     result_dict = {}
 
-    print(f"Running benchmark: {args.benchmark} Batch size: {args.batch_size} amp: {args.amp}")
+    print(f"Running framework: {args.framework} benchmark: {args.benchmark} Batch size: {args.batch_size} amp: {args.amp}")
 
     benchmark_func(args.benchmark, args.batch_size, args.amp, args.warmup_iters,
                    args.runtime, total_iters, result_dict, args.signal)
