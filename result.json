@@ -1,0 +1,566 @@
+{
+    "default": {
+        "hidet_resnet50_64": {
+            "hidet_resnet50_64_0": {
+                "iters": 56,
+                "time_elapsed": 10.029736995697021
+            }
+        },
+        "hidet_resnet50_64_amp": {
+            "hidet_resnet50_64_amp_0": {
+                "iters": 377,
+                "time_elapsed": 10.003542423248291
+            }
+        },
+        "pytorch_LSTM_64": {
+            "pytorch_LSTM_64_0": {
+                "iters": 552,
+                "time_elapsed": 10.008655548095703
+            }
+        },
+        "pytorch_LSTM_64_amp": {
+            "pytorch_LSTM_64_amp_0": {
+                "iters": 513,
+                "time_elapsed": 10.003198385238647
+            }
+        },
+        "pytorch_NeuMF-pre_64": {
+            "pytorch_NeuMF-pre_64_0": {
+                "iters": 6482,
+                "time_elapsed": 10.045101165771484
+            }
+        },
+        "pytorch_NeuMF-pre_64_amp": {
+            "pytorch_NeuMF-pre_64_amp_0": {
+                "iters": 5346,
+                "time_elapsed": 10.056294202804565
+            }
+        },
+        "pytorch_VGG_64": {
+            "pytorch_VGG_64_0": {
+                "iters": 425,
+                "time_elapsed": 10.020661115646362
+            }
+        },
+        "pytorch_VGG_64_amp": {
+            "pytorch_VGG_64_amp_0": {
+                "iters": 527,
+                "time_elapsed": 10.034287691116333
+            }
+        },
+        "pytorch_bert_16": {
+            "pytorch_bert_16_0": {
+                "iters": 37,
+                "time_elapsed": 10.084511280059814
+            }
+        },
+        "pytorch_bert_16_amp": {
+            "pytorch_bert_16_amp_0": {
+                "iters": 108,
+                "time_elapsed": 10.08014178276062
+            }
+        },
+        "pytorch_dcgan_64": {
+            "pytorch_dcgan_64_0": {
+                "iters": 159,
+                "time_elapsed": 10.074697017669678
+            }
+        },
+        "pytorch_dcgan_64_amp": {
+            "pytorch_dcgan_64_amp_0": {
+                "iters": 183,
+                "time_elapsed": 10.05096173286438
+            }
+        },
+        "pytorch_pointnet_64": {
+            "pytorch_pointnet_64_0": {
+                "iters": 122,
+                "time_elapsed": 10.081281185150146
+            }
+        },
+        "pytorch_pointnet_64_amp": {
+            "pytorch_pointnet_64_amp_0": {
+                "iters": 194,
+                "time_elapsed": 10.031787157058716
+            }
+        },
+        "pytorch_resnet50_64": {
+            "pytorch_resnet50_64_0": {
+                "iters": 30,
+                "time_elapsed": 10.040385484695435
+            }
+        },
+        "pytorch_resnet50_64_amp": {
+            "pytorch_resnet50_64_amp_0": {
+                "iters": 47,
+                "time_elapsed": 10.204025030136108
+            }
+        }
+    },
+    "mps": {
+        "hidet_resnet50_64_amp_hidet_resnet50_64": {
+            "hidet_resnet50_64_1": {
+                "iters": 44,
+                "time_elapsed": 10.190434694290161
+            },
+            "hidet_resnet50_64_amp_0": {
+                "iters": 71,
+                "time_elapsed": 10.071522235870361
+            }
+        },
+        "hidet_resnet50_64_amp_hidet_resnet50_64_amp": {
+            "hidet_resnet50_64_amp_0": {
+                "iters": 202,
+                "time_elapsed": 10.030703783035278
+            },
+            "hidet_resnet50_64_amp_1": {
+                "iters": 202,
+                "time_elapsed": 10.029579877853394
+            }
+        },
+        "hidet_resnet50_64_amp_pytorch_LSTM_64": {
+            "hidet_resnet50_64_amp_0": {
+                "iters": 308,
+                "time_elapsed": 10.015637159347534
+            },
+            "pytorch_LSTM_64_1": {
+                "iters": 154,
+                "time_elapsed": 10.00187349319458
+            }
+        },
+        "hidet_resnet50_64_amp_pytorch_LSTM_64_amp": {
+            "hidet_resnet50_64_amp_0": {
+                "iters": 324,
+                "time_elapsed": 10.014967918395996
+            },
+            "pytorch_LSTM_64_amp_1": {
+                "iters": 174,
+                "time_elapsed": 10.010829448699951
+            }
+        },
+        "hidet_resnet50_64_amp_pytorch_NeuMF-pre_64": {
+            "hidet_resnet50_64_amp_0": {
+                "iters": 367,
+                "time_elapsed": 10.013229846954346
+            },
+            "pytorch_NeuMF-pre_64_1": {
+                "iters": 3860,
+                "time_elapsed": 10.052411079406738
+            }
+        },
+        "hidet_resnet50_64_amp_pytorch_NeuMF-pre_64_amp": {
+            "hidet_resnet50_64_amp_0": {
+                "iters": 367,
+                "time_elapsed": 10.00789475440979
+            },
+            "pytorch_NeuMF-pre_64_amp_1": {
+                "iters": 3031,
+                "time_elapsed": 10.04933762550354
+            }
+        },
+        "hidet_resnet50_64_amp_pytorch_VGG_64": {
+            "hidet_resnet50_64_amp_0": {
+                "iters": 356,
+                "time_elapsed": 10.027877807617188
+            },
+            "pytorch_VGG_64_1": {
+                "iters": 57,
+                "time_elapsed": 10.046917200088501
+            }
+        },
+        "hidet_resnet50_64_amp_pytorch_VGG_64_amp": {
+            "hidet_resnet50_64_amp_0": {
+                "iters": 362,
+                "time_elapsed": 10.0063316822052
+            },
+            "pytorch_VGG_64_amp_1": {
+                "iters": 64,
+                "time_elapsed": 10.03542423248291
+            }
+        },
+        "hidet_resnet50_64_amp_pytorch_bert_16": {
+            "hidet_resnet50_64_amp_0": {
+                "iters": 156,
+                "time_elapsed": 10.053084373474121
+            },
+            "pytorch_bert_16_1": {
+                "iters": 25,
+                "time_elapsed": 10.14895486831665
+            }
+        },
+        "hidet_resnet50_64_amp_pytorch_bert_16_amp": {
+            "hidet_resnet50_64_amp_0": {
+                "iters": 258,
+                "time_elapsed": 10.02855372428894
+            },
+            "pytorch_bert_16_amp_1": {
+                "iters": 43,
+                "time_elapsed": 10.036537170410156
+            }
+        },
+        "hidet_resnet50_64_amp_pytorch_dcgan_64": {
+            "hidet_resnet50_64_amp_0": {
+                "iters": 362,
+                "time_elapsed": 10.011351585388184
+            },
+            "pytorch_dcgan_64_1": {
+                "iters": 18,
+                "time_elapsed": 10.081592559814453
+            }
+        },
+        "hidet_resnet50_64_amp_pytorch_dcgan_64_amp": {
+            "hidet_resnet50_64_amp_0": {
+                "iters": 368,
+                "time_elapsed": 10.023670673370361
+            },
+            "pytorch_dcgan_64_amp_1": {
+                "iters": 23,
+                "time_elapsed": 10.071317434310913
+            }
+        },
+        "hidet_resnet50_64_amp_pytorch_pointnet_64": {
+            "hidet_resnet50_64_amp_0": {
+                "iters": 313,
+                "time_elapsed": 10.008121967315674
+            },
+            "pytorch_pointnet_64_1": {
+                "iters": 28,
+                "time_elapsed": 10.026371479034424
+            }
+        },
+        "hidet_resnet50_64_amp_pytorch_pointnet_64_amp": {
+            "hidet_resnet50_64_amp_0": {
+                "iters": 337,
+                "time_elapsed": 10.007426261901855
+            },
+            "pytorch_pointnet_64_amp_1": {
+                "iters": 33,
+                "time_elapsed": 10.026933908462524
+            }
+        },
+        "hidet_resnet50_64_amp_pytorch_resnet50_64": {
+            "hidet_resnet50_64_amp_0": {
+                "iters": 327,
+                "time_elapsed": 10.027514696121216
+            },
+            "pytorch_resnet50_64_1": {
+                "iters": 6,
+                "time_elapsed": 10.15444540977478
+            }
+        },
+        "hidet_resnet50_64_amp_pytorch_resnet50_64_amp": {
+            "hidet_resnet50_64_amp_0": {
+                "iters": 339,
+                "time_elapsed": 10.000375270843506
+            },
+            "pytorch_resnet50_64_amp_1": {
+                "iters": 8,
+                "time_elapsed": 10.174401760101318
+            }
+        },
+        "hidet_resnet50_64_hidet_resnet50_64": {
+            "hidet_resnet50_64_0": {
+                "iters": 30,
+                "time_elapsed": 10.253790855407715
+            },
+            "hidet_resnet50_64_1": {
+                "iters": 30,
+                "time_elapsed": 10.203517436981201
+            }
+        },
+        "hidet_resnet50_64_pytorch_LSTM_64_amp": {
+            "hidet_resnet50_64_0": {
+                "iters": 47,
+                "time_elapsed": 10.050431251525879
+            },
+            "pytorch_LSTM_64_amp_1": {
+                "iters": 155,
+                "time_elapsed": 10.00511646270752
+            }
+        },
+        "hidet_resnet50_64_pytorch_VGG_64": {
+            "hidet_resnet50_64_0": {
+                "iters": 49,
+                "time_elapsed": 10.085135459899902
+            },
+            "pytorch_VGG_64_1": {
+                "iters": 59,
+                "time_elapsed": 10.07142424583435
+            }
+        },
+        "hidet_resnet50_64_pytorch_VGG_64_amp": {
+            "hidet_resnet50_64_0": {
+                "iters": 51,
+                "time_elapsed": 10.143002033233643
+            },
+            "pytorch_VGG_64_amp_1": {
+                "iters": 72,
+                "time_elapsed": 10.033544540405273
+            }
+        },
+        "hidet_resnet50_64_pytorch_bert_16": {
+            "hidet_resnet50_64_0": {
+                "iters": 39,
+                "time_elapsed": 10.046712398529053
+            },
+            "pytorch_bert_16_1": {
+                "iters": 10,
+                "time_elapsed": 10.154261112213135
+            }
+        },
+        "hidet_resnet50_64_pytorch_bert_16_amp": {
+            "hidet_resnet50_64_0": {
+                "iters": 44,
+                "time_elapsed": 10.17949628829956
+            },
+            "pytorch_bert_16_amp_1": {
+                "iters": 20,
+                "time_elapsed": 10.06199049949646
+            }
+        },
+        "hidet_resnet50_64_pytorch_dcgan_64": {
+            "hidet_resnet50_64_0": {
+                "iters": 50,
+                "time_elapsed": 10.03798532485962
+            },
+            "pytorch_dcgan_64_1": {
+                "iters": 20,
+                "time_elapsed": 10.02002239227295
+            }
+        },
+        "hidet_resnet50_64_pytorch_dcgan_64_amp": {
+            "hidet_resnet50_64_0": {
+                "iters": 52,
+                "time_elapsed": 10.158269166946411
+            },
+            "pytorch_dcgan_64_amp_1": {
+                "iters": 29,
+                "time_elapsed": 10.185168981552124
+            }
+        },
+        "hidet_resnet50_64_pytorch_resnet50_64": {
+            "hidet_resnet50_64_0": {
+                "iters": 48,
+                "time_elapsed": 10.199492454528809
+            },
+            "pytorch_resnet50_64_1": {
+                "iters": 5,
+                "time_elapsed": 10.252027034759521
+            }
+        },
+        "hidet_resnet50_64_pytorch_resnet50_64_amp": {
+            "hidet_resnet50_64_0": {
+                "iters": 49,
+                "time_elapsed": 10.156743288040161
+            },
+            "pytorch_resnet50_64_amp_1": {
+                "iters": 7,
+                "time_elapsed": 10.112981796264648
+            }
+        }
+    },
+    "tally_naive": {
+        "hidet_resnet50_64_amp_hidet_resnet50_64": {
+            "hidet_resnet50_64_1": {
+                "iters": 43,
+                "time_elapsed": 10.03251338005066
+            },
+            "hidet_resnet50_64_amp_0": {
+                "iters": 71,
+                "time_elapsed": 10.044225454330444
+            }
+        },
+        "hidet_resnet50_64_amp_hidet_resnet50_64_amp": {
+            "hidet_resnet50_64_amp_0": {
+                "iters": 203,
+                "time_elapsed": 10.025375843048096
+            },
+            "hidet_resnet50_64_amp_1": {
+                "iters": 203,
+                "time_elapsed": 10.02130913734436
+            }
+        },
+        "hidet_resnet50_64_amp_pytorch_LSTM_64": {
+            "hidet_resnet50_64_amp_0": {
+                "iters": 310,
+                "time_elapsed": 10.000830173492432
+            },
+            "pytorch_LSTM_64_1": {
+                "iters": 156,
+                "time_elapsed": 10.019813299179077
+            }
+        },
+        "hidet_resnet50_64_amp_pytorch_LSTM_64_amp": {
+            "hidet_resnet50_64_amp_0": {
+                "iters": 332,
+                "time_elapsed": 10.011703729629517
+            },
+            "pytorch_LSTM_64_amp_1": {
+                "iters": 166,
+                "time_elapsed": 10.011071920394897
+            }
+        },
+        "hidet_resnet50_64_amp_pytorch_NeuMF-pre_64": {
+            "hidet_resnet50_64_amp_0": {
+                "iters": 369,
+                "time_elapsed": 10.00515365600586
+            },
+            "pytorch_NeuMF-pre_64_1": {
+                "iters": 3332,
+                "time_elapsed": 10.121533393859863
+            }
+        },
+        "hidet_resnet50_64_amp_pytorch_NeuMF-pre_64_amp": {
+            "hidet_resnet50_64_amp_0": {
+                "iters": 372,
+                "time_elapsed": 10.019585371017456
+            },
+            "pytorch_NeuMF-pre_64_amp_1": {
+                "iters": 2587,
+                "time_elapsed": 10.107585668563843
+            }
+        },
+        "hidet_resnet50_64_amp_pytorch_VGG_64": {
+            "hidet_resnet50_64_amp_0": {
+                "iters": 356,
+                "time_elapsed": 10.001226425170898
+            },
+            "pytorch_VGG_64_1": {
+                "iters": 59,
+                "time_elapsed": 10.10587477684021
+            }
+        },
+        "hidet_resnet50_64_amp_pytorch_VGG_64_amp": {
+            "hidet_resnet50_64_amp_0": {
+                "iters": 348,
+                "time_elapsed": 10.020329713821411
+            },
+            "pytorch_VGG_64_amp_1": {
+                "iters": 87,
+                "time_elapsed": 10.147580623626709
+            }
+        },
+        "hidet_resnet50_64_amp_pytorch_bert_16": {
+            "hidet_resnet50_64_amp_0": {
+                "iters": 154,
+                "time_elapsed": 10.004441738128662
+            },
+            "pytorch_bert_16_1": {
+                "iters": 25,
+                "time_elapsed": 10.075249195098877
+            }
+        },
+        "hidet_resnet50_64_amp_pytorch_bert_16_amp": {
+            "hidet_resnet50_64_amp_0": {
+                "iters": 141,
+                "time_elapsed": 10.006720781326294
+            },
+            "pytorch_bert_16_amp_1": {
+                "iters": 72,
+                "time_elapsed": 10.102645635604858
+            }
+        },
+        "hidet_resnet50_64_amp_pytorch_dcgan_64": {
+            "hidet_resnet50_64_amp_0": {
+                "iters": 360,
+                "time_elapsed": 10.019227266311646
+            },
+            "pytorch_dcgan_64_1": {
+                "iters": 19,
+                "time_elapsed": 10.09794569015503
+            }
+        },
+        "hidet_resnet50_64_amp_pytorch_dcgan_64_amp": {
+            "hidet_resnet50_64_amp_0": {
+                "iters": 361,
+                "time_elapsed": 10.023052453994751
+            },
+            "pytorch_dcgan_64_amp_1": {
+                "iters": 28,
+                "time_elapsed": 10.215204238891602
+            }
+        },
+        "hidet_resnet50_64_amp_pytorch_pointnet_64": {
+            "hidet_resnet50_64_amp_0": {
+                "iters": 316,
+                "time_elapsed": 10.016509056091309
+            },
+            "pytorch_pointnet_64_1": {
+                "iters": 28,
+                "time_elapsed": 10.104879379272461
+            }
+        },
+        "hidet_resnet50_64_amp_pytorch_pointnet_64_amp": {
+            "hidet_resnet50_64_amp_0": {
+                "iters": 324,
+                "time_elapsed": 10.002438068389893
+            },
+            "pytorch_pointnet_64_amp_1": {
+                "iters": 41,
+                "time_elapsed": 10.158052921295166
+            }
+        },
+        "hidet_resnet50_64_amp_pytorch_resnet50_64": {
+            "hidet_resnet50_64_amp_0": {
+                "iters": 327,
+                "time_elapsed": 10.0222008228302
+            },
+            "pytorch_resnet50_64_1": {
+                "iters": 6,
+                "time_elapsed": 10.12450385093689
+            }
+        },
+        "hidet_resnet50_64_amp_pytorch_resnet50_64_amp": {
+            "hidet_resnet50_64_amp_0": {
+                "iters": 338,
+                "time_elapsed": 10.0140380859375
+            },
+            "pytorch_resnet50_64_amp_1": {
+                "iters": 8,
+                "time_elapsed": 10.157652854919434
+            }
+        },
+        "hidet_resnet50_64_hidet_resnet50_64": {
+            "hidet_resnet50_64_0": {
+                "iters": 30,
+                "time_elapsed": 10.103655338287354
+            },
+            "hidet_resnet50_64_1": {
+                "iters": 30,
+                "time_elapsed": 10.053367137908936
+            }
+        },
+        "hidet_resnet50_64_pytorch_resnet50_64_amp": {
+            "hidet_resnet50_64_0": {
+                "iters": 49,
+                "time_elapsed": 10.097813129425049
+            },
+            "pytorch_resnet50_64_amp_1": {
+                "iters": 7,
+                "time_elapsed": 10.070586919784546
+            }
+        }
+    },
+    "tally_workload_agnostic_sharing": {
+        "hidet_resnet50_64_amp_hidet_resnet50_64": {
+            "hidet_resnet50_64_1": {
+                "iters": 42,
+                "time_elapsed": 10.072566509246826
+            },
+            "hidet_resnet50_64_amp_0": {
+                "iters": 89,
+                "time_elapsed": 10.056992053985596
+            }
+        },
+        "hidet_resnet50_64_amp_hidet_resnet50_64_amp": {
+            "hidet_resnet50_64_amp_0": {
+                "iters": 167,
+                "time_elapsed": 10.029796361923218
+            },
+            "hidet_resnet50_64_amp_1": {
+                "iters": 168,
+                "time_elapsed": 10.040748834609985
+            }
+        }
+    }
+}

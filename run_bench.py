@@ -3,9 +3,9 @@ import os
 
 sys.path.append('utils')
 
+from utils.util import execute_cmd, write_json_to_file, load_json_from_file
 from utils.bench import Benchmark
-from utils.bench_util import launch_benchmark
-from utils.tally import start_iox_roudi, shut_down_iox_roudi
+from utils.bench_util import launch_benchmark, init_env, tear_down_env
 
 benchmark_list = {
     "hidet": {
@@ -19,7 +19,7 @@ benchmark_list = {
         "LSTM": [64],
         "NeuMF-pre": [64],
         "pointnet": [64],
-        "transformer": [8]
+        # "transformer": [8]
     }
 }
 
@@ -31,10 +31,13 @@ if __name__ == "__main__":
 
     curr_dir = os.getcwd()
     os.environ["TALLY_HOME"] = f"{curr_dir}/tally"
-    os.environ["PYTHONUNBUFFERED"] = "true"
 
-    scheduler_policy = os.environ.get("SCHEDULER_POLICY", "NAIVE")
+    if use_tally:
+        scheduler_policy = os.environ.get("SCHEDULER_POLICY", "NAIVE")
+        print(f"Benchmarking tally with SCHEDULER_POLICY: {scheduler_policy}")
 
+    result = load_json_from_file("result.json")
+    
     benchmarks = []
 
     for framework in benchmark_list:
@@ -48,13 +51,22 @@ if __name__ == "__main__":
                     bench = Benchmark(framework, model, batch_size, amp, warmup_iters=10, runtime=10)
                     benchmarks.append(bench)
 
-    if use_tally:
-        shut_down_iox_roudi()
-        start_iox_roudi()
+    init_env(use_mps, use_tally)
+    
+    for benchmark in benchmarks:
+        launch_benchmark([benchmark], result=result)
+        write_json_to_file(result, "result.json")
+        execute_cmd("cp result.json result_copy.json")
 
-    for bench_1 in benchmarks:
-        for bench_2 in benchmarks:
-            launch_benchmark([bench_1, bench_2], use_mps=use_mps, use_tally=use_tally)
+    for i in range(len(benchmarks)):
+        for j in range(i, len(benchmarks)):
 
-    if use_tally:
-        shut_down_iox_roudi()
+            bench_1 = benchmarks[i]
+            bench_2 = benchmarks[j]
+
+            launch_benchmark([bench_1, bench_2], use_mps=use_mps, use_tally=use_tally, result=result)
+            
+            write_json_to_file(result, "result.json")
+            execute_cmd("cp result.json result_copy.json")
+
+    tear_down_env()

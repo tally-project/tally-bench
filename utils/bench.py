@@ -8,3 +8,9 @@ class Benchmark:
         self.warmup_iters = warmup_iters
         self.runtime = runtime
         self.total_iters = total_iters
+    
+    def __str__(self):
+        _str = f"{self.framework}_{self.model_name}_{self.batch_size}"
+        if self.amp:
+            _str += "_amp"
+        return _str

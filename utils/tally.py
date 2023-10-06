@@ -1,3 +1,5 @@
+import time
+
 from utils.util import execute_cmd
 
 iox_roudi_start_script = "./tally/scripts/start_iox.sh"
@@ -12,6 +14,7 @@ def start_iox_roudi():
     print("Starting Iox Roudi ...")
     start_iox_cmd = f"bash {iox_roudi_start_script} &"
     execute_cmd(start_iox_cmd)
+    time.sleep(5)
 
 def shut_down_iox_roudi():
     print("Shutting down Iox Roudi ...")

@@ -50,8 +50,6 @@ benchmark_list = {
 
 if __name__ == "__main__":
 
-    os.environ["PYTHONUNBUFFERED"] = "true"
-
     # Retrieve benchmark function
     benchmark_func = benchmark_list[args.framework][args.benchmark]
 

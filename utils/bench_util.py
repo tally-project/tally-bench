@@ -2,10 +2,39 @@ import sys
 import subprocess
 import time
 import json
-from multiprocessing.connection import Listener
+import os
 
-from utils.mps import shut_down_mps, start_mps
-from utils.tally import shut_down_tally, start_tally, tally_client_script
+from utils.util import execute_cmd
+from utils.mps import start_mps, shut_down_mps
+from utils.tally import shut_down_tally, start_tally, tally_client_script, start_iox_roudi, shut_down_iox_roudi
+
+def get_bench_id(benchmarks: list):
+    _str = ""
+    for i in range(len(benchmarks)):
+        benchmark = benchmarks[i]
+        _str += str(benchmark)
+        if i != len(benchmarks) - 1:
+            _str += "_"
+    return _str
+        
+def init_env(use_mps=False, use_tally=False):
+    tear_down_env()
+
+    out, err = execute_cmd("nvidia-smi --query-gpu=compute_mode --format=csv", get_output=True)
+    mode = out.split("compute_mode")[1].strip()
+
+    if use_mps:
+        if mode != "Exclusive_Process":
+            raise Exception(f"GPU mode is not Exclusive_Process. Now: {mode}")
+
+    elif use_tally:
+        if mode != "Default":
+            raise Exception(f"GPU mode is not Default. Now: {mode}")
+        start_iox_roudi()
+
+def tear_down_env():
+    shut_down_mps()
+    shut_down_iox_roudi()
 
 def wait_for_signal():
     while True:
@@ -15,24 +44,41 @@ def wait_for_signal():
         if "start" in inp:
             break
 
-def launch_benchmark(benchmarks: list, use_mps=False, use_tally=False):
+def launch_benchmark(benchmarks: list, use_mps=False, use_tally=False, result=None):
 
-    shut_down_mps()
-    shut_down_tally()
+    output_dict = None
+    result_key = "default"
 
     if use_mps:
-        start_mps()
-        assert(not use_tally)
+        result_key = "mps"
+    elif use_tally:
+        policy = os.environ.get("SCHEDULER_POLICY", "NAIVE")
+        result_key = f"tally_{policy}".lower()
+    
+    if result_key not in result:
+        result[result_key] = {}
 
-    if use_tally:
-        start_tally()
+    bench_id = get_bench_id(benchmarks)
+    if bench_id in result[result_key]:
+        return
+    
+    result[result_key][bench_id] = {}
+    output_dict = result[result_key][bench_id]
 
     processes = []
     abort = False
 
+    if use_tally:
+        shut_down_tally()
+        start_tally()
+
+    if use_mps:
+        shut_down_mps()
+        start_mps()
+
     for benchmark in benchmarks:
         
-        launch_cmd = (f"python3 launch.py " +
+        launch_cmd = (f"python3 -u launch.py " +
                         f"--framework {benchmark.framework} " +
                         f"--benchmark {benchmark.model_name} " +
                         f"--batch-size {benchmark.batch_size} " +
@@ -84,11 +130,17 @@ def launch_benchmark(benchmarks: list, use_mps=False, use_tally=False):
         process.stdin.write("start\n")
         process.stdin.flush()
     
-    for process in processes:
+    for i in range(len(processes)):
+        process = processes[i]
         process.wait()
         output = process.communicate()[0].strip()
         result_dict = json.loads(output.split("\n")[-1])
 
+        bench = benchmarks[i]
+        output_dict[f"{bench}_{i}"] = result_dict
         print(result_dict)
     
-    shut_down_tally()
+    if use_tally:
+        shut_down_tally()
+    if use_mps:
+        shut_down_mps()
