@@ -4,9 +4,12 @@ import random
 import argparse
 import json
 
-random.seed(0)
-
 sys.path.append('workloads')
+sys.path.append('utils')
+
+from utils.bench_util import set_deterministic
+
+# set_deterministic()
 
 from workloads.hidet.resnet import run_resnet as hidet_run_resnet
 
