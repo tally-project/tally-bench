@@ -3,10 +3,26 @@ import subprocess
 import time
 import json
 import os
+import random
+import numpy as np
+import selectors
+
+import torch
 
 from utils.util import execute_cmd
 from utils.mps import start_mps, shut_down_mps
 from utils.tally import shut_down_tally, start_tally, tally_client_script, start_iox_roudi, shut_down_iox_roudi
+
+def set_deterministic(seed=42):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed) 
+
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    torch.backends.cudnn.enabled = False
 
 def get_bench_id(benchmarks: list):
     _str = ""
@@ -86,6 +102,8 @@ def launch_benchmark(benchmarks: list, use_mps=False, use_tally=False, result=No
                         f"--runtime {benchmark.runtime} " +
                         f"--signal ")
         
+        print(f"launch_cmd: {launch_cmd}")
+        
         if benchmark.total_iters:
             launch_cmd += f"--total-iters {benchmark.total_iters} "
 
@@ -99,17 +117,27 @@ def launch_benchmark(benchmarks: list, use_mps=False, use_tally=False, result=No
         process = subprocess.Popen(launch_cmd_list, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
         processes.append(process)
 
+        sel = selectors.DefaultSelector()
+        sel.register(process.stdout, selectors.EVENT_READ)
+        sel.register(process.stderr, selectors.EVENT_READ)
+        break_loop = False
+
         while True:
             poll = process.poll()
             if poll is not None:
                 abort = True
                 break
-            process.stdout.flush()
-            response = process.stdout.readline().strip()
-            if response:
-                print(response)
-            if "benchmark is warm" in response:
+        
+            for key, val1 in sel.select():
+                line = key.fileobj.readline()
+                if line:
+                    print(line, end="")
+                if not line or "benchmark is warm" in line:
+                    break_loop = True
+                    break
+            if break_loop:
                 break
+
             time.sleep(0.01)
 
     if abort:
