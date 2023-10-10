@@ -52,9 +52,11 @@ if __name__ == "__main__":
                     benchmarks.append(bench)
 
     init_env(use_mps, use_tally)
-    
+
     for benchmark in benchmarks:
         launch_benchmark([benchmark], result=result)
+        if use_tally:
+            launch_benchmark([benchmark], result=result, use_tally=use_tally)
         write_json_to_file(result, "result.json")
         execute_cmd("cp result.json result_copy.json")
 

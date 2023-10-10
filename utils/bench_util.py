@@ -39,17 +39,28 @@ def init_env(use_mps=False, use_tally=False):
     out, err = execute_cmd("nvidia-smi --query-gpu=compute_mode --format=csv", get_output=True)
     mode = out.split("compute_mode")[1].strip()
 
+    required_mode = ""
+
     if use_mps:
-        if mode != "Exclusive_Process":
-            raise Exception(f"GPU mode is not Exclusive_Process. Now: {mode}")
+        required_mode = "Exclusive_Process"
 
     elif use_tally:
-        if mode != "Default":
-            raise Exception(f"GPU mode is not Default. Now: {mode}")
+        scheduler_policy = os.environ.get("SCHEDULER_POLICY", "NAIVE")
+
+        if scheduler_policy == "WORKLOAD_AGNOSTIC_SHARING":
+            required_mode = "Exclusive_Process"
+        else:
+            required_mode = "Default"
+    else:
+        return
+
+    if mode != required_mode:
+        raise Exception(f"GPU mode is not {required_mode}. Now: {mode}")
+    
+    if use_tally and scheduler_policy != "WORKLOAD_AGNOSTIC_SHARING":
         start_iox_roudi()
 
 def tear_down_env():
-    shut_down_mps()
     shut_down_iox_roudi()
 
 def wait_for_signal():
@@ -84,13 +95,18 @@ def launch_benchmark(benchmarks: list, use_mps=False, use_tally=False, result=No
     processes = []
     abort = False
 
-    if use_tally:
-        shut_down_tally()
-        start_tally()
-
     if use_mps:
         shut_down_mps()
         start_mps()
+
+    elif use_tally:
+
+        if policy == "WORKLOAD_AGNOSTIC_SHARING":
+            shut_down_mps()
+            start_mps()
+        else:
+            shut_down_tally()
+            start_tally()
 
     for benchmark in benchmarks:
         
@@ -162,13 +178,15 @@ def launch_benchmark(benchmarks: list, use_mps=False, use_tally=False, result=No
         process = processes[i]
         process.wait()
         output = process.communicate()[0].strip()
-        result_dict = json.loads(output.split("\n")[-1])
+        try:
+            result_dict = json.loads(output.split("\n")[-1])
+        except Exception as e:
+            print(output.split("\n")[-1])
+            raise e
 
         bench = benchmarks[i]
         output_dict[f"{bench}_{i}"] = result_dict
         print(result_dict)
     
-    if use_tally:
-        shut_down_tally()
-    if use_mps:
-        shut_down_mps()
+    shut_down_tally()
+    shut_down_mps()
