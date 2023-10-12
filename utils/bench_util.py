@@ -11,7 +11,7 @@ import torch
 
 from utils.util import execute_cmd
 from utils.mps import start_mps, shut_down_mps
-from utils.tally import shut_down_tally, start_tally, tally_client_script, start_iox_roudi, shut_down_iox_roudi
+from utils.tally import shut_down_tally, start_tally, tally_client_script, start_iox_roudi, shut_down_iox_roudi, query_tally
 
 def set_deterministic(seed=42):
     random.seed(seed)
@@ -36,7 +36,7 @@ def get_bench_id(benchmarks: list):
 def init_env(use_mps=False, use_tally=False):
     tear_down_env()
 
-    out, err = execute_cmd("nvidia-smi --query-gpu=compute_mode --format=csv", get_output=True)
+    out, err, rc = execute_cmd("nvidia-smi --query-gpu=compute_mode --format=csv", get_output=True)
     mode = out.split("compute_mode")[1].strip()
 
     required_mode = ""
@@ -56,11 +56,10 @@ def init_env(use_mps=False, use_tally=False):
 
     if mode != required_mode:
         raise Exception(f"GPU mode is not {required_mode}. Now: {mode}")
-    
-    if use_tally and scheduler_policy != "WORKLOAD_AGNOSTIC_SHARING":
-        start_iox_roudi()
 
 def tear_down_env():
+    shut_down_tally()
+    shut_down_mps()
     shut_down_iox_roudi()
 
 def wait_for_signal():
@@ -95,98 +94,100 @@ def launch_benchmark(benchmarks: list, use_mps=False, use_tally=False, result=No
     processes = []
     abort = False
 
-    if use_mps:
-        shut_down_mps()
-        start_mps()
-
-    elif use_tally:
-
-        if policy == "WORKLOAD_AGNOSTIC_SHARING":
+    try:
+        if use_mps:
             shut_down_mps()
             start_mps()
-        else:
-            shut_down_tally()
-            start_tally()
 
-    for benchmark in benchmarks:
-        
-        launch_cmd = (f"python3 -u launch.py " +
-                        f"--framework {benchmark.framework} " +
-                        f"--benchmark {benchmark.model_name} " +
-                        f"--batch-size {benchmark.batch_size} " +
-                        f"--warmup-iters {benchmark.warmup_iters} " +
-                        f"--runtime {benchmark.runtime} " +
-                        f"--signal ")
-        
-        print(f"launch_cmd: {launch_cmd}")
-        
-        if benchmark.total_iters:
-            launch_cmd += f"--total-iters {benchmark.total_iters} "
+        elif use_tally:
 
-        if benchmark.amp:
-            launch_cmd += "--amp "
-        
-        if use_tally:
-            launch_cmd = f"{tally_client_script} {launch_cmd}"
+            if policy == "WORKLOAD_AGNOSTIC_SHARING":
+                shut_down_mps()
+                start_mps()
+            else:
+                shut_down_tally()
+                shut_down_iox_roudi
+                start_iox_roudi()
+                start_tally()
 
-        launch_cmd_list = launch_cmd.strip().split(" ")
-        process = subprocess.Popen(launch_cmd_list, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
-        processes.append(process)
+        for benchmark in benchmarks:
+            
+            launch_cmd = (f"python3 -u launch.py " +
+                            f"--framework {benchmark.framework} " +
+                            f"--benchmark {benchmark.model_name} " +
+                            f"--batch-size {benchmark.batch_size} " +
+                            f"--warmup-iters {benchmark.warmup_iters} " +
+                            f"--runtime {benchmark.runtime} " +
+                            f"--signal ")
+            
+            print(f"launch_cmd: {launch_cmd}")
+            
+            if benchmark.total_iters:
+                launch_cmd += f"--total-iters {benchmark.total_iters} "
 
-        sel = selectors.DefaultSelector()
-        sel.register(process.stdout, selectors.EVENT_READ)
-        sel.register(process.stderr, selectors.EVENT_READ)
-        break_loop = False
+            if benchmark.amp:
+                launch_cmd += "--amp "
+            
+            if use_tally:
+                launch_cmd = f"{tally_client_script} {launch_cmd}"
 
-        while True:
-            poll = process.poll()
-            if poll is not None:
-                abort = True
-                break
-        
-            for key, val1 in sel.select():
-                line = key.fileobj.readline()
-                if line:
-                    print(line, end="")
-                if not line or "benchmark is warm" in line:
-                    break_loop = True
+            launch_cmd_list = launch_cmd.strip().split(" ")
+            process = subprocess.Popen(launch_cmd_list, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+            processes.append(process)
+
+            sel = selectors.DefaultSelector()
+            sel.register(process.stdout, selectors.EVENT_READ)
+            sel.register(process.stderr, selectors.EVENT_READ)
+            break_loop = False
+
+            while True:
+                poll = process.poll()
+                if poll is not None or query_tally() == 1:
+                    abort = True
                     break
-            if break_loop:
-                break
+            
+                for key, val1 in sel.select(timeout=1):
+                    line = key.fileobj.readline()
+                    if line:
+                        print(line, end="")
+                    if not line or "benchmark is warm" in line:
+                        break_loop = True
+                        break
+                if break_loop:
+                    break
 
-            time.sleep(0.01)
+                time.sleep(0.01)
 
-    if abort:
-        print("Detect process abort. Terminating ...")
+        if abort:
+            print("Detect process abort.")
+            for process in processes:
+                process.kill()
+            raise Exception("Detect process abort.")
+
+        # All benchmarks should be warm, signal start
+        print("Setting start signals ...")
+
         for process in processes:
-            process.terminate()
-        std_out = process.stdout.readlines()
-        std_err = process.stderr.readlines()
-        for line in std_out + std_err:
-            print(line.strip())
-        shut_down_tally()
-        exit(1)
+            process.stdin.write("start\n")
+            process.stdin.flush()
+        
+        for i in range(len(processes)):
+            process = processes[i]
+            process.wait()
+            output = process.communicate()[0].strip()
+            try:
+                result_dict = json.loads(output.split("\n")[-1])
+            except Exception as e:
+                print(output.split("\n")[-1])
+                raise e
 
-    # All benchmarks should be warm, signal start
-    print("Setting start signals ...")
-
-    for process in processes:
-        process.stdin.write("start\n")
-        process.stdin.flush()
-    
-    for i in range(len(processes)):
-        process = processes[i]
-        process.wait()
-        output = process.communicate()[0].strip()
-        try:
-            result_dict = json.loads(output.split("\n")[-1])
-        except Exception as e:
-            print(output.split("\n")[-1])
-            raise e
-
-        bench = benchmarks[i]
-        output_dict[f"{bench}_{i}"] = result_dict
-        print(result_dict)
-    
-    shut_down_tally()
-    shut_down_mps()
+            bench = benchmarks[i]
+            output_dict[f"{bench}_{i}"] = result_dict
+            print(result_dict)
+            
+        print(bench_id)
+    except Exception as e:
+        print(f"Caught exception when running the benchmark: Error: {e}")
+        time.sleep(10)
+    finally:
+        tear_down_env()

@@ -8,6 +8,8 @@ iox_roudi_kill_script = "./tally/scripts/kill_iox.sh"
 tally_start_script = "./tally/scripts/start_server.sh"
 tally_kill_script = "./tally/scripts/kill_server.sh"
 
+tally_query_script = "./tally/scripts/query_server.sh"
+
 tally_client_script = "./tally/scripts/start_client.sh"
 
 def start_iox_roudi():
@@ -30,3 +32,8 @@ def shut_down_tally():
     print("Shutting down Tally server ...")
     stop_tally_cmd = f"bash {tally_kill_script}"
     execute_cmd(stop_tally_cmd)
+
+def query_tally():
+    query_tally_cmd = f"bash {tally_query_script}"
+    _, _, rc = execute_cmd(query_tally_cmd, get_output=True)
+    return rc

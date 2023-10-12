@@ -8,7 +8,8 @@ def execute_cmd(cmd, get_output=False):
         process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
         process.wait()
         out, err = process.communicate()
-        return out, err
+        rc = process.returncode
+        return out, err, rc
     else:
         process = subprocess.Popen(cmd, shell=True, universal_newlines=True)
         process.wait()

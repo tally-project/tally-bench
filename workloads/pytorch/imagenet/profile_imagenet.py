@@ -18,6 +18,7 @@ def benchmark_imagenet(model_name, batch_size, amp, warmup_iters, total_time,
         "epilogue_fusion": True,
         "max_autotune": True,
         "triton.cudagraphs": False,
+        "aot_inductor.output_path": "/home/zhaowe58/.cache/torch_inductor"
     }
     model = torch.compile(model, backend='inductor', options=compile_options)
 
