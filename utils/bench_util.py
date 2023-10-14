@@ -142,7 +142,7 @@ def launch_benchmark(benchmarks: list, use_mps=False, use_tally=False, result=No
 
             while True:
                 poll = process.poll()
-                if poll is not None or query_tally() == 1:
+                if poll is not None or (use_tally and query_tally() == 1):
                     abort = True
                     break
             

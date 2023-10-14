@@ -15,7 +15,7 @@ benchmark_list = {
     },
     "pytorch": {
         "resnet50": [64],
-        "bert": [16, 32],
+        "bert": [16],
         "VGG": [64],
         "dcgan": [64],
         "LSTM": [64],
@@ -26,7 +26,7 @@ benchmark_list = {
 }
 
 use_mps = False
-use_tally = True
+use_tally = False
 assert(not (use_mps and use_tally))
 
 if __name__ == "__main__":
@@ -51,7 +51,7 @@ if __name__ == "__main__":
                     if model == "transformer" and amp:
                         continue
 
-                    bench = Benchmark(framework, model, batch_size, amp, warmup_iters=10, runtime=100)
+                    bench = Benchmark(framework, model, batch_size, amp, warmup_iters=100, runtime=60)
                     benchmarks.append(bench)
 
     init_env(use_mps, use_tally)
@@ -75,37 +75,39 @@ if __name__ == "__main__":
 
     random.shuffle(benchmark_pairs)
 
-    for pair in benchmark_pairs:
+    if use_tally or use_mps:
 
-        # Only run workload aware scheduler if the tally overhead is small (i.e. GPU bounded jobs)
-        if scheduler_policy == "WORKLOAD_AWARE_SHARING":
+        for pair in benchmark_pairs:
 
-            model_1_norm_speed, model_2_norm_speed = None, None
+            # Only run workload aware scheduler if the tally overhead is small (i.e. GPU bounded jobs)
+            if scheduler_policy == "WORKLOAD_AWARE_SHARING":
 
-            for res in single_job_result:
-                if res["model"] == str(pair[0]):
-                    model_1_norm_speed = res["tally_workload_aware"]
-                if res["model"] == str(pair[1]):
-                    model_2_norm_speed = res["tally_workload_aware"]
+                model_1_norm_speed, model_2_norm_speed = None, None
 
-            assert(model_1_norm_speed and model_2_norm_speed)
+                for res in single_job_result:
+                    if res["model"] == str(pair[0]):
+                        model_1_norm_speed = res["tally_workload_aware"]
+                    if res["model"] == str(pair[1]):
+                        model_2_norm_speed = res["tally_workload_aware"]
 
-            if model_1_norm_speed < 0.7 or model_2_norm_speed < 0.7:
-                print(f"Skipping workload-aware benchmark for {pair[0]} and {pair[1]}")
-                print(f"Norm speeds: {pair[0]}: {model_1_norm_speed} {pair[1]}: {model_2_norm_speed}")
+                assert(model_1_norm_speed and model_2_norm_speed)
+
+                if model_1_norm_speed < 0.7 or model_2_norm_speed < 0.7:
+                    print(f"Skipping workload-aware benchmark for {pair[0]} and {pair[1]}")
+                    print(f"Norm speeds: {pair[0]}: {model_1_norm_speed} {pair[1]}: {model_2_norm_speed}")
+                    continue
+
+            launch_benchmark(pair, use_mps=use_mps, use_tally=use_tally, result=result)
+            
+            if use_tally and scheduler_policy == "WORKLOAD_AWARE_SHARING":
                 continue
+            
+            write_json_to_file(result, "result.json")
+            execute_cmd("cp result.json result_copy.json")
 
-        launch_benchmark(pair, use_mps=use_mps, use_tally=use_tally, result=result)
-        
-        if use_tally and scheduler_policy == "WORKLOAD_AWARE_SHARING":
-            continue
-        
-        write_json_to_file(result, "result.json")
-        execute_cmd("cp result.json result_copy.json")
+    bench_1 = Benchmark("hidet", "resnet50", 64, True, warmup_iters=10, runtime=10)
+    bench_2 = Benchmark("hidet", "resnet50", 64, False, warmup_iters=10, runtime=10)
 
-    # bench_1 = Benchmark("hidet", "resnet50", 64, True, warmup_iters=10, runtime=10)
-    # bench_2 = Benchmark("hidet", "resnet50", 64, False, warmup_iters=10, runtime=10)
-
-    # launch_benchmark([bench_1, bench_2], use_mps=use_mps, use_tally=use_tally, result=result)
+    launch_benchmark([bench_1, bench_2], use_mps=use_mps, use_tally=use_tally, result=result)
 
     tear_down_env()
