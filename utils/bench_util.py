@@ -120,8 +120,6 @@ def launch_benchmark(benchmarks: list, use_mps=False, use_tally=False, result=No
                             f"--runtime {benchmark.runtime} " +
                             f"--signal ")
             
-            print(f"launch_cmd: {launch_cmd}")
-            
             if benchmark.total_iters:
                 launch_cmd += f"--total-iters {benchmark.total_iters} "
 
@@ -130,6 +128,8 @@ def launch_benchmark(benchmarks: list, use_mps=False, use_tally=False, result=No
             
             if use_tally:
                 launch_cmd = f"{tally_client_script} {launch_cmd}"
+
+            print(f"launch_cmd: {launch_cmd}")
 
             launch_cmd_list = launch_cmd.strip().split(" ")
             process = subprocess.Popen(launch_cmd_list, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
@@ -142,8 +142,9 @@ def launch_benchmark(benchmarks: list, use_mps=False, use_tally=False, result=No
 
             while True:
                 poll = process.poll()
-                if poll is not None or (use_tally and query_tally() == 1):
+                if poll is not None or (use_tally and policy != "WORKLOAD_AGNOSTIC_SHARING" and query_tally() == 1):
                     abort = True
+                    output_dict["error"] = "Encountered error."
                     break
             
                 for key, val1 in sel.select(timeout=1):

@@ -26,7 +26,7 @@ benchmark_list = {
 }
 
 use_mps = False
-use_tally = False
+use_tally = True
 assert(not (use_mps and use_tally))
 
 if __name__ == "__main__":
@@ -73,14 +73,14 @@ if __name__ == "__main__":
 
             benchmark_pairs.append([bench_1, bench_2])
 
-    random.shuffle(benchmark_pairs)
+    # random.shuffle(benchmark_pairs)
 
     if use_tally or use_mps:
 
         for pair in benchmark_pairs:
 
             # Only run workload aware scheduler if the tally overhead is small (i.e. GPU bounded jobs)
-            if scheduler_policy == "WORKLOAD_AWARE_SHARING":
+            if use_tally and scheduler_policy == "WORKLOAD_AWARE_SHARING":
 
                 model_1_norm_speed, model_2_norm_speed = None, None
 
@@ -104,10 +104,5 @@ if __name__ == "__main__":
             
             write_json_to_file(result, "result.json")
             execute_cmd("cp result.json result_copy.json")
-
-    bench_1 = Benchmark("hidet", "resnet50", 64, True, warmup_iters=10, runtime=10)
-    bench_2 = Benchmark("hidet", "resnet50", 64, False, warmup_iters=10, runtime=10)
-
-    launch_benchmark([bench_1, bench_2], use_mps=use_mps, use_tally=use_tally, result=result)
 
     tear_down_env()
