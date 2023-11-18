@@ -83,6 +83,7 @@ def parse_result(file_name, single_job_result_out=None, co_locate_result_out=Non
         assert(job_1_clean in default_res and job_2_clean in default_res)
 
         result_row = {
+            "key": key,
             "model_1": job_1_clean, "model_2": job_2_clean,
             "model_1_mps": "", "model_2_mps": "",
             "model_1_tally_naive": "", "model_2_tally_naive": "",
@@ -110,6 +111,11 @@ def parse_result(file_name, single_job_result_out=None, co_locate_result_out=Non
 
     if co_locate_result_out:
         co_locate_df = pd.DataFrame(co_locate_result)
+        co_locate_df["mps_sum"] = pd.to_numeric((co_locate_df["model_1_mps"] + co_locate_df["model_2_mps"])).round(2)
+        co_locate_df["tally_agnostic_sum"] = pd.to_numeric((co_locate_df["model_1_tally_agnostic"] + co_locate_df["model_2_tally_agnostic"])).round(2)
+        co_locate_df["tally_aware_sum"] = pd.to_numeric((co_locate_df["model_1_tally_aware"] + co_locate_df["model_2_tally_aware"])).round(2)
+        co_locate_df["speedup"] = pd.to_numeric((co_locate_df["tally_agnostic_sum"] / co_locate_df["mps_sum"])).round(2)
+        co_locate_df = co_locate_df.sort_values(by='speedup', ascending=False)
         co_locate_df.to_csv(co_locate_result_out, index=True)
 
     return single_job_result, co_locate_result

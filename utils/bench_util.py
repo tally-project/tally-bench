@@ -176,6 +176,7 @@ def launch_benchmark(benchmarks: list, use_mps=False, use_tally=False, result=No
             process = processes[i]
             process.wait()
             output = process.communicate()[0].strip()
+            print(output)
             try:
                 result_dict = json.loads(output.split("\n")[-1])
             except Exception as e:
@@ -184,7 +185,8 @@ def launch_benchmark(benchmarks: list, use_mps=False, use_tally=False, result=No
 
             bench = benchmarks[i]
             output_dict[f"{bench}_{i}"] = result_dict
-            print(result_dict)
+        
+        print(output_dict)
             
         print(bench_id)
     except Exception as e:

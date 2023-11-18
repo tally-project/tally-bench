@@ -6,7 +6,7 @@ sys.path.append('utils')
 
 from utils.util import load_json_from_file, write_json_to_file, execute_cmd
 from utils.bench import Benchmark
-from utils.bench_util import launch_benchmark, init_env, tear_down_env
+from utils.bench_util import launch_benchmark, init_env, tear_down_env, get_bench_id
 from utils.parse import parse_result
 
 benchmark_list = {
@@ -16,7 +16,6 @@ benchmark_list = {
     "pytorch": {
         "resnet50": [64],
         "bert": [16],
-        "VGG": [64],
         "dcgan": [64],
         "LSTM": [64],
         "NeuMF-pre": [64],
@@ -25,6 +24,33 @@ benchmark_list = {
     }
 }
 
+# Manually specify which pair has tuned all kernel pair configs
+prepared_workload_aware = [
+    "pytorch_bert_16_pytorch_pointnet_64",
+    "hidet_resnet50_64_amp_pytorch_pointnet_64",
+    "pytorch_pointnet_64_pytorch_pointnet_64",
+    "hidet_resnet50_64_amp_pytorch_bert_16_amp",
+    "hidet_resnet50_64_amp_hidet_resnet50_64_amp",
+    "hidet_resnet50_64_amp_hidet_resnet50_64",
+    "pytorch_bert_16_amp_pytorch_bert_16",
+    "hidet_resnet50_64_amp_pytorch_bert_16",
+    "pytorch_resnet50_64_amp_pytorch_pointnet_64",
+    "hidet_resnet50_64_amp_pytorch_resnet50_64_amp",
+    "pytorch_bert_16_amp_pytorch_pointnet_64",
+    "hidet_resnet50_64_amp_pytorch_resnet50_64",
+    "hidet_resnet50_64_pytorch_pointnet_64",
+    "pytorch_bert_16_amp_pytorch_bert_16_amp",
+    "pytorch_resnet50_64_amp_pytorch_bert_16",
+    "pytorch_bert_16_pytorch_bert_16",
+    "pytorch_resnet50_64_pytorch_bert_16_amp",
+    "pytorch_resnet50_64_pytorch_pointnet_64",
+    "pytorch_resnet50_64_amp_pytorch_bert_16_amp",
+    "hidet_resnet50_64_pytorch_bert_16_amp",
+    "hidet_resnet50_64_pytorch_resnet50_64_amp"
+]
+
+# Benchmark options
+save_results = False
 use_mps = False
 use_tally = True
 assert(not (use_mps and use_tally))
@@ -40,7 +66,7 @@ if __name__ == "__main__":
 
     result = load_json_from_file("result.json")
     single_job_result, co_locate_result = parse_result("result.json")
-    
+
     benchmarks = []
 
     for framework in benchmark_list:
@@ -51,7 +77,7 @@ if __name__ == "__main__":
                     if model == "transformer" and amp:
                         continue
 
-                    bench = Benchmark(framework, model, batch_size, amp, warmup_iters=100, runtime=60)
+                    bench = Benchmark(framework, model, batch_size, amp, warmup_iters=100, runtime=1200)
                     benchmarks.append(bench)
 
     init_env(use_mps, use_tally)
@@ -60,8 +86,9 @@ if __name__ == "__main__":
         launch_benchmark([benchmark], result=result)
         if use_tally:
             launch_benchmark([benchmark], result=result, use_tally=use_tally)
-        write_json_to_file(result, "result.json")
-        execute_cmd("cp result.json result_copy.json")
+        if save_results:
+            write_json_to_file(result, "result.json")
+            execute_cmd("cp result.json result_copy.json")
 
     benchmark_pairs = []
 
@@ -73,7 +100,7 @@ if __name__ == "__main__":
 
             benchmark_pairs.append([bench_1, bench_2])
 
-    # random.shuffle(benchmark_pairs)
+    random.shuffle(benchmark_pairs)
 
     if use_tally or use_mps:
 
@@ -97,12 +124,22 @@ if __name__ == "__main__":
                     print(f"Norm speeds: {pair[0]}: {model_1_norm_speed} {pair[1]}: {model_2_norm_speed}")
                     continue
 
+                bench_id = get_bench_id(pair)
+
+                # Skip already prepared model pairs
+                if not save_results:
+                    if bench_id in prepared_workload_aware:
+                        print(f"Skipping workload-aware benchmark for {pair[0]} and {pair[1]} as all kernel pairs have been tuned")
+                        continue
+                else:
+                    if bench_id not in prepared_workload_aware:
+                        print(f"Skipping workload-aware benchmark for {pair[0]} and {pair[1]} as not all kernel pairs have been tuned")
+                        continue
+
             launch_benchmark(pair, use_mps=use_mps, use_tally=use_tally, result=result)
             
-            if use_tally and scheduler_policy == "WORKLOAD_AWARE_SHARING":
-                continue
-            
-            write_json_to_file(result, "result.json")
-            execute_cmd("cp result.json result_copy.json")
+            if save_results:
+                write_json_to_file(result, "result.json")
+                execute_cmd("cp result.json result_copy.json")
 
     tear_down_env()
