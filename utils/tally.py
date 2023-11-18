@@ -11,6 +11,7 @@ tally_kill_script = "./tally/scripts/kill_server.sh"
 tally_query_script = "./tally/scripts/query_server.sh"
 
 tally_client_script = "./tally/scripts/start_client.sh"
+tally_client_local_script = "./tally/scripts/start_client_local.sh"
 
 def start_iox_roudi():
     print("Starting Iox Roudi ...")

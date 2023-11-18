@@ -6,12 +6,33 @@ import os
 import random
 import numpy as np
 import selectors
+import logging
+import select
 
 import torch
 
 from utils.util import execute_cmd
 from utils.mps import start_mps, shut_down_mps
-from utils.tally import shut_down_tally, start_tally, tally_client_script, start_iox_roudi, shut_down_iox_roudi, query_tally
+from utils.tally import (
+    shut_down_tally,
+    start_tally,
+    tally_client_script,
+    tally_client_local_script, 
+    start_iox_roudi,
+    shut_down_iox_roudi,
+    query_tally
+)
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.DEBUG)
+
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+console_handler.setFormatter(formatter)
+
+logger.addHandler(console_handler)
 
 def set_deterministic(seed=42):
     random.seed(seed)
@@ -63,12 +84,16 @@ def tear_down_env():
     shut_down_iox_roudi()
 
 def wait_for_signal():
+
+    logger.info("benchmark is warm")
+
     while True:
-        print("benchmark is warm\n", flush=True)
         sys.stdin.flush()
-        inp = sys.stdin.readline()
-        if "start" in inp:
-            break
+        timeout = 2
+        if select.select([sys.stdin], [], [], timeout)[0]:
+            line = sys.stdin.readline()
+            if "start" in line:
+                break
 
 def launch_benchmark(benchmarks: list, use_mps=False, use_tally=False, result=None):
 
@@ -128,11 +153,17 @@ def launch_benchmark(benchmarks: list, use_mps=False, use_tally=False, result=No
             
             if use_tally:
                 launch_cmd = f"{tally_client_script} {launch_cmd}"
+            else:
+                launch_cmd = f"{tally_client_local_script} {launch_cmd}"
 
             print(f"launch_cmd: {launch_cmd}")
 
             launch_cmd_list = launch_cmd.strip().split(" ")
             process = subprocess.Popen(launch_cmd_list, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+            stdout_fd = process.stdout.fileno()
+            stderr_fd = process.stderr.fileno()
+            os.set_blocking(stdout_fd, False)
+            os.set_blocking(stderr_fd, False)
             processes.append(process)
 
             sel = selectors.DefaultSelector()
@@ -150,7 +181,7 @@ def launch_benchmark(benchmarks: list, use_mps=False, use_tally=False, result=No
                 for key, val1 in sel.select(timeout=1):
                     line = key.fileobj.readline()
                     if line:
-                        print(line, end="")
+                        print(line.strip())
                     if not line or "benchmark is warm" in line:
                         break_loop = True
                         break
@@ -177,18 +208,22 @@ def launch_benchmark(benchmarks: list, use_mps=False, use_tally=False, result=No
             process.wait()
             output = process.communicate()[0].strip()
             print(output)
-            try:
-                result_dict = json.loads(output.split("\n")[-1])
-            except Exception as e:
-                print(output.split("\n")[-1])
-                raise e
-
+            output_lines = output.split("\n")
+            result_dict = None
+            for line in output_lines:
+                try:
+                    result_dict = json.loads(line)
+                    break
+                except:
+                    pass
+            if not result_dict:
+                raise Exception("Cannot parse result dict")
             bench = benchmarks[i]
             output_dict[f"{bench}_{i}"] = result_dict
-        
+
         print(output_dict)
-            
         print(bench_id)
+
     except Exception as e:
         print(f"Caught exception when running the benchmark: Error: {e}")
         time.sleep(10)
