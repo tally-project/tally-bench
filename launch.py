@@ -1,6 +1,4 @@
 import sys
-import os
-import random
 import argparse
 import json
 
@@ -21,6 +19,7 @@ from workloads.pytorch.lstm.profile_lstm import benchmark_lstm
 from workloads.pytorch.ncf.profile_ncf import benchmark_ncf
 from workloads.pytorch.pointnet.profile_pointnet import benchmark_pointnet
 from workloads.pytorch.translation.profile_transformer import benchmark_transformer
+from workloads.pytorch.yolov6.profile_yolov6 import benchmark_yolov6
 
 parser = argparse.ArgumentParser(prog="benchmark launcher", description="Launch a benchmark")
 
@@ -47,7 +46,8 @@ benchmark_list = {
         "LSTM": benchmark_lstm,
         "NeuMF-pre": benchmark_ncf,
         "pointnet": benchmark_pointnet,
-        "transformer": benchmark_transformer
+        "transformer": benchmark_transformer,
+        "yolov6n": benchmark_yolov6
     }
 }
 

@@ -11,16 +11,16 @@ from utils.parse import parse_result
 
 benchmark_list = {
     "hidet": {
-        # "resnet50": [64]
+        "resnet50": [64]
     },
     "pytorch": {
-        # "resnet50": [64],
-        # "bert": [16],
-        # "dcgan": [64],
-        # "LSTM": [64],
-        # "NeuMF-pre": [64],
+        "resnet50": [64],
+        "bert": [16],
+        "dcgan": [64],
+        "LSTM": [64],
+        "NeuMF-pre": [64],
         "pointnet": [64],
-        # "transformer": [8]
+        "transformer": [8]
     }
 }
 
