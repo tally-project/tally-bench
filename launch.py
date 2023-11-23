@@ -1,6 +1,7 @@
 import sys
 import argparse
 import json
+import torch
 
 sys.path.append('workloads')
 sys.path.append('utils')
@@ -19,7 +20,6 @@ from workloads.pytorch.lstm.profile_lstm import benchmark_lstm
 from workloads.pytorch.ncf.profile_ncf import benchmark_ncf
 from workloads.pytorch.pointnet.profile_pointnet import benchmark_pointnet
 from workloads.pytorch.translation.profile_transformer import benchmark_transformer
-from workloads.pytorch.yolov6.profile_yolov6 import benchmark_yolov6
 
 parser = argparse.ArgumentParser(prog="benchmark launcher", description="Launch a benchmark")
 
@@ -47,14 +47,23 @@ benchmark_list = {
         "NeuMF-pre": benchmark_ncf,
         "pointnet": benchmark_pointnet,
         "transformer": benchmark_transformer,
-        "yolov6n": benchmark_yolov6
     }
 }
+
+def get_benchmark_func(framework, benchmark):
+
+    # Lazy loading yolo benchmark
+    if framework == "pytorch":
+        if benchmark in ["yolov6n"]:
+            from workloads.pytorch.yolov6.profile_yolov6 import benchmark_yolov6
+            return benchmark_yolov6
+
+    return benchmark_list[framework][benchmark]
 
 if __name__ == "__main__":
 
     # Retrieve benchmark function
-    benchmark_func = benchmark_list[args.framework][args.benchmark]
+    benchmark_func = get_benchmark_func(args.framework, args.benchmark)
 
     total_iters = args.total_iters if args.total_iters else None
     result_dict = {}
@@ -68,3 +77,5 @@ if __name__ == "__main__":
 
     # Print json format result
     print(json.dumps(dict(result_dict)))
+
+    # torch.cuda.profiler.stop()
