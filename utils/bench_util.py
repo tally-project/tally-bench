@@ -5,7 +5,6 @@ import json
 import os
 import random
 import numpy as np
-import selectors
 import logging
 import select
 
@@ -83,17 +82,18 @@ def tear_down_env():
     shut_down_mps()
     shut_down_iox_roudi()
 
-def wait_for_signal():
+def wait_for_signal(pipe_name):
 
-    logger.info("benchmark is warm")
+    with open(pipe_name, 'w') as pipe:
+        pipe.write("benchmark is warm\n")
 
-    while True:
-        sys.stdin.flush()
-        timeout = 2
-        if select.select([sys.stdin], [], [], timeout)[0]:
-            line = sys.stdin.readline()
-            if "start" in line:
-                break
+    with open(pipe_name, 'r') as pipe:
+        while True:
+            readable, _, _ = select.select([pipe], [], [], 1)
+            if readable:
+                line = pipe.readline()
+                if "start" in line:
+                    break
 
 def launch_benchmark(benchmarks: list, use_mps=False, use_tally=False, result=None):
 
@@ -135,15 +135,18 @@ def launch_benchmark(benchmarks: list, use_mps=False, use_tally=False, result=No
                 start_iox_roudi()
                 start_tally()
 
-        for benchmark in benchmarks:
-            
-            launch_cmd = (f"python3 -u launch.py " +
-                            f"--framework {benchmark.framework} " +
-                            f"--benchmark {benchmark.model_name} " +
-                            f"--batch-size {benchmark.batch_size} " +
-                            f"--warmup-iters {benchmark.warmup_iters} " +
-                            f"--runtime {benchmark.runtime} " +
-                            f"--signal ")
+        for idx, benchmark in enumerate(benchmarks):
+
+            pipe_name = f"/tmp/tally_bench_pipe_{idx}"
+
+            launch_cmd = (f"python3 -u scripts/launch.py "
+                            f"--framework {benchmark.framework} "
+                            f"--benchmark {benchmark.model_name} "
+                            f"--batch-size {benchmark.batch_size} "
+                            f"--warmup-iters {benchmark.warmup_iters} "
+                            f"--runtime {benchmark.runtime} "
+                            f"--signal "
+                            f"--pipe {pipe_name} ")
             
             if benchmark.total_iters:
                 launch_cmd += f"--total-iters {benchmark.total_iters} "
@@ -153,42 +156,35 @@ def launch_benchmark(benchmarks: list, use_mps=False, use_tally=False, result=No
             
             if use_tally:
                 launch_cmd = f"{tally_client_script} {launch_cmd}"
-            else:
-                launch_cmd = f"{tally_client_local_script} {launch_cmd}"
+            # else:
+            #     launch_cmd = f"{tally_client_local_script} {launch_cmd}"
 
             print(f"launch_cmd: {launch_cmd}")
 
             launch_cmd_list = launch_cmd.strip().split(" ")
             process = subprocess.Popen(launch_cmd_list, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
-            stdout_fd = process.stdout.fileno()
-            stderr_fd = process.stderr.fileno()
-            os.set_blocking(stdout_fd, False)
-            os.set_blocking(stderr_fd, False)
             processes.append(process)
 
-            sel = selectors.DefaultSelector()
-            sel.register(process.stdout, selectors.EVENT_READ)
-            sel.register(process.stderr, selectors.EVENT_READ)
-            break_loop = False
-
+            try:
+                os.mkfifo(pipe_name)
+            except OSError:
+                pass
+        
             while True:
                 poll = process.poll()
                 if poll is not None or (use_tally and policy != "WORKLOAD_AGNOSTIC_SHARING" and query_tally() == 1):
                     abort = True
                     output_dict["error"] = "Encountered error."
                     break
-            
-                for key, val1 in sel.select(timeout=1):
-                    line = key.fileobj.readline()
-                    if line:
-                        print(line.strip())
-                    if not line or "benchmark is warm" in line:
-                        break_loop = True
-                        break
-                if break_loop:
-                    break
 
-                time.sleep(0.01)
+                # Note this will block indefinitely if the client aborts
+                with open(pipe_name, 'r') as fifo:
+                    readable, _, _ = select.select([fifo], [], [], 1)
+                    if readable:
+                        line = fifo.readline()
+                        if "benchmark is warm" in line:
+                            print("benchmark is warm")
+                            break
 
         if abort:
             print("Detect process abort.")
@@ -199,9 +195,11 @@ def launch_benchmark(benchmarks: list, use_mps=False, use_tally=False, result=No
         # All benchmarks should be warm, signal start
         print("Setting start signals ...")
 
-        for process in processes:
-            process.stdin.write("start\n")
-            process.stdin.flush()
+        for i in range(len(processes)):
+            pipe_name = f"/tmp/tally_bench_pipe_{i}"
+
+            with open(pipe_name, 'w') as pipe:
+                pipe.write("start\n")
         
         for i in range(len(processes)):
             process = processes[i]

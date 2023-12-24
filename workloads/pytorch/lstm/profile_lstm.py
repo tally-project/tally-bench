@@ -18,7 +18,7 @@ def repackage_hidden(h):
 
 # Training
 def benchmark_lstm(model_name, batch_size, amp, warmup_iters, total_time,
-                    total_iters=None, result_dict=None, signal=False,
+                    total_iters=None, result_dict=None, signal=False, pipe=None,
                     data_dir='./data/wikitext-2', bptt=35, emsize=200,
                     nhead=2, nhid=200, nlayers=2, dropout=0.2, tied=False):
     device = 'cuda'
@@ -144,7 +144,7 @@ def benchmark_lstm(model_name, batch_size, amp, warmup_iters, total_time,
                 warm = True
 
                 if signal:
-                    wait_for_signal()
+                    wait_for_signal(pipe)
 
                 start_time = time.time()
                 print("Measurement starts ...")

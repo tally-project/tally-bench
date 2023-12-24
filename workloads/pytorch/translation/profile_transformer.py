@@ -82,7 +82,7 @@ def prepare_dataloaders(data, distributed, batch_size):
 
 
 # Training
-def benchmark_transformer(model_name, batch_size, amp, warmup_iters, total_time, total_iters=None, result_dict=None, signal=False,
+def benchmark_transformer(model_name, batch_size, amp, warmup_iters, total_time, total_iters=None, result_dict=None, signal=False, pipe=None,
                     data='./data/multi30k/multi30k.atok.low.pt', master_addr=None, embs_share_weight=False, proj_share_weight=True,
                     d_k=64, d_v=64, d_model=512, d_word_vec=512, d_inner_hid=2048, n_layers=6, n_head=8, dropout=0.1,
                     n_warmup_steps=4000, label_smoothing=True):
@@ -181,7 +181,7 @@ def benchmark_transformer(model_name, batch_size, amp, warmup_iters, total_time,
                 warm = True
 
                 if signal:
-                    wait_for_signal()
+                    wait_for_signal(pipe)
 
                 start_time = time.time()
                 print("Measurement starts ...")

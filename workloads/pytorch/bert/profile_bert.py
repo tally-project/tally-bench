@@ -40,7 +40,7 @@ def load_and_cache_examples(tokenizer, version_2_with_negative, data_dir=None,
 
 # Training
 def benchmark_bert(model_name, batch_size, amp, warmup_iters, total_time, total_iters=None, result_dict=None, signal=False,
-                   model_type='bert', config_name="", model_name_or_path='bert-base-uncased', cache_dir="./data",
+                   pipe=None, model_type='bert', config_name="", model_name_or_path='bert-base-uncased', cache_dir="./data",
                    tokenizer_name="", do_lower_case=True, weight_decay=0.0, learning_rate=5e-5, adam_epsilon=1e-8,
                    version_2_with_negative=True, lang_id=0):
 
@@ -65,12 +65,12 @@ def benchmark_bert(model_name, batch_size, amp, warmup_iters, total_time, total_
 
     model = model.cuda()
 
-    compile_options = {
-        "epilogue_fusion": True,
-        "max_autotune": True,
-        "triton.cudagraphs": False,
-    }
-    model = torch.compile(model, backend='inductor', options=compile_options)
+    # compile_options = {
+    #     "epilogue_fusion": True,
+    #     "max_autotune": True,
+    #     "triton.cudagraphs": False,
+    # }
+    # model = torch.compile(model, backend='inductor', options=compile_options)
 
     if amp:
         scaler = torch.cuda.amp.GradScaler(enabled=True)
@@ -162,7 +162,7 @@ def benchmark_bert(model_name, batch_size, amp, warmup_iters, total_time, total_
                 warm = True
 
                 if signal:
-                    wait_for_signal()
+                    wait_for_signal(pipe)
 
                 start_time = time.time()
                 print("Measurement starts ...")

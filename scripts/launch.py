@@ -1,10 +1,10 @@
 import sys
 import argparse
 import json
-import torch
 
-sys.path.append('workloads')
-sys.path.append('utils')
+sys.path.append('.')
+# sys.path.append('workloads')
+# sys.path.append('utils')
 
 from utils.bench_util import set_deterministic
 
@@ -31,6 +31,7 @@ parser.add_argument("--warmup-iters", type=int, default=10)
 parser.add_argument("--total-iters", type=int, default=0)
 parser.add_argument("--runtime", type=int, default=10)
 parser.add_argument("--signal", action="store_true", default=False)
+parser.add_argument("--pipe", type=str, default="")
 
 args = parser.parse_args()
 
@@ -62,6 +63,9 @@ def get_benchmark_func(framework, benchmark):
 
 if __name__ == "__main__":
 
+    if args.signal:
+        assert(args.pipe)
+
     # Retrieve benchmark function
     benchmark_func = get_benchmark_func(args.framework, args.benchmark)
 
@@ -71,11 +75,9 @@ if __name__ == "__main__":
     print(f"Running framework: {args.framework} benchmark: {args.benchmark} Batch size: {args.batch_size} amp: {args.amp}")
 
     benchmark_func(args.benchmark, args.batch_size, args.amp, args.warmup_iters,
-                   args.runtime, total_iters, result_dict, args.signal)
+                   args.runtime, total_iters, result_dict, args.signal, args.pipe)
     
     print(f"Benchmark: {args.benchmark} Time: {result_dict['time_elapsed']} Iterations: {result_dict['iters']}")
 
     # Print json format result
     print(json.dumps(dict(result_dict)))
-
-    # torch.cuda.profiler.stop()

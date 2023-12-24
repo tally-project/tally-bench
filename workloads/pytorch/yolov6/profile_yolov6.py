@@ -27,7 +27,7 @@ from yolov6.utils.general import increment_name, find_latest_checkpoint, check_i
 
 class TallyYoloTrainer(Trainer):
 
-    def __init__(self, args, cfg, device, warmup_iters, total_time, total_iters, result_dict, signal):
+    def __init__(self, args, cfg, device, warmup_iters, total_time, total_iters, result_dict, signal, pipe):
         super().__init__(args, cfg, device)
         self.start_time = None
         self.num_iters = 0
@@ -40,6 +40,7 @@ class TallyYoloTrainer(Trainer):
         self.total_iters = total_iters
         self.finished = False
         self.time_elapsed = None
+        self.pipe = pipe
 
     # Training Process
     def train(self):
@@ -94,7 +95,7 @@ class TallyYoloTrainer(Trainer):
                     self.warm = True
 
                     if self.signal:
-                        wait_for_signal()
+                        wait_for_signal(self.pipe)
 
                     self.start_time = time.time()
                     print("Measurement starts ...")
@@ -108,11 +109,11 @@ class TallyYoloTrainer(Trainer):
 
 
 def benchmark_yolov6(model_name, batch_size, amp, warmup_iters, total_time,
-                   total_iters=None, result_dict=None, signal=False):
+                   total_iters=None, result_dict=None, signal=False, pipe=None):
     '''main function of training'''
 
     args = argparse.Namespace()
-    args.data_path = str(curr_dir / f"YOLOv6/data/coco.yaml")
+    args.data_path = str(curr_dir / f"YOLOv6/data/coco_new.yaml")
     args.conf_file = str(curr_dir / f"YOLOv6/configs/{model_name}.py")
     args.img_size = 416
     args.rect = False
@@ -161,7 +162,7 @@ def benchmark_yolov6(model_name, batch_size, amp, warmup_iters, total_time,
                 init_method=args.dist_url, rank=args.local_rank, world_size=args.world_size,timeout=datetime.timedelta(seconds=7200))
 
     # Start
-    trainer = TallyYoloTrainer(args, cfg, device, warmup_iters, total_time, total_iters, result_dict, signal)
+    trainer = TallyYoloTrainer(args, cfg, device, warmup_iters, total_time, total_iters, result_dict, signal, pipe)
     # PTQ
     if args.quant and args.calib:
         trainer.calibrate(cfg)

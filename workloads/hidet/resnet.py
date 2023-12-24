@@ -6,7 +6,7 @@ import torch
 from utils.bench_util import wait_for_signal
 
 def run_resnet(model_name, batch_size, amp, warmup_iters, total_time,
-               total_iters=None, result_dict=None, signal=False):
+               total_iters=None, result_dict=None, signal=False, pipe=None):
 
     hidet.torch.dynamo_config.use_cuda_graph(False)
 
@@ -54,7 +54,7 @@ def run_resnet(model_name, batch_size, amp, warmup_iters, total_time,
             warm = True
 
             if signal:
-                wait_for_signal()
+                wait_for_signal(pipe)
 
             start_time = time.time()
             print("Measurement starts ...")

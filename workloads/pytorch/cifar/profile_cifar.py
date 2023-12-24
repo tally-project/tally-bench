@@ -10,7 +10,7 @@ from utils.bench_util import wait_for_signal
 
 # Training
 def benchmark_cifar(model_name, batch_size, amp, warmup_iters, total_time,
-                        total_iters=None, result_dict=None, signal=False):
+                        total_iters=None, result_dict=None, signal=False, pipe=None):
     device = 'cuda'
 
     if model_name == 'VGG':
@@ -22,12 +22,12 @@ def benchmark_cifar(model_name, batch_size, amp, warmup_iters, total_time,
 
     model = model.cuda()
 
-    compile_options = {
-        "epilogue_fusion": True,
-        "max_autotune": True,
-        "triton.cudagraphs": False,
-    }
-    model = torch.compile(model, backend='inductor', options=compile_options)
+    # compile_options = {
+    #     "epilogue_fusion": True,
+    #     "max_autotune": True,
+    #     "triton.cudagraphs": False,
+    # }
+    # model = torch.compile(model, backend='inductor', options=compile_options)
 
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=5e-4)
@@ -94,7 +94,7 @@ def benchmark_cifar(model_name, batch_size, amp, warmup_iters, total_time,
                 warm = True
 
                 if signal:
-                    wait_for_signal()
+                    wait_for_signal(pipe)
 
                 start_time = time.time()
                 print("Measurement starts ...")

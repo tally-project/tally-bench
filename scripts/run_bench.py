@@ -2,7 +2,7 @@ import sys
 import os
 import random
 
-sys.path.append('utils')
+sys.path.append('.')
 
 from utils.util import load_json_from_file, write_json_to_file, execute_cmd
 from utils.bench import Benchmark
@@ -20,39 +20,18 @@ benchmark_list = {
         "LSTM": [64],
         "NeuMF-pre": [64],
         "pointnet": [64],
-        "transformer": [8]
+        "transformer": [8],
+        "yolov6n": [8]
     }
 }
 
 # Manually specify which pair has tuned all kernel pair configs
-prepared_workload_aware = [
-    "pytorch_bert_16_pytorch_pointnet_64",
-    "hidet_resnet50_64_amp_pytorch_pointnet_64",
-    "pytorch_pointnet_64_pytorch_pointnet_64",
-    "hidet_resnet50_64_amp_pytorch_bert_16_amp",
-    "hidet_resnet50_64_amp_hidet_resnet50_64_amp",
-    "hidet_resnet50_64_amp_hidet_resnet50_64",
-    "pytorch_bert_16_amp_pytorch_bert_16",
-    "hidet_resnet50_64_amp_pytorch_bert_16",
-    "pytorch_resnet50_64_amp_pytorch_pointnet_64",
-    "hidet_resnet50_64_amp_pytorch_resnet50_64_amp",
-    "pytorch_bert_16_amp_pytorch_pointnet_64",
-    "hidet_resnet50_64_amp_pytorch_resnet50_64",
-    "hidet_resnet50_64_pytorch_pointnet_64",
-    "pytorch_bert_16_amp_pytorch_bert_16_amp",
-    "pytorch_resnet50_64_amp_pytorch_bert_16",
-    "pytorch_bert_16_pytorch_bert_16",
-    "pytorch_resnet50_64_pytorch_bert_16_amp",
-    "pytorch_resnet50_64_pytorch_pointnet_64",
-    "pytorch_resnet50_64_amp_pytorch_bert_16_amp",
-    "hidet_resnet50_64_pytorch_bert_16_amp",
-    "hidet_resnet50_64_pytorch_resnet50_64_amp"
-]
+prepared_workload_aware = []
 
 # Benchmark options
 save_results = False
 use_mps = False
-use_tally = True
+use_tally = False
 assert(not (use_mps and use_tally))
 
 runtime = 10
@@ -75,7 +54,8 @@ if __name__ == "__main__":
     for framework in benchmark_list:
         for model in benchmark_list[framework]:
             for batch_size in benchmark_list[framework][model]:
-                for amp in [True, False]:
+                # for amp in [True, False]:
+                for amp in [False]:
 
                     if model == "transformer" and amp:
                         continue

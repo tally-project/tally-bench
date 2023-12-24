@@ -14,7 +14,7 @@ from utils.bench_util import wait_for_signal
 
 # Training
 def benchmark_dcgan(model_name, batch_size, amp, warmup_iters, total_time,
-                    total_iters=None, result_dict=None, signal=False,
+                    total_iters=None, result_dict=None, signal=False, pipe=None,
                     imageSize=64, nz=100, ngf=64, ndf=64, arg_netG='',
                     arg_netD='', lr=0.0002, beta1=0.5):
     device = 'cuda'
@@ -135,14 +135,14 @@ def benchmark_dcgan(model_name, batch_size, amp, warmup_iters, total_time,
     else:
         scaler = None
 
-    compile_options = {
-        "epilogue_fusion": True,
-        "max_autotune": True,
-        "triton.cudagraphs": False,
-    }
+    # compile_options = {
+    #     "epilogue_fusion": True,
+    #     "max_autotune": True,
+    #     "triton.cudagraphs": False,
+    # }
 
-    netG = torch.compile(netG, backend='inductor', options=compile_options)
-    netD = torch.compile(netD, backend='inductor', options=compile_options)
+    # netG = torch.compile(netG, backend='inductor', options=compile_options)
+    # netD = torch.compile(netD, backend='inductor', options=compile_options)
 
     start_time = None
     num_iters = 0
@@ -242,7 +242,7 @@ def benchmark_dcgan(model_name, batch_size, amp, warmup_iters, total_time,
                 warm = True
 
                 if signal:
-                    wait_for_signal()
+                    wait_for_signal(pipe)
 
                 start_time = time.time()
                 print("Measurement starts ...")
