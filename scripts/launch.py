@@ -1,25 +1,13 @@
 import sys
 import argparse
 import json
+import os
 
 sys.path.append('.')
-# sys.path.append('workloads')
-# sys.path.append('utils')
 
-from utils.bench_util import set_deterministic
+from utils.bench_util import set_deterministic, get_benchmark_func
 
 set_deterministic()
-
-from workloads.hidet.resnet import run_resnet as hidet_run_resnet
-
-from workloads.pytorch.imagenet.profile_imagenet import benchmark_imagenet
-from workloads.pytorch.bert.profile_bert import benchmark_bert
-from workloads.pytorch.cifar.profile_cifar import benchmark_cifar
-from workloads.pytorch.dcgan.profile_dcgan import benchmark_dcgan
-from workloads.pytorch.lstm.profile_lstm import benchmark_lstm
-from workloads.pytorch.ncf.profile_ncf import benchmark_ncf
-from workloads.pytorch.pointnet.profile_pointnet import benchmark_pointnet
-from workloads.pytorch.translation.profile_transformer import benchmark_transformer
 
 parser = argparse.ArgumentParser(prog="benchmark launcher", description="Launch a benchmark")
 
@@ -35,33 +23,9 @@ parser.add_argument("--pipe", type=str, default="")
 
 args = parser.parse_args()
 
-benchmark_list = {
-    "hidet": {
-        "resnet50": hidet_run_resnet
-    },
-    "pytorch": {
-        "resnet50": benchmark_imagenet,
-        "bert": benchmark_bert,
-        "VGG": benchmark_cifar,
-        "dcgan": benchmark_dcgan,
-        "LSTM": benchmark_lstm,
-        "NeuMF-pre": benchmark_ncf,
-        "pointnet": benchmark_pointnet,
-        "transformer": benchmark_transformer,
-    }
-}
-
-def get_benchmark_func(framework, benchmark):
-
-    # Lazy loading yolo benchmark
-    if framework == "pytorch":
-        if benchmark in ["yolov6n"]:
-            from workloads.pytorch.yolov6.profile_yolov6 import benchmark_yolov6
-            return benchmark_yolov6
-
-    return benchmark_list[framework][benchmark]
-
 if __name__ == "__main__":
+
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
     if args.signal:
         assert(args.pipe)

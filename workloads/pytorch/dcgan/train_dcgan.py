@@ -13,7 +13,7 @@ from torchvision import transforms
 from utils.bench_util import wait_for_signal
 
 # Training
-def benchmark_dcgan(model_name, batch_size, amp, warmup_iters, total_time,
+def train_dcgan(model_name, batch_size, amp, warmup_iters, total_time,
                     total_iters=None, result_dict=None, signal=False, pipe=None,
                     imageSize=64, nz=100, ngf=64, ndf=64, arg_netG='',
                     arg_netD='', lr=0.0002, beta1=0.5):

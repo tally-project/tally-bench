@@ -29,7 +29,7 @@ def loss_fn(output, label, trans_feat, feature_transform):
     return loss
 
 # Training
-def benchmark_pointnet(model_name, batch_size, amp, warmup_iters, total_time,
+def train_pointnet(model_name, batch_size, amp, warmup_iters, total_time,
                     total_iters=None, result_dict=None, signal=False, pipe=None,
                     data_dir="./data/shapenetcore", num_points=2500,
                     feature_transform=True):

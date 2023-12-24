@@ -13,7 +13,7 @@ import workloads.pytorch.ncf.data_utils as data_utils
 from utils.bench_util import wait_for_signal
 
 # Training
-def benchmark_ncf(model_name, batch_size, amp, warmup_iters, total_time,
+def train_ncf(model_name, batch_size, amp, warmup_iters, total_time,
                     total_iters=None, result_dict=None, signal=False, pipe=None,
                     num_ng=4, factor_num=32, num_layers=3, dropout=0.0, lr=0.001):
     

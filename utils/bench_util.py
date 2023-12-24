@@ -1,37 +1,17 @@
-import sys
-import subprocess
-import time
-import json
 import os
 import random
 import numpy as np
-import logging
 import select
 
 import torch
 
 from utils.util import execute_cmd
-from utils.mps import start_mps, shut_down_mps
+from utils.mps import shut_down_mps
 from utils.tally import (
     shut_down_tally,
-    start_tally,
-    tally_client_script,
-    tally_client_local_script, 
-    start_iox_roudi,
-    shut_down_iox_roudi,
-    query_tally
+    shut_down_iox_roudi
 )
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.DEBUG)
-
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-console_handler.setFormatter(formatter)
-
-logger.addHandler(console_handler)
 
 def set_deterministic(seed=42):
     random.seed(seed)
@@ -44,6 +24,7 @@ def set_deterministic(seed=42):
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.enabled = False
 
+
 def get_bench_id(benchmarks: list):
     _str = ""
     for i in range(len(benchmarks)):
@@ -52,7 +33,75 @@ def get_bench_id(benchmarks: list):
         if i != len(benchmarks) - 1:
             _str += "_"
     return _str
+
+
+def get_pipe_name(idx):
+    return f"/tmp/tally_bench_pipe_{idx}"
+
+
+def get_torch_compile_options():
+    compile_options = {
+        "epilogue_fusion": True,
+        "max_autotune": True,
+        "triton.cudagraphs": False
+    }
+
+    return compile_options
+
+
+def get_benchmark_func(framework, model_name):
+    bench_func = None
+
+    if framework == "hidet":
+        if model_name in ["resnet50"]:
+            from workloads.hidet.resnet import run_resnet as hidet_run_resnet
+            bench_func = hidet_run_resnet
+    
+    elif framework == "pytorch":
+
+        if model_name in ["resnet50"]:
+            from workloads.pytorch.resnet.train_resnet import train_resnet
+            bench_func = train_resnet
+
+        if model_name in ["bert"]:
+            from workloads.pytorch.bert.train_bert import train_bert
+            bench_func = train_bert
+
+        if model_name in ["VGG", "ShuffleNetV2"]:
+            from workloads.pytorch.cifar.train_cifar import train_cifar
+            bench_func = train_cifar
+
+        if model_name in ["dcgan"]:
+            from workloads.pytorch.dcgan.train_dcgan import train_dcgan
+            bench_func = train_dcgan
+
+        if model_name in ["LSTM"]:
+            from workloads.pytorch.lstm.train_lstm import train_lstm
+            bench_func = train_lstm
+
+        if model_name in ["NeuMF-pre"]:
+            from workloads.pytorch.ncf.train_ncf import train_ncf
+            bench_func = train_ncf
         
+        if model_name in ["pointnet"]:
+            from workloads.pytorch.pointnet.train_pointnet import train_pointnet
+            bench_func = train_pointnet
+
+        if model_name in ["transformer"]:
+            from workloads.pytorch.transformer.train_transformer import train_transformer
+            bench_func = train_transformer
+
+        if model_name in ["yolov6n"]:
+            from workloads.pytorch.yolov6.train_yolov6 import train_yolov6
+            bench_func = train_yolov6
+    
+        if model_name in ["pegasus-x-base", "pegasus-large"]:
+            from workloads.pytorch.pegasus.train_pegasus import train_pegasus
+            bench_func = train_pegasus
+
+    return bench_func
+
+  
 def init_env(use_mps=False, use_tally=False):
     tear_down_env()
 
@@ -77,10 +126,12 @@ def init_env(use_mps=False, use_tally=False):
     if mode != required_mode:
         raise Exception(f"GPU mode is not {required_mode}. Now: {mode}")
 
+
 def tear_down_env():
     shut_down_tally()
     shut_down_mps()
     shut_down_iox_roudi()
+
 
 def wait_for_signal(pipe_name):
 
@@ -94,136 +145,3 @@ def wait_for_signal(pipe_name):
                 line = pipe.readline()
                 if "start" in line:
                     break
-
-def launch_benchmark(benchmarks: list, use_mps=False, use_tally=False, result=None):
-
-    output_dict = None
-    result_key = "default"
-
-    if use_mps:
-        result_key = "mps"
-    elif use_tally:
-        policy = os.environ.get("SCHEDULER_POLICY", "NAIVE")
-        result_key = f"tally_{policy}".lower()
-    
-    if result_key not in result:
-        result[result_key] = {}
-
-    bench_id = get_bench_id(benchmarks)
-    if bench_id in result[result_key]:
-        return
-    
-    result[result_key][bench_id] = {}
-    output_dict = result[result_key][bench_id]
-
-    processes = []
-    abort = False
-
-    try:
-        if use_mps:
-            shut_down_mps()
-            start_mps()
-
-        elif use_tally:
-
-            if policy == "WORKLOAD_AGNOSTIC_SHARING":
-                shut_down_mps()
-                start_mps()
-            else:
-                shut_down_tally()
-                shut_down_iox_roudi
-                start_iox_roudi()
-                start_tally()
-
-        for idx, benchmark in enumerate(benchmarks):
-
-            pipe_name = f"/tmp/tally_bench_pipe_{idx}"
-
-            launch_cmd = (f"python3 -u scripts/launch.py "
-                            f"--framework {benchmark.framework} "
-                            f"--benchmark {benchmark.model_name} "
-                            f"--batch-size {benchmark.batch_size} "
-                            f"--warmup-iters {benchmark.warmup_iters} "
-                            f"--runtime {benchmark.runtime} "
-                            f"--signal "
-                            f"--pipe {pipe_name} ")
-            
-            if benchmark.total_iters:
-                launch_cmd += f"--total-iters {benchmark.total_iters} "
-
-            if benchmark.amp:
-                launch_cmd += "--amp "
-            
-            if use_tally:
-                launch_cmd = f"{tally_client_script} {launch_cmd}"
-            # else:
-            #     launch_cmd = f"{tally_client_local_script} {launch_cmd}"
-
-            print(f"launch_cmd: {launch_cmd}")
-
-            launch_cmd_list = launch_cmd.strip().split(" ")
-            process = subprocess.Popen(launch_cmd_list, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
-            processes.append(process)
-
-            try:
-                os.mkfifo(pipe_name)
-            except OSError:
-                pass
-        
-            while True:
-                poll = process.poll()
-                if poll is not None or (use_tally and policy != "WORKLOAD_AGNOSTIC_SHARING" and query_tally() == 1):
-                    abort = True
-                    output_dict["error"] = "Encountered error."
-                    break
-
-                # Note this will block indefinitely if the client aborts
-                with open(pipe_name, 'r') as fifo:
-                    readable, _, _ = select.select([fifo], [], [], 1)
-                    if readable:
-                        line = fifo.readline()
-                        if "benchmark is warm" in line:
-                            print("benchmark is warm")
-                            break
-
-        if abort:
-            print("Detect process abort.")
-            for process in processes:
-                process.kill()
-            raise Exception("Detect process abort.")
-
-        # All benchmarks should be warm, signal start
-        print("Setting start signals ...")
-
-        for i in range(len(processes)):
-            pipe_name = f"/tmp/tally_bench_pipe_{i}"
-
-            with open(pipe_name, 'w') as pipe:
-                pipe.write("start\n")
-        
-        for i in range(len(processes)):
-            process = processes[i]
-            process.wait()
-            output = process.communicate()[0].strip()
-            print(output)
-            output_lines = output.split("\n")
-            result_dict = None
-            for line in output_lines:
-                try:
-                    result_dict = json.loads(line)
-                    break
-                except:
-                    pass
-            if not result_dict:
-                raise Exception("Cannot parse result dict")
-            bench = benchmarks[i]
-            output_dict[f"{bench}_{i}"] = result_dict
-
-        print(output_dict)
-        print(bench_id)
-
-    except Exception as e:
-        print(f"Caught exception when running the benchmark: Error: {e}")
-        time.sleep(10)
-    finally:
-        tear_down_env()

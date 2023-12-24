@@ -108,7 +108,7 @@ class TallyYoloTrainer(Trainer):
             raise
 
 
-def benchmark_yolov6(model_name, batch_size, amp, warmup_iters, total_time,
+def train_yolov6(model_name, batch_size, amp, warmup_iters, total_time,
                    total_iters=None, result_dict=None, signal=False, pipe=None):
     '''main function of training'''
 

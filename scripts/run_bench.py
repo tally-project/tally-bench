@@ -5,8 +5,8 @@ import random
 sys.path.append('.')
 
 from utils.util import load_json_from_file, write_json_to_file, execute_cmd
-from utils.bench import Benchmark
-from utils.bench_util import launch_benchmark, init_env, tear_down_env, get_bench_id
+from utils.bench import Benchmark, launch_benchmark
+from utils.bench_util import init_env, tear_down_env
 from utils.parse import parse_result
 
 benchmark_list = {
@@ -21,7 +21,8 @@ benchmark_list = {
         "NeuMF-pre": [64],
         "pointnet": [64],
         "transformer": [8],
-        "yolov6n": [8]
+        "yolov6n": [8],
+        "pegasus-x-base": [1]
     }
 }
 

@@ -5,21 +5,16 @@ import torch.utils.data.distributed
 import time
 import torchvision
 
-from utils.bench_util import wait_for_signal
+from utils.bench_util import wait_for_signal, get_torch_compile_options
 
 # Training
-def benchmark_imagenet(model_name, batch_size, amp, warmup_iters, total_time,
+def train_resnet(model_name, batch_size, amp, warmup_iters, total_time,
                         total_iters=None, result_dict=None, signal=False, pipe=None):
 
     model = getattr(torchvision.models, model_name)()
     model = model.cuda()
 
-    # compile_options = {
-    #     "epilogue_fusion": True,
-    #     "max_autotune": True,
-    #     "triton.cudagraphs": False,
-    #     "aot_inductor.output_path": "/home/zhaowe58/.cache/torch_inductor"
-    # }
+    # compile_options = get_torch_compile_options()
     # model = torch.compile(model, backend='inductor', options=compile_options)
 
     data = torch.randn(batch_size, 3, 224, 224)

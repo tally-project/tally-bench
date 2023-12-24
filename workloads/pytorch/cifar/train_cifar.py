@@ -6,10 +6,10 @@ import time
 from torchvision import transforms
 
 from workloads.pytorch.cifar.models import *
-from utils.bench_util import wait_for_signal
+from utils.bench_util import wait_for_signal, get_torch_compile_options
 
 # Training
-def benchmark_cifar(model_name, batch_size, amp, warmup_iters, total_time,
+def train_cifar(model_name, batch_size, amp, warmup_iters, total_time,
                         total_iters=None, result_dict=None, signal=False, pipe=None):
     device = 'cuda'
 
@@ -22,11 +22,7 @@ def benchmark_cifar(model_name, batch_size, amp, warmup_iters, total_time,
 
     model = model.cuda()
 
-    # compile_options = {
-    #     "epilogue_fusion": True,
-    #     "max_autotune": True,
-    #     "triton.cudagraphs": False,
-    # }
+    # compile_options = get_torch_compile_options()
     # model = torch.compile(model, backend='inductor', options=compile_options)
 
     criterion = nn.CrossEntropyLoss()
