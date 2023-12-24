@@ -11,6 +11,7 @@ from workloads.pytorch.transformer.transformer import Constants
 from workloads.pytorch.transformer.dataset import TranslationDataset, paired_collate_fn
 from workloads.pytorch.transformer.transformer.Models import Transformer
 from workloads.pytorch.transformer.transformer.Optim import ScheduledOptim
+from workloads.pytorch.common.train_monitor import TrainMonitor
 
 from utils.bench_util import wait_for_signal
 
@@ -87,6 +88,7 @@ def train_transformer(model_name, batch_size, amp, warmup_iters, total_time, tot
                     d_k=64, d_v=64, d_model=512, d_word_vec=512, d_inner_hid=2048, n_layers=6, n_head=8, dropout=0.1,
                     n_warmup_steps=4000, label_smoothing=True):
     device = 'cuda'
+    train_monitor = TrainMonitor(warmup_iters, total_time, total_iters, result_dict, signal, pipe)
 
     data = torch.load(data)
     max_token_seq_len = data['settings'].max_token_seq_len
@@ -126,21 +128,17 @@ def train_transformer(model_name, batch_size, amp, warmup_iters, total_time, tot
     else:
         scaler = None
 
-    compile_options = {
-        "epilogue_fusion": True,
-        "max_autotune": True,
-        "triton.cudagraphs": False,
-    }
-    model = torch.compile(model, backend='inductor', options=compile_options)
+    # compile_options = {
+    #     "epilogue_fusion": True,
+    #     "max_autotune": True,
+    #     "triton.cudagraphs": False,
+    # }
+    # model = torch.compile(model, backend='inductor', options=compile_options)
 
-    start_time = None
-    num_iters = 0
-    warm_iters = 0
-    warm = False
     model.train()
 
     while True:
-        stop = False
+        should_training_stop = False
 
         for batch in tqdm(training_data, mininterval=2, desc='  - (Training)   ', leave=False):
             src_seq, src_pos, tgt_seq, tgt_pos = map(lambda x: x.to(device), batch)
@@ -161,39 +159,15 @@ def train_transformer(model_name, batch_size, amp, warmup_iters, total_time, tot
                 # update parameters
                 optimizer.step_and_update_lr()
             
-            # Increment iterations
-            num_iters += 1
-            if warm:
-                warm_iters += 1
-
-                # Break if reaching total iterations
-                if warm_iters == total_iters:
-                    stop = True
-                    break
-
-                # Or break if time is up
-                curr_time = time.time()
-                if curr_time - start_time >= total_time:
-                    stop = True
-                    break
-
-            if num_iters == warmup_iters:
-                warm = True
-
-                if signal:
-                    wait_for_signal(pipe)
-
-                start_time = time.time()
-                print("Measurement starts ...")
+            should_training_stop = train_monitor.on_step_end()
+            if should_training_stop:
+                break
         
-        if stop:
+        if should_training_stop:
             break
-
-    end_time = time.time()
-    time_elapsed = end_time - start_time
     
     if result_dict is not None:
-        result_dict["time_elapsed"] = time_elapsed
-        result_dict["iters"] = warm_iters
+        result_dict["time_elapsed"] = train_monitor.time_elapsed
+        result_dict["iters"] = train_monitor.warm_iters
 
-    return time_elapsed, warm_iters
+    return train_monitor.time_elapsed, train_monitor.warm_iters

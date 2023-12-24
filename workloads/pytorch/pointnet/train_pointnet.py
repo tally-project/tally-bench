@@ -7,6 +7,7 @@ import time
 
 from workloads.pytorch.pointnet.dataset import ShapeNetDataset
 from workloads.pytorch.pointnet.pointnet import PointNetCls, feature_transform_regularizer
+from workloads.pytorch.common.train_monitor import TrainMonitor
 
 from utils.bench_util import wait_for_signal
 
@@ -34,6 +35,7 @@ def train_pointnet(model_name, batch_size, amp, warmup_iters, total_time,
                     data_dir="./data/shapenetcore", num_points=2500,
                     feature_transform=True):
     device = 'cuda'
+    train_monitor = TrainMonitor(warmup_iters, total_time, total_iters, result_dict, signal, pipe)
 
     trainset = build_dataset(data_dir, num_points)
     trainloader = build_dataloader(trainset, batch_size)
@@ -56,14 +58,10 @@ def train_pointnet(model_name, batch_size, amp, warmup_iters, total_time,
     # }
     # model = torch.compile(model, backend='inductor', options=compile_options)
 
-    start_time = None
-    num_iters = 0
-    warm_iters = 0
-    warm = False
     model.train()
 
     while True:
-        stop = False
+        should_training_stop = False
 
         for inputs, targets in trainloader:
             optimizer.zero_grad()
@@ -84,39 +82,15 @@ def train_pointnet(model_name, batch_size, amp, warmup_iters, total_time,
                 loss.backward()
                 optimizer.step()
             
-            # Increment iterations
-            num_iters += 1
-            if warm:
-                warm_iters += 1
-
-                # Break if reaching total iterations
-                if warm_iters == total_iters:
-                    stop = True
-                    break
-
-                # Or break if time is up
-                curr_time = time.time()
-                if curr_time - start_time >= total_time:
-                    stop = True
-                    break
-
-            if num_iters == warmup_iters:
-                warm = True
-
-                if signal:
-                    wait_for_signal(pipe)
-
-                start_time = time.time()
-                print("Measurement starts ...")
+            should_training_stop = train_monitor.on_step_end()
+            if should_training_stop:
+                break
         
-        if stop:
+        if should_training_stop:
             break
 
-    end_time = time.time()
-    time_elapsed = end_time - start_time
-    
     if result_dict is not None:
-        result_dict["time_elapsed"] = time_elapsed
-        result_dict["iters"] = warm_iters
+        result_dict["time_elapsed"] = train_monitor.time_elapsed
+        result_dict["iters"] = train_monitor.warm_iters
 
-    return time_elapsed, warm_iters
+    return train_monitor.time_elapsed, train_monitor.warm_iters

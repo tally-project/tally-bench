@@ -7,6 +7,7 @@ import workloads.pytorch.lstm.data as lstm_data
 import workloads.pytorch.lstm.models as models
 
 from utils.bench_util import wait_for_signal
+from workloads.pytorch.common.train_monitor import TrainMonitor
 
 def repackage_hidden(h):
     """Wraps hidden states in new Tensors, to detach them from their history."""
@@ -21,6 +22,7 @@ def train_lstm(model_name, batch_size, amp, warmup_iters, total_time,
                     total_iters=None, result_dict=None, signal=False, pipe=None,
                     data_dir='./data/wikitext-2', bptt=35, emsize=200,
                     nhead=2, nhid=200, nlayers=2, dropout=0.2, tied=False):
+    train_monitor = TrainMonitor(warmup_iters, total_time, total_iters, result_dict, signal, pipe)
     device = 'cuda'
 
     corpus = lstm_data.Corpus(data_dir)
@@ -77,25 +79,21 @@ def train_lstm(model_name, batch_size, amp, warmup_iters, total_time,
     else:
         scaler = None
 
-    compile_options = {
-        "epilogue_fusion": True,
-        "max_autotune": True,
-        "triton.cudagraphs": False,
-    }
-    model = torch.compile(model, backend='inductor', options=compile_options)
+    # compile_options = {
+    #     "epilogue_fusion": True,
+    #     "max_autotune": True,
+    #     "triton.cudagraphs": False,
+    # }
+    # model = torch.compile(model, backend='inductor', options=compile_options)
 
     ntokens = len(corpus.dictionary)
     if model_name != 'Transformer':
         hidden = model.init_hidden(batch_size)
 
-    start_time = None
-    num_iters = 0
-    warm_iters = 0
-    warm = False
     model.train()
 
     while True:
-        stop = False
+        should_training_stop = False
 
         for data, targets in trainloader:
             data = data.t()
@@ -124,39 +122,15 @@ def train_lstm(model_name, batch_size, amp, warmup_iters, total_time,
                 loss.backward()
                 optimizer.step()
             
-            # Increment iterations
-            num_iters += 1
-            if warm:
-                warm_iters += 1
-
-                # Break if reaching total iterations
-                if warm_iters == total_iters:
-                    stop = True
-                    break
-
-                # Or break if time is up
-                curr_time = time.time()
-                if curr_time - start_time >= total_time:
-                    stop = True
-                    break
-
-            if num_iters == warmup_iters:
-                warm = True
-
-                if signal:
-                    wait_for_signal(pipe)
-
-                start_time = time.time()
-                print("Measurement starts ...")
+            should_training_stop = train_monitor.on_step_end()
+            if should_training_stop:
+                break
         
-        if stop:
+        if should_training_stop:
             break
 
-    end_time = time.time()
-    time_elapsed = end_time - start_time
-    
     if result_dict is not None:
-        result_dict["time_elapsed"] = time_elapsed
-        result_dict["iters"] = warm_iters
+        result_dict["time_elapsed"] = train_monitor.time_elapsed
+        result_dict["iters"] = train_monitor.warm_iters
 
-    return time_elapsed, warm_iters
+    return train_monitor.time_elapsed, train_monitor.warm_iters

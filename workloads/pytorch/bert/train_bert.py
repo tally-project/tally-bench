@@ -5,6 +5,7 @@ import time
 from torch.utils.data import DataLoader, RandomSampler
 
 from utils.bench_util import wait_for_signal, get_torch_compile_options
+from workloads.pytorch.common.train_monitor import TrainMonitor
 
 from transformers import (
     AdamW,
@@ -43,6 +44,8 @@ def train_bert(model_name, batch_size, amp, warmup_iters, total_time, total_iter
                    pipe=None, model_type='bert', config_name="", model_name_or_path='bert-base-uncased', cache_dir="./data",
                    tokenizer_name="", do_lower_case=True, weight_decay=0.0, learning_rate=5e-5, adam_epsilon=1e-8,
                    version_2_with_negative=True, lang_id=0):
+    
+    train_monitor = TrainMonitor(warmup_iters, total_time, total_iters, result_dict, signal, pipe)
 
     device = 'cuda'
 
@@ -94,14 +97,10 @@ def train_bert(model_name, batch_size, amp, warmup_iters, total_time, total_iter
     ]
     optimizer = AdamW(optimizer_grouped_parameters, lr=learning_rate, eps=adam_epsilon)
 
-    start_time = None
-    num_iters = 0
-    warm_iters = 0
-    warm = False
     model.train()
 
     while True:
-        stop = False
+        should_training_stop = False
 
         for step, batch in enumerate(train_dataloader):
             optimizer.zero_grad()
@@ -138,39 +137,15 @@ def train_bert(model_name, batch_size, amp, warmup_iters, total_time, total_iter
                 loss.backward()
                 optimizer.step()
 
-            # Increment iterations
-            num_iters += 1
-            if warm:
-                warm_iters += 1
-
-                # Break if reaching total iterations
-                if warm_iters == total_iters:
-                    stop = True
-                    break
-
-                # Or break if time is up
-                curr_time = time.time()
-                if curr_time - start_time >= total_time:
-                    stop = True
-                    break
-
-            if num_iters == warmup_iters:
-                warm = True
-
-                if signal:
-                    wait_for_signal(pipe)
-
-                start_time = time.time()
-                print("Measurement starts ...")
+            should_training_stop = train_monitor.on_step_end()
+            if should_training_stop:
+                break
         
-        if stop:
+        if should_training_stop:
             break
 
-    end_time = time.time()
-    time_elapsed = end_time - start_time
-    
     if result_dict is not None:
-        result_dict["time_elapsed"] = time_elapsed
-        result_dict["iters"] = warm_iters
+        result_dict["time_elapsed"] = train_monitor.time_elapsed
+        result_dict["iters"] = train_monitor.warm_iters
 
-    return time_elapsed, warm_iters
+    return train_monitor.time_elapsed, train_monitor.warm_iters

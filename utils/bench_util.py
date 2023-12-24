@@ -99,6 +99,10 @@ def get_benchmark_func(framework, model_name):
             from workloads.pytorch.pegasus.train_pegasus import train_pegasus
             bench_func = train_pegasus
 
+        if model_name in ["whisper-small"]:
+            from workloads.pytorch.whisper.train_whisper import train_whisper
+            bench_func = train_whisper
+
     return bench_func
 
   

@@ -11,12 +11,14 @@ import workloads.pytorch.ncf.config as config
 import workloads.pytorch.ncf.data_utils as data_utils
 
 from utils.bench_util import wait_for_signal
+from workloads.pytorch.common.train_monitor import TrainMonitor
 
 # Training
 def train_ncf(model_name, batch_size, amp, warmup_iters, total_time,
                     total_iters=None, result_dict=None, signal=False, pipe=None,
                     num_ng=4, factor_num=32, num_layers=3, dropout=0.0, lr=0.001):
     
+    train_monitor = TrainMonitor(warmup_iters, total_time, total_iters, result_dict, signal, pipe)
     train_data, test_data, user_num, item_num, train_mat = data_utils.load_all()
 
     # construct the train and test datasets
@@ -60,11 +62,6 @@ def train_ncf(model_name, batch_size, amp, warmup_iters, total_time,
     # }
     # model = torch.compile(model, backend='inductor', options=compile_options)
 
-    start_time = None
-    num_iters = 0
-    warm_iters = 0
-    warm = False
-
     model.train()
     train_loader.dataset.ng_sample()
 
@@ -89,39 +86,15 @@ def train_ncf(model_name, batch_size, amp, warmup_iters, total_time,
                 loss.backward()
                 optimizer.step()
             
-            # Increment iterations
-            num_iters += 1
-            if warm:
-                warm_iters += 1
-
-                # Break if reaching total iterations
-                if warm_iters == total_iters:
-                    stop = True
-                    break
-
-                # Or break if time is up
-                curr_time = time.time()
-                if curr_time - start_time >= total_time:
-                    stop = True
-                    break
-
-            if num_iters == warmup_iters:
-                warm = True
-
-                if signal:
-                    wait_for_signal(pipe)
-
-                start_time = time.time()
-                print("Measurement starts ...")
+            should_training_stop = train_monitor.on_step_end()
+            if should_training_stop:
+                break
         
-        if stop:
+        if should_training_stop:
             break
-
-    end_time = time.time()
-    time_elapsed = end_time - start_time
     
     if result_dict is not None:
-        result_dict["time_elapsed"] = time_elapsed
-        result_dict["iters"] = warm_iters
+        result_dict["time_elapsed"] = train_monitor.time_elapsed
+        result_dict["iters"] = train_monitor.warm_iters
 
-    return time_elapsed, warm_iters
+    return train_monitor.time_elapsed, train_monitor.warm_iters
