@@ -32,11 +32,11 @@ prepared_workload_aware = []
 # Benchmark options
 save_results = False
 use_mps = False
-use_tally = False
+use_tally = True
 assert(not (use_mps and use_tally))
 
-runtime = 10
-warmup_iters = 10
+runtime = 60
+warmup_iters = 100
 
 if __name__ == "__main__":
 
@@ -48,17 +48,19 @@ if __name__ == "__main__":
         print(f"Benchmarking tally with SCHEDULER_POLICY: {scheduler_policy}")
 
     result = load_json_from_file("result.json")
-    single_job_result, co_locate_result = parse_result("result.json")
+    # single_job_result, co_locate_result = parse_result("result.json")
 
     benchmarks = []
 
     for framework in benchmark_list:
         for model in benchmark_list[framework]:
             for batch_size in benchmark_list[framework][model]:
-                # for amp in [True, False]:
-                for amp in [False]:
+                for amp in [True, False]:
 
-                    if model == "transformer" and amp:
+                    if model in ["transformer"] and amp:
+                        continue
+                
+                    if model in ["yolov6n", "pegasus-x-base"] and not amp:
                         continue
 
                     bench = Benchmark(framework, model, batch_size, amp, warmup_iters=warmup_iters, runtime=runtime)

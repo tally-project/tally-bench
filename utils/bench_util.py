@@ -118,11 +118,6 @@ def init_env(use_mps=False, use_tally=False):
         required_mode = "Exclusive_Process"
 
     elif use_tally:
-        scheduler_policy = os.environ.get("SCHEDULER_POLICY", "NAIVE")
-
-        if scheduler_policy == "WORKLOAD_AGNOSTIC_SHARING":
-            required_mode = "Exclusive_Process"
-        else:
             required_mode = "Default"
     else:
         return
@@ -138,6 +133,9 @@ def tear_down_env():
 
 
 def wait_for_signal(pipe_name):
+
+    with open("yolo.log", 'a') as pipe:
+        pipe.write("benchmark is warm\n")
 
     with open(pipe_name, 'w') as pipe:
         pipe.write("benchmark is warm\n")

@@ -4,7 +4,12 @@ import time
 import json
 import os
 import select
+import pandas as pd
+import threading
+import selectors
+from multiprocessing import Process, Manager
 
+from utils.nvidia_smi import smi_getter, parse_smi_list
 from utils.bench_util import get_bench_id, get_pipe_name, tear_down_env
 from utils.mps import start_mps, shut_down_mps
 from utils.tally import (
@@ -40,6 +45,8 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_tally=False
 
     output_dict = None
     result_key = "default"
+    manager = Manager()
+    smi_list = manager.list()
 
     if use_mps:
         result_key = "mps"
@@ -66,15 +73,10 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_tally=False
             start_mps()
 
         elif use_tally:
-
-            if policy == "WORKLOAD_AGNOSTIC_SHARING":
-                shut_down_mps()
-                start_mps()
-            else:
-                shut_down_tally()
-                shut_down_iox_roudi
-                start_iox_roudi()
-                start_tally()
+            shut_down_tally()
+            shut_down_iox_roudi
+            start_iox_roudi()
+            start_tally()
 
         for idx, benchmark in enumerate(benchmarks):
 
@@ -97,14 +99,36 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_tally=False
             
             if use_tally:
                 launch_cmd = f"{tally_client_script} {launch_cmd}"
-            # else:
-            #     launch_cmd = f"{tally_client_local_script} {launch_cmd}"
+            else:
+                launch_cmd = f"{tally_client_local_script} {launch_cmd}"
 
             print(f"launch_cmd: {launch_cmd}")
 
             launch_cmd_list = launch_cmd.strip().split(" ")
-            process = subprocess.Popen(launch_cmd_list, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+            process = subprocess.Popen(launch_cmd_list, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, universal_newlines=True)
+            # When debugging, turn on the stderr
+            # process = subprocess.Popen(launch_cmd_list, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
             processes.append(process)
+
+            def wait_for_bench_warm():
+                # Note this will block indefinitely if the client aborts
+                while not abort:
+                    with open(pipe_name, 'r') as fifo:
+                        readable, _, _ = select.select([fifo], [], [], 1)
+                        if readable:
+                            line = fifo.readline()
+                            if "benchmark is warm" in line:
+                                print("benchmark is warm")
+                                break
+
+            wait_t = threading.Thread(target=wait_for_bench_warm)
+            wait_t.start()
+
+            sel = selectors.DefaultSelector()
+            sel.register(process.stdout, selectors.EVENT_READ)
+            # sel.register(process.stderr, selectors.EVENT_READ)
+
+            p_stdout = ""
 
             try:
                 os.mkfifo(pipe_name)
@@ -113,24 +137,28 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_tally=False
         
             while True:
                 poll = process.poll()
-                if poll is not None or (use_tally and policy != "WORKLOAD_AGNOSTIC_SHARING" and query_tally() == 1):
+                if poll is not None or (use_tally and query_tally() == 1):
                     abort = True
                     output_dict["error"] = "Encountered error."
                     break
 
-                # Note this will block indefinitely if the client aborts
-                with open(pipe_name, 'r') as fifo:
-                    readable, _, _ = select.select([fifo], [], [], 1)
-                    if readable:
-                        line = fifo.readline()
-                        if "benchmark is warm" in line:
-                            print("benchmark is warm")
-                            break
+                for key, val in sel.select(timeout=1):
+                    line = key.fileobj.readline()
+                    if line:
+                        p_stdout += line
+
+                if not wait_t.is_alive():
+                    break
+            
+            print(p_stdout.strip())
 
         if abort:
             print("Detect process abort.")
             for process in processes:
                 process.kill()
+                stdout, stderr = process.communicate()
+                print(stdout.strip())
+                print(stderr.strip())
             raise Exception("Detect process abort.")
 
         # All benchmarks should be warm, signal start
@@ -142,9 +170,16 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_tally=False
             with open(pipe_name, 'w') as pipe:
                 pipe.write("start\n")
         
+        smi_p = Process(target=smi_getter, args=(smi_list, [0]))
+        smi_p.start()
+
+        print("waiting for benchmark to finish ...")
         for i in range(len(processes)):
             process = processes[i]
             process.wait()
+            if smi_p.is_alive():
+                smi_p.terminate()
+
             output = process.communicate()[0].strip()
             print(output)
             output_lines = output.split("\n")
@@ -159,6 +194,8 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_tally=False
                 raise Exception("Cannot parse result dict")
             bench = benchmarks[i]
             output_dict[f"{bench}_{i}"] = result_dict
+
+        output_dict["metrics"] =  parse_smi_list(smi_list)
 
         print(output_dict)
         print(bench_id)
