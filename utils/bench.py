@@ -158,7 +158,8 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_tally=False
                 process.kill()
                 stdout, stderr = process.communicate()
                 print(stdout.strip())
-                print(stderr.strip())
+                if stderr:
+                    print(stderr.strip())
             raise Exception("Detect process abort.")
 
         # All benchmarks should be warm, signal start
@@ -176,13 +177,13 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_tally=False
         print("waiting for benchmark to finish ...")
         for i in range(len(processes)):
             process = processes[i]
-            process.wait()
+            stdout, stderr = process.communicate()
             if smi_p.is_alive():
                 smi_p.terminate()
+                
+            print(stdout.strip())
+            output_lines = stdout.split("\n")
 
-            output = process.communicate()[0].strip()
-            print(output)
-            output_lines = output.split("\n")
             result_dict = None
             for line in output_lines:
                 try:
