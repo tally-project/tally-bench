@@ -134,9 +134,6 @@ def tear_down_env():
 
 def wait_for_signal(pipe_name):
 
-    with open("yolo.log", 'a') as pipe:
-        pipe.write("benchmark is warm\n")
-
     with open(pipe_name, 'w') as pipe:
         pipe.write("benchmark is warm\n")
 
