@@ -3,7 +3,6 @@ import json
 import os
 
 def execute_cmd(cmd, get_output=False):
-
     if get_output:
         process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
         process.wait()

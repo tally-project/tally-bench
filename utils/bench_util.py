@@ -116,11 +116,10 @@ def init_env(use_mps=False, use_tally=False):
 
     if use_mps:
         required_mode = "Exclusive_Process"
-
     elif use_tally:
-            required_mode = "Default"
+        required_mode = "Default"
     else:
-        return
+        required_mode = "Default"
 
     if mode != required_mode:
         raise Exception(f"GPU mode is not {required_mode}. Now: {mode}")

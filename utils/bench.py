@@ -82,6 +82,11 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_tally=False
 
             pipe_name = get_pipe_name(idx)
 
+            try:
+                os.mkfifo(pipe_name)
+            except OSError:
+                pass
+
             launch_cmd = (f"python3 -u scripts/launch.py "
                             f"--framework {benchmark.framework} "
                             f"--benchmark {benchmark.model_name} "
@@ -129,11 +134,6 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_tally=False
             # sel.register(process.stderr, selectors.EVENT_READ)
 
             p_stdout = ""
-
-            try:
-                os.mkfifo(pipe_name)
-            except OSError:
-                pass
         
             while True:
                 poll = process.poll()

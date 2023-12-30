@@ -6,6 +6,7 @@ import traceback
 import pandas as pd
 
 from xml.dom import minidom
+from utils.util import execute_cmd
 
 
 def parse_smi_list(smi_list):
@@ -107,3 +108,8 @@ def gen_empty_gpu_metric(outputDir):
     finally:
         os.umask(old_umask)
 
+
+def get_cuda_mem():
+    out, _, _ = execute_cmd("nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits", True)
+    mem_cap = int(out.strip())
+    return mem_cap

@@ -1,13 +1,26 @@
 import sys
 import os
 import random
+import argparse
 
 sys.path.append('.')
 
 from utils.util import load_json_from_file, write_json_to_file, execute_cmd
 from utils.bench import Benchmark, launch_benchmark
-from utils.bench_util import init_env, tear_down_env
+from utils.bench_util import init_env, tear_down_env, get_bench_id
 from utils.parse import parse_result
+from utils.nvidia_smi import get_cuda_mem
+
+parser = argparse.ArgumentParser(prog="benchmark suite launcher", description="Launch benchmark suite")
+
+parser.add_argument("--save-results", action="store_true", default=False)
+parser.add_argument("--use-mps", action="store_true", default=False)
+parser.add_argument("--use-tally", action="store_true", default=False)
+parser.add_argument("--run-pairwise", action="store_true", default=False)
+parser.add_argument("--runtime", type=int, default=60)
+parser.add_argument("--warmup-iters", type=int, default=100)
+
+args = parser.parse_args()
 
 benchmark_list = {
     "hidet": {
@@ -30,13 +43,14 @@ benchmark_list = {
 prepared_workload_aware = []
 
 # Benchmark options
-save_results = False
-use_mps = False
-use_tally = True
+save_results = args.save_results
+use_mps = args.use_mps
+use_tally = args.use_tally
+run_pairwise = args.run_pairwise
 assert(not (use_mps and use_tally))
 
-runtime = 60
-warmup_iters = 100
+runtime = args.runtime
+warmup_iters = args.warmup_iters
 
 if __name__ == "__main__":
 
@@ -76,56 +90,37 @@ if __name__ == "__main__":
             write_json_to_file(result, "result.json")
             execute_cmd("cp result.json result_copy.json")
 
-    # benchmark_pairs = []
+    benchmark_pairs = []
 
-    # for i in range(len(benchmarks)):
-    #     for j in range(i, len(benchmarks)):
+    for i in range(len(benchmarks)):
+        for j in range(i, len(benchmarks)):
 
-    #         bench_1 = benchmarks[i]
-    #         bench_2 = benchmarks[j]
+            bench_1 = benchmarks[i]
+            bench_2 = benchmarks[j]
 
-    #         benchmark_pairs.append([bench_1, bench_2])
+            benchmark_pairs.append([bench_1, bench_2])
 
-    # random.shuffle(benchmark_pairs)
+    random.shuffle(benchmark_pairs)
 
-    # if use_tally or use_mps:
+    cuda_mem_cap = get_cuda_mem()
 
-    #     for pair in benchmark_pairs:
+    if run_pairwise:
+        for pair in benchmark_pairs:
 
-    #         # Only run workload aware scheduler if the tally overhead is small (i.e. GPU bounded jobs)
-    #         if use_tally and scheduler_policy == "WORKLOAD_AWARE_SHARING":
+            bench_1, bench_2 = pair
+            bench_1_mem = result["tally_naive"][str(bench_1)]["metrics"]["gmem"]
+            bench_2_mem = result["tally_naive"][str(bench_2)]["metrics"]["gmem"]
+            sum_mem = bench_1_mem + bench_2_mem
 
-    #             model_1_norm_speed, model_2_norm_speed = None, None
+            if sum_mem > 0.95 * cuda_mem_cap:
+                bench_id = get_bench_id(pair)
+                print(f"Skipping {bench_id} as required memory of {sum_mem} MB exceeds system limit of {cuda_mem_cap} MB")
+                continue
 
-    #             for res in single_job_result:
-    #                 if res["model"] == str(pair[0]):
-    #                     model_1_norm_speed = res["tally_workload_aware"]
-    #                 if res["model"] == str(pair[1]):
-    #                     model_2_norm_speed = res["tally_workload_aware"]
-
-    #             assert(model_1_norm_speed and model_2_norm_speed)
-
-    #             if model_1_norm_speed < 0.7 or model_2_norm_speed < 0.7:
-    #                 print(f"Skipping workload-aware benchmark for {pair[0]} and {pair[1]}")
-    #                 print(f"Norm speeds: {pair[0]}: {model_1_norm_speed} {pair[1]}: {model_2_norm_speed}")
-    #                 continue
-
-    #             bench_id = get_bench_id(pair)
-
-    #             # Skip already prepared model pairs
-    #             if not save_results:
-    #                 if bench_id in prepared_workload_aware:
-    #                     print(f"Skipping workload-aware benchmark for {pair[0]} and {pair[1]} as all kernel pairs have been tuned")
-    #                     continue
-    #             else:
-    #                 if bench_id not in prepared_workload_aware:
-    #                     print(f"Skipping workload-aware benchmark for {pair[0]} and {pair[1]} as not all kernel pairs have been tuned")
-    #                     continue
-
-    #         launch_benchmark(pair, use_mps=use_mps, use_tally=use_tally, result=result)
+            launch_benchmark(pair, use_mps=use_mps, use_tally=use_tally, result=result)
             
-    #         if save_results:
-    #             write_json_to_file(result, "result.json")
-    #             execute_cmd("cp result.json result_copy.json")
+            if save_results:
+                write_json_to_file(result, "result.json")
+                execute_cmd("cp result.json result_copy.json")
 
     tear_down_env()
