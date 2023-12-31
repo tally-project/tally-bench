@@ -48,6 +48,12 @@ class TrainMonitor:
         if should_training_stop:
             end_time = time.time()
             self.time_elapsed = end_time - self.start_time
+
+            self.write_to_result()
         
         return should_training_stop
 
+    def write_to_result(self):
+        if self.result_dict is not None:
+            self.result_dict["time_elapsed"] = self.time_elapsed
+            self.result_dict["iters"] = self.warm_iters

@@ -116,16 +116,22 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_tally=False
             processes.append(process)
 
             def wait_for_bench_warm():
-                # Note this will block indefinitely if the client aborts
+                
+                pipe_fd = os.open(pipe_name, os.O_RDONLY | os.O_NONBLOCK)
+
                 while not abort:
-                    with open(pipe_name, 'r') as fifo:
-                        readable, _, _ = select.select([fifo], [], [], 1)
-                        if readable:
-                            line = fifo.readline()
+                    should_exit = False
+                    readable, _, _ = select.select([pipe_fd], [], [], 1)
+                    if readable:
+                        chunk = os.read(pipe_fd, 4096)
+                        lines = chunk.decode('utf-8').split('\n')
+                        for line in lines:
                             if "benchmark is warm" in line:
                                 print("benchmark is warm")
-                                break
-
+                                should_exit = True
+                        if should_exit:
+                            break
+                            
             wait_t = threading.Thread(target=wait_for_bench_warm)
             wait_t.start()
 
@@ -139,6 +145,7 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_tally=False
                 poll = process.poll()
                 if poll is not None or (use_tally and query_tally() == 1):
                     abort = True
+                    wait_t.join()
                     output_dict["error"] = "Encountered error."
                     break
 
@@ -156,10 +163,10 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_tally=False
             print("Detect process abort.")
             for process in processes:
                 process.kill()
-                stdout, stderr = process.communicate()
-                print(stdout.strip())
-                if stderr:
-                    print(stderr.strip())
+                # stdout, stderr = process.communicate()
+                # print(stdout.strip())
+                # if stderr:
+                #     print(stderr.strip())
             raise Exception("Detect process abort.")
 
         # All benchmarks should be warm, signal start

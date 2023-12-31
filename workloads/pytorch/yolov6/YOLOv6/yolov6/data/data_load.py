@@ -86,7 +86,7 @@ def create_dataloader(
             shuffle=shuffle and sampler is None,
             num_workers=workers,
             sampler=sampler,
-            pin_memory=True,
+            pin_memory=False,
             collate_fn=TrainValDataset.collate_fn,
         ),
         dataset,

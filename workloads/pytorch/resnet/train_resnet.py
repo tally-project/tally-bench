@@ -6,7 +6,7 @@ import time
 import torchvision
 
 from utils.bench_util import wait_for_signal, get_torch_compile_options
-from workloads.pytorch.common.train_monitor import TrainMonitor
+from workloads.common.train_monitor import TrainMonitor
 
 # Training
 def train_resnet(model_name, batch_size, amp, warmup_iters, total_time,
@@ -52,9 +52,3 @@ def train_resnet(model_name, batch_size, amp, warmup_iters, total_time,
         should_training_stop = train_monitor.on_step_end()
         if should_training_stop:
             break
-
-    if result_dict is not None:
-        result_dict["time_elapsed"] = train_monitor.time_elapsed
-        result_dict["iters"] = train_monitor.warm_iters
-
-    return train_monitor.time_elapsed, train_monitor.warm_iters

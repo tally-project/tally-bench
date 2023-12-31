@@ -1,12 +1,10 @@
-import time
-
 import hidet
 import torch
 
-from utils.bench_util import wait_for_signal
+from workloads.common.infer_monitor import SingleStreamInferMonitor, ServerInferMonitor, OfflineInferMonitor
 
-def run_resnet(model_name, batch_size, amp, warmup_iters, total_time,
-               total_iters=None, result_dict=None, signal=False, pipe=None):
+def resnet_infer(model_name, mode, batch_size, amp, warmup_iters, total_time,
+                 result_dict=None, signal=False, pipe=None):
 
     hidet.torch.dynamo_config.use_cuda_graph(False)
 
@@ -17,7 +15,6 @@ def run_resnet(model_name, batch_size, amp, warmup_iters, total_time,
         hidet.torch.dynamo_config.use_tensor_core(False)
         hidet.torch.dynamo_config.use_fp16(flag=False)
 
-    x = torch.randn(batch_size, 3, 224, 224).cuda()
     model = torch.hub.load(
         'pytorch/vision:v0.9.0', model_name, pretrained=True, verbose=False
     )
@@ -26,44 +23,26 @@ def run_resnet(model_name, batch_size, amp, warmup_iters, total_time,
     # optimize the model with 'hidet' backend
     model_opt = torch.compile(model, backend='hidet')
 
-    start_time = None
-    num_iters = 0
-    warm_iters = 0
-    warm = False
+    if mode == "single-stream":
+        x = torch.randn(1, 3, 224, 224).cuda()
+        monitor = SingleStreamInferMonitor(warmup_iters, total_time, result_dict, signal, pipe)
+    elif mode == "server":
+        x = torch.randn(1, 3, 224, 224).cuda()
+        monitor = ServerInferMonitor(warmup_iters, total_time, result_dict, signal, pipe)
+    elif mode == "offline":
+        x = torch.randn(batch_size, 3, 224, 224).cuda()
+        monitor = OfflineInferMonitor(warmup_iters, total_time, result_dict, signal, pipe)
+    else:
+        raise Exception("unknown mode")
 
     while True:
-        
+
+        monitor.on_step_begin()
+
         y = model_opt(x)
         torch.cuda.synchronize()
 
-        # Increment iterations
-        num_iters += 1
-        if warm:
-            warm_iters += 1
-
-            # Break if reaching total iterations
-            if warm_iters == total_iters:
-                break
-
-            # Or break if time is up
-            curr_time = time.time()
-            if curr_time - start_time >= total_time:
-                break
-
-        if num_iters == warmup_iters:
-            warm = True
-
-            if signal:
-                wait_for_signal(pipe)
-
-            start_time = time.time()
-            print("Measurement starts ...")
-    
-    end_time = time.time()
-    time_elapsed = end_time - start_time
-    
-    if result_dict is not None:
-        result_dict["time_elapsed"] = time_elapsed
-        result_dict["iters"] = warm_iters
-
-    return time_elapsed, warm_iters
+        should_stop = monitor.on_step_end()
+        if should_stop:
+            monitor.write_to_result()
+            break

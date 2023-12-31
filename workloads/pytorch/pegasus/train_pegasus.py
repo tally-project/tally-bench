@@ -78,7 +78,7 @@ def prepare_data(model_name,
 
 def train_pegasus(model_name, batch_size, amp, warmup_iters, total_time,
                   total_iters=None, result_dict=None, signal=False, pipe=None,
-                  freeze_encoder=False, output_dir='./results'):
+                  freeze_encoder=False, output_dir=None):
     from datasets import load_dataset
     dataset = load_dataset("xsum")
     train_texts, train_labels = dataset['train']['document'][:1000], dataset['train']['summary'][:1000]
@@ -117,9 +117,3 @@ def train_pegasus(model_name, batch_size, amp, warmup_iters, total_time,
     )
 
     trainer.train()
-
-    if result_dict is not None:
-        result_dict["time_elapsed"] = bench_callback.time_elapsed
-        result_dict["iters"] = bench_callback.warm_iters
-
-    return bench_callback.time_elapsed, bench_callback.warm_iters

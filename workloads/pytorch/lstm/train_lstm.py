@@ -7,7 +7,7 @@ import workloads.pytorch.lstm.data as lstm_data
 import workloads.pytorch.lstm.models as models
 
 from utils.bench_util import wait_for_signal
-from workloads.pytorch.common.train_monitor import TrainMonitor
+from workloads.common.train_monitor import TrainMonitor
 
 def repackage_hidden(h):
     """Wraps hidden states in new Tensors, to detach them from their history."""
@@ -128,9 +128,3 @@ def train_lstm(model_name, batch_size, amp, warmup_iters, total_time,
         
         if should_training_stop:
             break
-
-    if result_dict is not None:
-        result_dict["time_elapsed"] = train_monitor.time_elapsed
-        result_dict["iters"] = train_monitor.warm_iters
-
-    return train_monitor.time_elapsed, train_monitor.warm_iters

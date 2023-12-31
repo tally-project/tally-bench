@@ -20,7 +20,13 @@ def parse_result(file_name, single_job_result_out=None, co_locate_result_out=Non
     # CPU-bounded models generally have severely impacted performance when running on Tally
 
     single_job_perf = {}
-    single_job_keys = list(default_res.keys())
+    single_job_keys = []
+    
+    for key in list(default_res.keys()):
+        job_keys = list(default_res[key].keys())
+        job_keys.remove("metrics")
+        if len(job_keys) == 1:
+            single_job_keys.append(key)
 
     single_job_result = []
     for key in single_job_keys:
@@ -59,7 +65,9 @@ def parse_result(file_name, single_job_result_out=None, co_locate_result_out=Non
     co_locate_keys = []
     for res in [mps_res, tally_naive_res, tally_aware_res, tally_agnostic_res]:
         for key in res.keys():
-            if len(res[key]) == 2 and key not in co_locate_keys:
+            job_keys = list(res[key].keys())
+            job_keys.remove("metrics")
+            if len(job_keys) == 2 and key not in co_locate_keys:
                 co_locate_keys.append(key)
 
     for key in co_locate_keys:
@@ -73,9 +81,11 @@ def parse_result(file_name, single_job_result_out=None, co_locate_result_out=Non
                 exits_run_res = run_res
 
         assert(exits_run_res)
+        exits_run_res_keys = list(exits_run_res.keys())
+        exits_run_res_keys.remove("metrics")
 
-        job_1 = list(exits_run_res.keys())[0]
-        job_2 = list(exits_run_res.keys())[1]
+        job_1 = list(exits_run_res_keys)[0]
+        job_2 = list(exits_run_res_keys)[1]
 
         job_1_clean = job_1.rsplit("_", 1)[0]
         job_2_clean = job_2.rsplit("_", 1)[0]

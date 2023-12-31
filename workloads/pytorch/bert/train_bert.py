@@ -5,7 +5,7 @@ import time
 from torch.utils.data import DataLoader, RandomSampler
 
 from utils.bench_util import wait_for_signal, get_torch_compile_options
-from workloads.pytorch.common.train_monitor import TrainMonitor
+from workloads.common.train_monitor import TrainMonitor
 
 from transformers import (
     AdamW,
@@ -143,9 +143,3 @@ def train_bert(model_name, batch_size, amp, warmup_iters, total_time, total_iter
         
         if should_training_stop:
             break
-
-    if result_dict is not None:
-        result_dict["time_elapsed"] = train_monitor.time_elapsed
-        result_dict["iters"] = train_monitor.warm_iters
-
-    return train_monitor.time_elapsed, train_monitor.warm_iters

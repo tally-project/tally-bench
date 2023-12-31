@@ -21,65 +21,89 @@ time_cmd() {
 
 }
 
-# Make sure the script is run with sudo permission
-# This is to change the nvidia GPU mode between DEFAULT and EXCLUSIVE_PROCESS
-if [ "$UID" -ne 0 ]; then
-    echo "This script must be run with sudo."
-    exit 1
-fi
+set -e
 
 export RUNTIME=60
 export WARMUP_ITERS=100
 
-# Set GPU mode to DEFAULT for non-MPS experiments
-nvidia-smi -i 0 -c DEFAULT
+export GPU_MODE=$(nvidia-smi --query-gpu=compute_mode --format=csv | awk 'NR==2')
 
 # 1. Collect single-job performance with and without Tally
 #    This should give insights of the overhead of API forwarding in Tally
+if [[ $GPU_MODE == "Default" ]]; then
 echo "======== Collecting single-job performance with and without Tally ... ========"
-time_cmd sudo -u $SUDO_USER \
+time_cmd \
     python3 -u scripts/run_bench.py \
         --save-results \
         --use-tally \
         --runtime $RUNTIME \
         --warmup-iters $WARMUP_ITERS
+else
+    echo "Skip collecting single-job performance with and without Tally because GPU_MODE is not DEFAULT"
+fi
 
 # 2. Profile kernel metrics for workload-agnostic scheduler
 #    Run each job for a long period of time to make sure each kernel is profiled
 #    Results won't be collected
+if [[ $GPU_MODE == "Default" ]]; then
 echo "======== Profiling kernel metrics for workload-agnostic scheduler ... ========"
-time_cmd sudo -u $SUDO_USER \
-    SCHEDULER_POLICY=WORKLOAD_AGNOSTIC_SHARING \
+SCHEDULER_POLICY=WORKLOAD_AGNOSTIC_SHARING \
+    time_cmd \
     python3 -u scripts/run_bench.py \
         --use-tally \
         --runtime 600 \
         --warmup-iters 1000
 
 # Save results now
-time_cmd sudo -u $SUDO_USER \
-    SCHEDULER_POLICY=WORKLOAD_AGNOSTIC_SHARING \
+SCHEDULER_POLICY=WORKLOAD_AGNOSTIC_SHARING \
+    time_cmd \
     python3 -u scripts/run_bench.py \
         --save-results \
         --use-tally \
         --runtime $RUNTIME \
         --warmup-iters $WARMUP_ITERS
+else
+    echo "Skip profiling kernel metrics for workload-agnostic scheduler because GPU_MODE is not DEFAULT"
+fi
 
 # 3. Run co-located experiments without MPS nor Tally (Hardware multi-processing)
+if [[ $GPU_MODE == "Default" ]]; then
 echo "======== Collecting pair-wise performance with and hardware multi-processing ... ========"
-time_cmd sudo -u $SUDO_USER \
+time_cmd \
     python3 -u scripts/run_bench.py \
         --save-results \
         --runtime $RUNTIME \
         --warmup-iters $WARMUP_ITERS \
         --run-pairwise
+else
+    echo "Skip collecting pair-wise performance with and hardware multi-processing because GPU_MODE is not DEFAULT"
+fi
 
 # 4. Run co-located experiments with MPS
-nvidia-smi -i 0 -c EXCLUSIVE_PROCESS
+if [[ $GPU_MODE == "Exclusive_Process" ]]; then
 echo "======== Collecting pair-wise performance with MPS ... ========"
-time_cmd sudo -u $SUDO_USER \
+time_cmd \
     python3 -u scripts/run_bench.py \
         --save-results \
         --use-mps \
         --runtime $RUNTIME \
         --warmup-iters $WARMUP_ITERS \
         --run-pairwise
+else
+    echo "Skip collecting pair-wise performance with MPS because GPU_MODE is not EXCLUSIVE"
+fi
+
+# 5. Run co-located experiments with Tally workload agnostic
+if [[ $GPU_MODE == "Default" ]]; then
+echo "======== Collecting pair-wise performance with Tally workload agnostic ... ========"
+SCHEDULER_POLICY=WORKLOAD_AGNOSTIC_SHARING \
+    time_cmd \
+    python3 -u scripts/run_bench.py \
+        --save-results \
+        --use-tally \
+        --runtime $RUNTIME \
+        --warmup-iters $WARMUP_ITERS \
+        --run-pairwise
+else
+    echo "Skip collecting pair-wise performance with Tally workload agnostic because GPU_MODE is not DEFAULT"
+fi

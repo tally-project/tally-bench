@@ -49,59 +49,65 @@ def get_torch_compile_options():
     return compile_options
 
 
-def get_benchmark_func(framework, model_name):
+def get_benchmark_func(framework, model_name, run_training=True):
     bench_func = None
 
     if framework == "hidet":
-        if model_name in ["resnet50"]:
-            from workloads.hidet.resnet import run_resnet as hidet_run_resnet
-            bench_func = hidet_run_resnet
-    
-    elif framework == "pytorch":
 
-        if model_name in ["resnet50"]:
-            from workloads.pytorch.resnet.train_resnet import train_resnet
-            bench_func = train_resnet
+        if not run_training:
 
-        if model_name in ["bert"]:
-            from workloads.pytorch.bert.train_bert import train_bert
-            bench_func = train_bert
+            if model_name in ["resnet50"]:
 
-        if model_name in ["VGG", "ShuffleNetV2"]:
-            from workloads.pytorch.cifar.train_cifar import train_cifar
-            bench_func = train_cifar
+                from workloads.hidet.resnet import resnet_infer
+                bench_func = resnet_infer
 
-        if model_name in ["dcgan"]:
-            from workloads.pytorch.dcgan.train_dcgan import train_dcgan
-            bench_func = train_dcgan
+    if framework == "pytorch":
 
-        if model_name in ["LSTM"]:
-            from workloads.pytorch.lstm.train_lstm import train_lstm
-            bench_func = train_lstm
+        if run_training:
 
-        if model_name in ["NeuMF-pre"]:
-            from workloads.pytorch.ncf.train_ncf import train_ncf
-            bench_func = train_ncf
+            if model_name in ["resnet50"]:
+                from workloads.pytorch.resnet.train_resnet import train_resnet
+                bench_func = train_resnet
+
+            if model_name in ["bert"]:
+                from workloads.pytorch.bert.train_bert import train_bert
+                bench_func = train_bert
+
+            if model_name in ["VGG", "ShuffleNetV2"]:
+                from workloads.pytorch.cifar.train_cifar import train_cifar
+                bench_func = train_cifar
+
+            if model_name in ["dcgan"]:
+                from workloads.pytorch.dcgan.train_dcgan import train_dcgan
+                bench_func = train_dcgan
+
+            if model_name in ["LSTM"]:
+                from workloads.pytorch.lstm.train_lstm import train_lstm
+                bench_func = train_lstm
+
+            if model_name in ["NeuMF-pre"]:
+                from workloads.pytorch.ncf.train_ncf import train_ncf
+                bench_func = train_ncf
+            
+            if model_name in ["pointnet"]:
+                from workloads.pytorch.pointnet.train_pointnet import train_pointnet
+                bench_func = train_pointnet
+
+            if model_name in ["transformer"]:
+                from workloads.pytorch.transformer.train_transformer import train_transformer
+                bench_func = train_transformer
+
+            if model_name in ["yolov6n"]:
+                from workloads.pytorch.yolov6.train_yolov6 import train_yolov6
+                bench_func = train_yolov6
         
-        if model_name in ["pointnet"]:
-            from workloads.pytorch.pointnet.train_pointnet import train_pointnet
-            bench_func = train_pointnet
+            if model_name in ["pegasus-x-base", "pegasus-large"]:
+                from workloads.pytorch.pegasus.train_pegasus import train_pegasus
+                bench_func = train_pegasus
 
-        if model_name in ["transformer"]:
-            from workloads.pytorch.transformer.train_transformer import train_transformer
-            bench_func = train_transformer
-
-        if model_name in ["yolov6n"]:
-            from workloads.pytorch.yolov6.train_yolov6 import train_yolov6
-            bench_func = train_yolov6
-    
-        if model_name in ["pegasus-x-base", "pegasus-large"]:
-            from workloads.pytorch.pegasus.train_pegasus import train_pegasus
-            bench_func = train_pegasus
-
-        if model_name in ["whisper-small"]:
-            from workloads.pytorch.whisper.train_whisper import train_whisper
-            bench_func = train_whisper
+            if model_name in ["whisper-small"]:
+                from workloads.pytorch.whisper.train_whisper import train_whisper
+                bench_func = train_whisper
 
     return bench_func
 

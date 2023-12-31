@@ -129,9 +129,3 @@ def train_whisper(model_name, batch_size, amp, warmup_iters, total_time,
     )
 
     trainer.train()
-
-    if result_dict is not None:
-        result_dict["time_elapsed"] = bench_callback.time_elapsed
-        result_dict["iters"] = bench_callback.warm_iters
-
-    return bench_callback.time_elapsed, bench_callback.warm_iters

@@ -15,6 +15,9 @@ parser.add_argument("--framework", type=str, default="hidet")
 parser.add_argument("--benchmark", type=str, default="resnet50")
 parser.add_argument("--batch-size", type=int, default=64)
 parser.add_argument("--amp", action="store_true", default=False)
+parser.add_argument("--train", action="store_true", default=False)
+parser.add_argument("--infer", action="store_true", default=False)
+parser.add_argument("--infer-type", type=str, default="single-stream")
 parser.add_argument("--warmup-iters", type=int, default=10)
 parser.add_argument("--total-iters", type=int, default=0)
 parser.add_argument("--runtime", type=int, default=10)
@@ -29,19 +32,27 @@ if __name__ == "__main__":
 
     if args.signal:
         assert(args.pipe)
+    
+    assert(args.train or args.infer)
+    assert(not (args.train and args.infer))
+
+    if args.infer:
+        assert (args.infer_type in ["single-stream", "server", "offline"])
 
     # Retrieve benchmark function
-    benchmark_func = get_benchmark_func(args.framework, args.benchmark)
+    benchmark_func = get_benchmark_func(args.framework, args.benchmark, args.train)
 
     total_iters = args.total_iters if args.total_iters else None
     result_dict = {}
 
     print(f"Running framework: {args.framework} benchmark: {args.benchmark} Batch size: {args.batch_size} amp: {args.amp}")
 
-    benchmark_func(args.benchmark, args.batch_size, args.amp, args.warmup_iters,
-                   args.runtime, total_iters, result_dict, args.signal, args.pipe)
+    if args.train:
+        benchmark_func(args.benchmark, args.batch_size, args.amp, args.warmup_iters,
+                       args.runtime, total_iters, result_dict, args.signal, args.pipe)
+    else:
+        benchmark_func(args.benchmark, args.infer_type, args.batch_size, args.amp, args.warmup_iters,
+                       args.runtime, result_dict, args.signal, args.pipe)
     
-    print(f"Benchmark: {args.benchmark} Time: {result_dict['time_elapsed']} Iterations: {result_dict['iters']}")
-
     # Print json format result
     print(json.dumps(dict(result_dict)))
