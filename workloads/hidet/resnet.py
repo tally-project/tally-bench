@@ -4,7 +4,7 @@ import torch
 from workloads.common.infer_monitor import SingleStreamInferMonitor, ServerInferMonitor, OfflineInferMonitor
 
 def resnet_infer(model_name, mode, batch_size, amp, warmup_iters, total_time,
-                 result_dict=None, signal=False, pipe=None):
+                 bustiness=0.5, result_dict=None, signal=False, pipe=None):
 
     hidet.torch.dynamo_config.use_cuda_graph(False)
 
@@ -28,7 +28,7 @@ def resnet_infer(model_name, mode, batch_size, amp, warmup_iters, total_time,
         monitor = SingleStreamInferMonitor(warmup_iters, total_time, result_dict, signal, pipe)
     elif mode == "server":
         x = torch.randn(1, 3, 224, 224).cuda()
-        monitor = ServerInferMonitor(warmup_iters, total_time, result_dict, signal, pipe)
+        monitor = ServerInferMonitor(warmup_iters, total_time, result_dict, signal, pipe, bustiness)
     elif mode == "offline":
         x = torch.randn(batch_size, 3, 224, 224).cuda()
         monitor = OfflineInferMonitor(warmup_iters, total_time, result_dict, signal, pipe)

@@ -1,4 +1,5 @@
 import time
+import numpy as np
 
 from utils.bench_util import wait_for_signal
 
@@ -73,29 +74,41 @@ class SingleStreamInferMonitor(InferMonitor):
         if self.result_dict is not None:
             self.result_dict["time_elapsed"] = self.time_elapsed
             self.result_dict["latencies"] = self.latencies
+            self.result_dict["iters"] = self.warm_iters
 
 
 class ServerInferMonitor(InferMonitor):
 
-    def __init__(self, warmup_iters, total_time, result_dict, signal, pipe):
+    def __init__(self, warmup_iters, total_time, result_dict, signal, pipe, bustiness):
         super().__init__(warmup_iters, total_time, result_dict, signal, pipe)
 
         self.step_begin_time = None
         self.step_end_time = None
         self.latencies = []
+        self.bustiness = bustiness
+        self.query_latency = None
+        self.poisson_lambda = None
 
     def on_step_begin(self):
-        if self.warm:
-            self.step_begin_time = time.time()
+        self.step_begin_time = time.time()
 
     def on_step_end(self):
+        self.step_end_time = time.time()
+
+        if not self.query_latency and self.num_iters >= 5:
+            elapsed_time_seconds = self.step_end_time - self.step_begin_time
+            self.query_latency = elapsed_time_seconds
+            self.poisson_lambda = (1 / self.query_latency) * self.bustiness
+            print(f"Poisson lambda rate: {self.poisson_lambda}")
 
         if self.warm:
-            self.step_end_time = time.time()
             elapsed_time_ms = (self.step_end_time - self.step_begin_time) * 1000
             self.latencies.append(elapsed_time_ms)
 
-            # add wait time
+            # wait time to simulate arrival rate of poisson distribution
+            assert(self.poisson_lambda)
+            interval = np.random.exponential(1 / self.poisson_lambda)
+            time.sleep(interval)
         
         return super().on_step_end()
     
@@ -103,6 +116,7 @@ class ServerInferMonitor(InferMonitor):
         if self.result_dict is not None:
             self.result_dict["time_elapsed"] = self.time_elapsed
             self.result_dict["latencies"] = self.latencies
+            self.result_dict["iters"] = self.warm_iters
 
 
 class OfflineInferMonitor(InferMonitor):
