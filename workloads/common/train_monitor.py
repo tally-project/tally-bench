@@ -1,4 +1,5 @@
 import time
+import torch
 
 from utils.bench_util import wait_for_signal
 
@@ -20,6 +21,8 @@ class TrainMonitor:
         self.pipe = pipe
 
     def on_step_end(self):
+
+        torch.cuda.synchronize()
 
         should_training_stop = False
         

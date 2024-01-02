@@ -1,4 +1,4 @@
-training_list = {
+training_workloads = {
     "pytorch": {
         "resnet50": {
             "batch-sizes": [64],

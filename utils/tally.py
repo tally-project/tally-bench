@@ -1,6 +1,7 @@
 import time
 
 from utils.util import execute_cmd
+from utils.util import logger
 
 iox_roudi_start_script = "./tally/scripts/start_iox.sh"
 iox_roudi_kill_script = "./tally/scripts/kill_iox.sh"
@@ -14,23 +15,23 @@ tally_client_script = "./tally/scripts/start_client.sh"
 tally_client_local_script = "./tally/scripts/start_client_local.sh"
 
 def start_iox_roudi():
-    print("Starting Iox Roudi ...")
+    logger.info("Starting Iox Roudi ...")
     start_iox_cmd = f"bash {iox_roudi_start_script} &"
     execute_cmd(start_iox_cmd)
     time.sleep(5)
 
 def shut_down_iox_roudi():
-    print("Shutting down Iox Roudi ...")
+    logger.info("Shutting down Iox Roudi ...")
     stop_iox_cmd = f"bash {iox_roudi_kill_script}"
     execute_cmd(stop_iox_cmd)
 
 def start_tally():
-    print("Starting Tally server ...")
+    logger.info("Starting Tally server ...")
     start_tally_cmd = f"bash {tally_start_script} &"
     execute_cmd(start_tally_cmd)
 
 def shut_down_tally():
-    print("Shutting down Tally server ...")
+    logger.info("Shutting down Tally server ...")
     stop_tally_cmd = f"bash {tally_kill_script}"
     execute_cmd(stop_tally_cmd)
 

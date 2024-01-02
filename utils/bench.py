@@ -21,25 +21,138 @@ from utils.tally import (
     shut_down_iox_roudi,
     query_tally
 )
+from utils.util import logger
 
 
 class Benchmark:
 
-    def __init__(self, framework, model_name, batch_size, amp, warmup_iters, runtime, total_iters=None):
+    def __init__(self, framework, model_name, warmup_iters, runtime, is_train,
+                 batch_size=1, amp=False, total_iters=None, infer_mode=None,
+                 infer_load=None):
         self.framework = framework
         self.model_name = model_name
-        self.batch_size = batch_size
-        self.amp = amp
         self.warmup_iters = warmup_iters
         self.runtime = runtime
+        self.is_train = is_train
+        self.batch_size = batch_size
+        self.amp = amp
         self.total_iters = total_iters
+        self.infer_mode = infer_mode
+        self.infer_load = infer_load
+        self.priority = None
+
+        if is_train:
+            assert(batch_size)
+        else:
+            assert(infer_mode)
+            if infer_mode == "single-stream":
+                pass
+            elif infer_mode == "server":
+                assert(infer_mode)
+            elif infer_mode == "offline":
+                assert(batch_size)
+            else:
+                assert(False)
     
+    def is_latency_critical(self):
+        if not self.is_train:
+            if self.infer_mode in ["single-stream", "server"]:
+                return True
+        
+        return False
+
+    def set_priority(self, priority):
+        self.priority = priority
+
     def __str__(self):
-        _str = f"{self.framework}_{self.model_name}_{self.batch_size}"
+        _str = f"{self.framework}_{self.model_name}"
+
+        if self.is_train:
+            _str += "_train"
+        else:
+            _str += f"_infer_{self.infer_mode}"
+            if self.infer_mode == "server":
+                _str += f"_load_{self.infer_load}"
+
+        _str += f"_{self.batch_size}"
+
         if self.amp:
             _str += "_amp"
+
         return _str
-    
+
+    def get_launch_cmd(self, use_tally, pipe_name=None):
+        launch_cmd = (f"python3 -u scripts/launch.py "
+                            f"--framework {self.framework} "
+                            f"--benchmark {self.model_name} "
+                            f"--batch-size {self.batch_size} "
+                            f"--warmup-iters {self.warmup_iters} "
+                            f"--runtime {self.runtime} "
+                            f"{'--train ' if self.is_train else '--infer '}"
+                            f"{'--amp ' if self.amp else ''}")
+
+        if self.total_iters:
+            launch_cmd += f"--total-iters {self.total_iters} "
+        
+        if pipe_name:
+            launch_cmd += f"--signal --pipe {pipe_name} "
+        
+        if self.infer_mode:
+            launch_cmd += f"--infer-type {self.infer_mode} "
+        
+            if self.infer_load:
+                launch_cmd += f"--infer-load {self.infer_load} "
+        
+        if use_tally:
+            launch_cmd = f"{tally_client_script} {launch_cmd}"
+        else:
+            launch_cmd = f"{tally_client_local_script} {launch_cmd}"
+        
+        return launch_cmd
+
+
+def get_train_benchmarks(training_workloads, warmup_iters, runtime):
+    train_benchmarks = []
+
+    for framework in training_workloads:
+        for model in training_workloads[framework]:
+
+            bench_config = training_workloads[framework][model]
+
+            for batch_size in bench_config["batch-sizes"]:
+                for amp in bench_config["amp"]:
+
+                    bench = Benchmark(framework, model, warmup_iters, runtime, is_train=True,
+                                      batch_size=batch_size, amp=amp)
+                    train_benchmarks.append(bench)
+
+    return train_benchmarks
+
+def get_infer_benchmarks(inference_workloads, warmup_iters, runtime, profile_only=False):
+    infer_benchmarks = []
+
+    for framework in inference_workloads:
+        for model in inference_workloads[framework]:
+
+            bench_config = inference_workloads[framework][model] 
+
+            for amp in bench_config["amp"]:
+                single_stream_bench = Benchmark(framework, model, warmup_iters, runtime, is_train=False,
+                                                batch_size=1, amp=amp, infer_mode="single-stream")
+                infer_benchmarks.append(single_stream_bench)
+            
+                if not profile_only:
+                    for load in bench_config["load"]:
+                        server_bench = Benchmark(framework, model, warmup_iters, runtime, is_train=False, 
+                                                batch_size=1, amp=amp, infer_mode="server", infer_load=load)
+                        infer_benchmarks.append(server_bench)
+                
+                for batch_size in bench_config["batch-sizes"]:
+                    offline_bench = Benchmark(framework, model, warmup_iters, runtime, is_train=False, 
+                                              batch_size=batch_size, amp=amp, infer_mode="offline")
+                    infer_benchmarks.append(offline_bench)
+
+    return infer_benchmarks
 
 def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_tally=False, result=None):
 
@@ -87,32 +200,19 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_tally=False
             except OSError:
                 pass
 
-            launch_cmd = (f"python3 -u scripts/launch.py "
-                            f"--framework {benchmark.framework} "
-                            f"--benchmark {benchmark.model_name} "
-                            f"--batch-size {benchmark.batch_size} "
-                            f"--warmup-iters {benchmark.warmup_iters} "
-                            f"--runtime {benchmark.runtime} "
-                            f"--signal "
-                            f"--pipe {pipe_name} ")
-            
-            if benchmark.total_iters:
-                launch_cmd += f"--total-iters {benchmark.total_iters} "
+            launch_cmd = benchmark.get_launch_cmd(pipe_name=pipe_name, use_tally=use_tally)
+            logger.info(f"bench {idx} launch_cmd: {launch_cmd}")
 
-            if benchmark.amp:
-                launch_cmd += "--amp "
-            
-            if use_tally:
-                launch_cmd = f"{tally_client_script} {launch_cmd}"
-            else:
-                launch_cmd = f"{tally_client_local_script} {launch_cmd}"
-
-            print(f"launch_cmd: {launch_cmd}")
+            process_env = os.environ.copy()
+            if benchmark.priority:
+                process_env["PRIORITY"] = str(benchmark.priority)
 
             launch_cmd_list = launch_cmd.strip().split(" ")
-            process = subprocess.Popen(launch_cmd_list, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, universal_newlines=True)
+            process = subprocess.Popen(launch_cmd_list, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                       stderr=subprocess.DEVNULL, universal_newlines=True, env=process_env)
             # When debugging, turn on the stderr
-            # process = subprocess.Popen(launch_cmd_list, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+            # process = subprocess.Popen(launch_cmd_list, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+            #                            stderr=subprocess.PIPE, universal_newlines=True, env=process_env)
             processes.append(process)
 
             def wait_for_bench_warm():
@@ -127,7 +227,7 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_tally=False
                         lines = chunk.decode('utf-8').split('\n')
                         for line in lines:
                             if "benchmark is warm" in line:
-                                print("benchmark is warm")
+                                logger.info(f"benchmark {idx} is warm")
                                 should_exit = True
                         if should_exit:
                             break
@@ -160,17 +260,13 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_tally=False
             print(p_stdout.strip())
 
         if abort:
-            print("Detect process abort.")
+            logger.info("Detect process abort.")
             for process in processes:
                 process.kill()
-                # stdout, stderr = process.communicate()
-                # print(stdout.strip())
-                # if stderr:
-                #     print(stderr.strip())
             raise Exception("Detect process abort.")
 
         # All benchmarks should be warm, signal start
-        print("Setting start signals ...")
+        logger.info("Setting start signals ...")
 
         for i in range(len(processes)):
             pipe_name = get_pipe_name(i)
@@ -181,7 +277,7 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_tally=False
         smi_p = Process(target=smi_getter, args=(smi_list, [0]))
         smi_p.start()
 
-        print("waiting for benchmark to finish ...")
+        logger.info("waiting for benchmark to finish ...")
         for i in range(len(processes)):
             process = processes[i]
             stdout, stderr = process.communicate()
@@ -200,16 +296,21 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_tally=False
                     pass
             if not result_dict:
                 raise Exception("Cannot parse result dict")
+            
             bench = benchmarks[i]
+            if bench.priority:
+                result_dict["priority"] = bench.priority
+
             output_dict[f"{bench}_{i}"] = result_dict
 
         output_dict["metrics"] =  parse_smi_list(smi_list)
 
-        print(output_dict)
-        print(bench_id)
+        logger.info(f"bench_id: {bench_id}")
+        logger.info(output_dict)
 
     except Exception as e:
-        print(f"Caught exception when running the benchmark: Error: {e}")
+        output_dict["error"] = str(e)
+        logger.warning(f"Caught exception when running the benchmark: Error: {e}")
         time.sleep(10)
     finally:
         tear_down_env()

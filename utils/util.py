@@ -1,6 +1,17 @@
 import subprocess
 import json
 import os
+import logging
+
+logger = logging.getLogger("tally-bench")
+logger.setLevel(logging.INFO)
+
+handler = logging.StreamHandler()
+handler.setLevel(logging.INFO)
+logger.addHandler(handler)
+
+format = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(format)
 
 def execute_cmd(cmd, get_output=False):
     if get_output:

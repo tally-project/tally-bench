@@ -23,8 +23,8 @@ time_cmd() {
 
 set -e
 
-export RUNTIME=60
-export WARMUP_ITERS=100
+export RUNTIME=5
+export WARMUP_ITERS=10
 
 export GPU_MODE=$(nvidia-smi --query-gpu=compute_mode --format=csv | awk 'NR==2')
 
@@ -42,26 +42,31 @@ else
     echo "Skip collecting single-job performance with and without Tally because GPU_MODE is not DEFAULT"
 fi
 
-# 2. Profile kernel metrics for workload-agnostic scheduler
+# 2. Profile kernel metrics for workload-agnostic and priority scheduler
 #    Run each job for a long period of time to make sure each kernel is profiled
 #    Results won't be collected
 if [[ $GPU_MODE == "Default" ]]; then
-echo "======== Profiling kernel metrics for workload-agnostic scheduler ... ========"
-SCHEDULER_POLICY=WORKLOAD_AGNOSTIC_SHARING \
-    time_cmd \
-    python3 -u scripts/run_bench.py \
-        --use-tally \
-        --runtime 600 \
-        --warmup-iters 1000
+echo "======== Profiling kernel metrics for workload-agnostic and priority scheduler ... ========"
 
-# Save results now
-SCHEDULER_POLICY=WORKLOAD_AGNOSTIC_SHARING \
-    time_cmd \
-    python3 -u scripts/run_bench.py \
-        --save-results \
-        --use-tally \
-        --runtime $RUNTIME \
-        --warmup-iters $WARMUP_ITERS
+for policy in WORKLOAD_AGNOSTIC_SHARING PRIORITY
+do
+    SCHEDULER_POLICY=$policy \
+        time_cmd \
+        python3 -u scripts/run_bench.py \
+            --use-tally \
+            --runtime 10 \
+            --warmup-iters 1000 \
+            --profile-only
+
+    SCHEDULER_POLICY=$policy \
+        time_cmd \
+        python3 -u scripts/run_bench.py \
+            --save-results \
+            --use-tally \
+            --runtime $RUNTIME \
+            --warmup-iters $WARMUP_ITERS
+done
+
 else
     echo "Skip profiling kernel metrics for workload-agnostic scheduler because GPU_MODE is not DEFAULT"
 fi
@@ -106,4 +111,19 @@ SCHEDULER_POLICY=WORKLOAD_AGNOSTIC_SHARING \
         --run-pairwise
 else
     echo "Skip collecting pair-wise performance with Tally workload agnostic because GPU_MODE is not DEFAULT"
+fi
+
+# 5. Run co-located experiments with Tally priority scheduler
+if [[ $GPU_MODE == "Default" ]]; then
+echo "======== Collecting pair-wise performance with Tally priority scheduler ... ========"
+SCHEDULER_POLICY=PRIORITY \
+    time_cmd \
+    python3 -u scripts/run_bench.py \
+        --save-results \
+        --use-tally \
+        --runtime $RUNTIME \
+        --warmup-iters $WARMUP_ITERS \
+        --run-pairwise
+else
+    echo "Skip collecting pair-wise performance with Tally priority scheduler because GPU_MODE is not DEFAULT"
 fi

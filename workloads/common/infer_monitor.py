@@ -58,13 +58,13 @@ class SingleStreamInferMonitor(InferMonitor):
         self.latencies = []
 
     def on_step_begin(self):
-        if self.warm:
-            self.step_begin_time = time.time()
+        self.step_begin_time = time.time()
 
     def on_step_end(self):
 
+        self.step_end_time = time.time()
+
         if self.warm:
-            self.step_end_time = time.time()
             elapsed_time_ms = (self.step_end_time - self.step_begin_time) * 1000
             self.latencies.append(elapsed_time_ms)
         
@@ -79,13 +79,13 @@ class SingleStreamInferMonitor(InferMonitor):
 
 class ServerInferMonitor(InferMonitor):
 
-    def __init__(self, warmup_iters, total_time, result_dict, signal, pipe, bustiness):
+    def __init__(self, warmup_iters, total_time, result_dict, signal, pipe, load):
         super().__init__(warmup_iters, total_time, result_dict, signal, pipe)
 
         self.step_begin_time = None
         self.step_end_time = None
         self.latencies = []
-        self.bustiness = bustiness
+        self.load = load
         self.query_latency = None
         self.poisson_lambda = None
 
@@ -98,12 +98,14 @@ class ServerInferMonitor(InferMonitor):
         if not self.query_latency and self.num_iters >= 5:
             elapsed_time_seconds = self.step_end_time - self.step_begin_time
             self.query_latency = elapsed_time_seconds
-            self.poisson_lambda = (1 / self.query_latency) * self.bustiness
+            self.poisson_lambda = (1 / self.query_latency) * self.load
             print(f"Poisson lambda rate: {self.poisson_lambda}")
 
-        if self.warm:
+        if self.query_latency:
             elapsed_time_ms = (self.step_end_time - self.step_begin_time) * 1000
-            self.latencies.append(elapsed_time_ms)
+
+            if self.warm:
+                self.latencies.append(elapsed_time_ms)
 
             # wait time to simulate arrival rate of poisson distribution
             assert(self.poisson_lambda)

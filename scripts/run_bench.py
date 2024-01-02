@@ -2,15 +2,17 @@ import sys
 import os
 import random
 import argparse
+import copy
 
 sys.path.append('.')
 
-from utils.util import load_json_from_file, write_json_to_file, execute_cmd
-from utils.bench import Benchmark, launch_benchmark
+from utils.util import load_json_from_file, write_json_to_file, execute_cmd, logger
+from utils.bench import launch_benchmark, get_train_benchmarks, get_infer_benchmarks
 from utils.bench_util import init_env, tear_down_env, get_bench_id
 from utils.parse import parse_result
 from utils.nvidia_smi import get_cuda_mem
-from workloads.configs.train_config import training_list
+from workloads.configs.train_config import training_workloads
+from workloads.configs.infer_config import inference_workloads
 
 parser = argparse.ArgumentParser(prog="benchmark suite launcher", description="Launch benchmark suite")
 
@@ -18,8 +20,9 @@ parser.add_argument("--save-results", action="store_true", default=False)
 parser.add_argument("--use-mps", action="store_true", default=False)
 parser.add_argument("--use-tally", action="store_true", default=False)
 parser.add_argument("--run-pairwise", action="store_true", default=False)
-parser.add_argument("--runtime", type=int, default=60)
+parser.add_argument("--runtime", type=int, default=10)
 parser.add_argument("--warmup-iters", type=int, default=100)
+parser.add_argument("--profile-only", action="store_true", default=False)
 
 args = parser.parse_args()
 
@@ -37,11 +40,9 @@ tally_bench_result_dir = "tally-bench-results"
 if not os.path.exists(tally_bench_result_dir):
     os.makedirs(tally_bench_result_dir)
 
-train_result_file = f"{tally_bench_result_dir}/train_result.json"
-infer_result_file = f"{tally_bench_result_dir}/infer_result.json"
+result_file = f"{tally_bench_result_dir}/result.json"
+result_backup_file = f"{tally_bench_result_dir}/result_backup.json"
 
-train_result_backup_file = f"{tally_bench_result_dir}/train_result_backup.json"
-infer_result_backup_file = f"{tally_bench_result_dir}/infer_result_backup.json"
 
 if __name__ == "__main__":
 
@@ -53,68 +54,97 @@ if __name__ == "__main__":
 
     if use_tally:
         scheduler_policy = os.environ.get("SCHEDULER_POLICY", "NAIVE")
-        print(f"Benchmarking tally with SCHEDULER_POLICY: {scheduler_policy}")
+        logger.info(f"Benchmarking tally with SCHEDULER_POLICY: {scheduler_policy}")
 
-    train_result = load_json_from_file(train_result_file)
-    infer_result = load_json_from_file(infer_result_file)
+    result = load_json_from_file(result_file)
+    # single_job_result, co_locate_result = parse_result(result_file)
 
-    single_job_result, co_locate_result = parse_result(train_result_file)
+    train_benchmarks = get_train_benchmarks(training_workloads, warmup_iters, runtime)
+    infer_benchmarks = get_infer_benchmarks(inference_workloads, warmup_iters, runtime, args.profile_only)
 
-    train_benchmarks = []
-    benchmark_pairs = []
-
-    for framework in training_list:
-        for model in training_list[framework]:
-
-            bench_config = training_list[framework][model]
-
-            for batch_size in bench_config["batch-sizes"]:
-                for amp in bench_config["amp"]:
-
-                    bench = Benchmark(framework, model, batch_size, amp, warmup_iters=warmup_iters, runtime=runtime)
-                    train_benchmarks.append(bench)
+    train_pairs = []
+    train_infer_pairs = []
 
     for i in range(len(train_benchmarks)):
+
         for j in range(i, len(train_benchmarks)):
+            train_pairs.append((copy.copy(train_benchmarks[i]), copy.copy(train_benchmarks[j])))
+        
+        for j in range(len(infer_benchmarks)):
+            train_infer_pairs.append((copy.copy(train_benchmarks[i]), copy.copy(infer_benchmarks[j])))
 
-            bench_1 = train_benchmarks[i]
-            bench_2 = train_benchmarks[j]
-
-            benchmark_pairs.append([bench_1, bench_2])
-
-    # random.shuffle(benchmark_pairs)
+    # random.shuffle(train_pairs)
 
     init_env(use_mps, use_tally)
 
-    # Run single-job training benchmark
-    for benchmark in train_benchmarks:
-        launch_benchmark([benchmark], result=train_result)
+    # Run single-job benchmark
+    for benchmark in train_benchmarks + infer_benchmarks:
+        launch_benchmark([benchmark], result=result)
         if use_tally:
-            launch_benchmark([benchmark], result=train_result, use_tally=use_tally)
+            launch_benchmark((benchmark, ), result=result, use_tally=use_tally)
         if save_results:
-            write_json_to_file(train_result, train_result_file)
-            write_json_to_file(train_result, train_result_backup_file)
+            write_json_to_file(result, result_file)
+            write_json_to_file(result, result_backup_file)
 
     # Run pairwise training benchmark
     if run_pairwise:
-        for idx, pair in enumerate(benchmark_pairs):
 
-            print(f"Running {idx + 1} out of {len(benchmark_pairs)} train_benchmarks ...")
+        all_pairs = train_pairs + train_infer_pairs
+
+        for idx, pair in enumerate(all_pairs):
 
             bench_1, bench_2 = pair
-            bench_1_mem = train_result["tally_naive"][str(bench_1)]["metrics"]["gmem"]
-            bench_2_mem = train_result["tally_naive"][str(bench_2)]["metrics"]["gmem"]
+            bench_id = get_bench_id(pair)
+
+            logger.info(f"Running {idx + 1} out of {len(all_pairs)} pairwise benchmarks: {bench_id} ...")
+
+            bench_1_mem = result["tally_naive"][str(bench_1)]["metrics"]["gmem"]
+            bench_2_mem = result["tally_naive"][str(bench_2)]["metrics"]["gmem"]
             sum_mem = bench_1_mem + bench_2_mem
 
             if sum_mem > 0.95 * cuda_mem_cap:
-                bench_id = get_bench_id(pair)
-                print(f"Skipping {bench_id} as required memory of {sum_mem} MB exceeds system limit of {cuda_mem_cap} MB")
+                logger.info(f"Skipping {bench_id} as required memory of {sum_mem} MB exceeds system limit of {cuda_mem_cap} MB")
                 continue
 
-            launch_benchmark(pair, use_mps=use_mps, use_tally=use_tally, result=train_result)
+            assert(not bench_1.is_latency_critical())
+            is_latency_critical = bench_2.is_latency_critical()
+
+            # Do not run train_infer pairs under workload-agnostic-sharing
+            if use_tally:
+                scheduler_policy = os.environ.get("SCHEDULER_POLICY", "NAIVE")
+                if scheduler_policy == "WORKLOAD_AGNOSTIC_SHARING" and is_latency_critical:
+                    logger.info(f"Skipping {bench_id} as workload-agnostic-sharing scheduler does not apply to latency-critical tasks")
+                    continue
+
+                if scheduler_policy == "PRIORITY":
+
+                    assert(bench_1.is_train)
+
+                    # let bench 2 be high-priority job
+                    bench_1.set_priority(1)
+                    bench_2.set_priority(2)
+
+                    launch_benchmark(pair, use_mps=use_mps, use_tally=use_tally, result=result)
+
+                    # if both are training jobs, let bench 1 be high-priority job as well
+                    if pair in train_pairs:
+                        bench_1.set_priority(2)
+                        bench_2.set_priority(1)
+
+                        reverse_pair = (bench_2, bench_1)
+                        launch_benchmark(reverse_pair, use_mps=use_mps, use_tally=use_tally, result=result)
+                else:
+                    launch_benchmark(pair, use_mps=use_mps, use_tally=use_tally, result=result)
+            else:
+
+                if is_latency_critical:
+                    logger.info(f"Skipping {bench_id} for latency-critical tasks")
+                    continue
+
+                launch_benchmark(pair, use_mps=use_mps, use_tally=use_tally, result=result)
             
             if save_results:
-                write_json_to_file(train_result, train_result_file)
-                write_json_to_file(train_result, train_result_backup_file)
+                write_json_to_file(result, result_file)
+                write_json_to_file(result, result_backup_file)
 
     tear_down_env()
