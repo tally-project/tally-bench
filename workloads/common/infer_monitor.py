@@ -1,7 +1,9 @@
 import time
 import numpy as np
+import timeit
 
 from utils.bench_util import wait_for_signal
+from utils.util import busy_sleep
 
 
 class InferMonitor:
@@ -28,7 +30,7 @@ class InferMonitor:
             self.warm_iters += 1
  
             # break if time is up
-            curr_time = time.time()
+            curr_time = timeit.default_timer()
             if curr_time - self.start_time >= self.total_time:
                 should_stop = True
 
@@ -38,11 +40,11 @@ class InferMonitor:
             if self.signal:
                 wait_for_signal(self.pipe)
 
-            self.start_time = time.time()
+            self.start_time = timeit.default_timer()
             print("Measurement starts ...")
         
         if should_stop:
-            end_time = time.time()
+            end_time = timeit.default_timer()
             self.time_elapsed = end_time - self.start_time
         
         return should_stop
@@ -58,11 +60,11 @@ class SingleStreamInferMonitor(InferMonitor):
         self.latencies = []
 
     def on_step_begin(self):
-        self.step_begin_time = time.time()
+        self.step_begin_time = timeit.default_timer()
 
     def on_step_end(self):
 
-        self.step_end_time = time.time()
+        self.step_end_time = timeit.default_timer()
 
         if self.warm:
             elapsed_time_ms = (self.step_end_time - self.step_begin_time) * 1000
@@ -90,10 +92,10 @@ class ServerInferMonitor(InferMonitor):
         self.poisson_lambda = None
 
     def on_step_begin(self):
-        self.step_begin_time = time.time()
+        self.step_begin_time = timeit.default_timer()
 
     def on_step_end(self):
-        self.step_end_time = time.time()
+        self.step_end_time = timeit.default_timer()
 
         if not self.query_latency and self.num_iters >= 5:
             elapsed_time_seconds = self.step_end_time - self.step_begin_time
@@ -110,8 +112,8 @@ class ServerInferMonitor(InferMonitor):
             # wait time to simulate arrival rate of poisson distribution
             assert(self.poisson_lambda)
             interval = np.random.exponential(1 / self.poisson_lambda)
-            time.sleep(interval)
-        
+            busy_sleep(interval)
+            
         return super().on_step_end()
     
     def write_to_result(self):

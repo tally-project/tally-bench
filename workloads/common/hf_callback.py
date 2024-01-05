@@ -1,6 +1,7 @@
 from transformers import TrainerCallback
 
 import time
+import timeit
 
 from utils.bench_util import wait_for_signal
 
@@ -32,7 +33,7 @@ class BenchCallback(TrainerCallback):
                 control.should_training_stop = True
                 
             # Or break if time is up
-            curr_time = time.time()
+            curr_time = timeit.default_timer()
             if curr_time - self.start_time >= self.total_time:
                 control.should_training_stop = True
 
@@ -42,10 +43,10 @@ class BenchCallback(TrainerCallback):
             if self.signal:
                 wait_for_signal(self.pipe)
 
-            self.start_time = time.time()
+            self.start_time = timeit.default_timer()
             print("Measurement starts ...")
         
         if control.should_training_stop:
-            end_time = time.time()
+            end_time = timeit.default_timer()
             self.time_elapsed = end_time - self.start_time
 

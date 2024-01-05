@@ -2,6 +2,7 @@ import subprocess
 import json
 import os
 import logging
+import time
 
 logger = logging.getLogger("tally-bench")
 logger.setLevel(logging.INFO)
@@ -34,3 +35,8 @@ def load_json_from_file(f_name):
         with open(f_name) as f:
             result = json.load(f)
     return result
+
+def busy_sleep(seconds):
+    start_time = time.time()
+    while (time.time() < start_time + seconds):
+        pass
