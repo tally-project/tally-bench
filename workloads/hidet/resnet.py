@@ -1,10 +1,16 @@
 import hidet
 import torch
+import torchvision
 
-from workloads.common.infer_monitor import SingleStreamInferMonitor, ServerInferMonitor, OfflineInferMonitor
+from workloads.common.infer_monitor import get_infer_monitor
 
 def resnet_infer(model_name, mode, batch_size, amp, warmup_iters, total_time,
                  load=0.5, result_dict=None, signal=False, pipe=None):
+
+    if mode in ["single-stream", "server"]:
+        batch_size = 1
+        
+    monitor = get_infer_monitor(mode, warmup_iters, total_time, result_dict, signal, pipe, load)
 
     hidet.torch.dynamo_config.use_cuda_graph(False)
 
@@ -15,25 +21,12 @@ def resnet_infer(model_name, mode, batch_size, amp, warmup_iters, total_time,
         hidet.torch.dynamo_config.use_tensor_core(False)
         hidet.torch.dynamo_config.use_fp16(flag=False)
 
-    model = torch.hub.load(
-        'pytorch/vision:v0.9.0', model_name, pretrained=True, verbose=False
-    )
+    model = getattr(torchvision.models, model_name)()
     model = model.cuda().eval()
 
     # optimize the model with 'hidet' backend
     model_opt = torch.compile(model, backend='hidet')
-
-    if mode == "single-stream":
-        x = torch.randn(1, 3, 224, 224).cuda()
-        monitor = SingleStreamInferMonitor(warmup_iters, total_time, result_dict, signal, pipe)
-    elif mode == "server":
-        x = torch.randn(1, 3, 224, 224).cuda()
-        monitor = ServerInferMonitor(warmup_iters, total_time, result_dict, signal, pipe, load)
-    elif mode == "offline":
-        x = torch.randn(batch_size, 3, 224, 224).cuda()
-        monitor = OfflineInferMonitor(warmup_iters, total_time, result_dict, signal, pipe)
-    else:
-        raise Exception("unknown mode")
+    x = torch.randn(batch_size, 3, 224, 224).cuda()
 
     while True:
 

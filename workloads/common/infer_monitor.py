@@ -138,3 +138,16 @@ class OfflineInferMonitor(InferMonitor):
         if self.result_dict is not None:
             self.result_dict["time_elapsed"] = self.time_elapsed
             self.result_dict["iters"] = self.warm_iters
+
+
+def get_infer_monitor(mode, warmup_iters, total_time, result_dict, signal, pipe, load=None):
+
+    if mode == "single-stream":
+        return SingleStreamInferMonitor(warmup_iters, total_time, result_dict, signal, pipe)
+    elif mode == "server":
+        assert(load)
+        return ServerInferMonitor(warmup_iters, total_time, result_dict, signal, pipe, load)
+    elif mode == "offline":
+       return OfflineInferMonitor(warmup_iters, total_time, result_dict, signal, pipe)
+    else:
+        raise Exception("unknown mode")

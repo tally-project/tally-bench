@@ -18,7 +18,7 @@ Reference:
 from transformers import PegasusForConditionalGeneration, PegasusTokenizer, Trainer, TrainingArguments
 import torch
 
-from workloads.pytorch.common.hf_callback import BenchCallback
+from workloads.common.hf_callback import BenchCallback
 
 class PegasusDataset(torch.utils.data.Dataset):
     def __init__(self, encodings, labels):
@@ -78,7 +78,7 @@ def prepare_data(model_name,
 
 def train_pegasus(model_name, batch_size, amp, warmup_iters, total_time,
                   total_iters=None, result_dict=None, signal=False, pipe=None,
-                  freeze_encoder=False, output_dir=None):
+                  freeze_encoder=False, output_dir="./pegasus_out"):
     from datasets import load_dataset
     dataset = load_dataset("xsum")
     train_texts, train_labels = dataset['train']['document'][:1000], dataset['train']['summary'][:1000]
@@ -106,6 +106,7 @@ def train_pegasus(model_name, batch_size, amp, warmup_iters, total_time,
         weight_decay=0.01,                          # strength of weight decay
         logging_dir='./logs',                       # directory for storing logs
         logging_steps=10,
+        fp16=amp
     )
 
     trainer = Trainer(

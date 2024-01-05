@@ -290,8 +290,10 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_tally=False
             result_dict = None
             for line in output_lines:
                 try:
-                    result_dict = json.loads(line)
-                    break
+                    parsed = json.loads(line)
+                    if "time_elapsed" in parsed and "iters" in parsed:
+                        result_dict = parsed
+                        break
                 except:
                     pass
             if not result_dict:

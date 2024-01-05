@@ -56,18 +56,32 @@ def get_benchmark_func(framework, model_name, run_training=True):
 
         if not run_training:
 
-            if model_name in ["resnet50"]:
+            if model_name in ["resnet50", "efficientnet_b0"]:
 
                 from workloads.hidet.resnet import resnet_infer
                 bench_func = resnet_infer
 
     if framework == "pytorch":
 
+        if not run_training:
+
+            if model_name in ["resnet50"]:
+                from workloads.pytorch.resnet.resnet_infer import resnet_infer
+                bench_func = resnet_infer
+
+            if model_name in ["VGG", "EfficientNetB0"]:
+                from workloads.pytorch.cifar.cifar_infer import cifar_infer
+                bench_func = cifar_infer
+
         if run_training:
 
             if model_name in ["resnet50"]:
                 from workloads.pytorch.resnet.train_resnet import train_resnet
                 bench_func = train_resnet
+            
+            if model_name in ["VGG", "EfficientNetB0"]:
+                from workloads.pytorch.cifar.train_cifar import train_cifar
+                bench_func = train_cifar
 
             if model_name in ["bert"]:
                 from workloads.pytorch.bert.train_bert import train_bert
@@ -97,7 +111,7 @@ def get_benchmark_func(framework, model_name, run_training=True):
                 from workloads.pytorch.transformer.train_transformer import train_transformer
                 bench_func = train_transformer
 
-            if model_name in ["yolov6n"]:
+            if model_name in ["yolov6n", "yolov6m"]:
                 from workloads.pytorch.yolov6.train_yolov6 import train_yolov6
                 bench_func = train_yolov6
         
