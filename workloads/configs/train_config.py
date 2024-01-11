@@ -17,7 +17,7 @@ training_workloads = {
             "amp": [True, False]
         },
         "yolov6m": {
-            "batch-sizes": [32, 64],
+            "batch-sizes": [16, 32],
             "amp": [True]
         },
         "pegasus-x-base": {

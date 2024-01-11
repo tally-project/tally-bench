@@ -81,7 +81,7 @@ if __name__ == "__main__":
     for benchmark in train_benchmarks + infer_benchmarks:
         launch_benchmark([benchmark], result=result)
         if use_tally:
-            launch_benchmark((benchmark, ), result=result, use_tally=use_tally)
+            launch_benchmark((benchmark, ), result=result, use_tally=use_tally, profile_only=args.profile_only)
         if save_results:
             write_json_to_file(result, result_file)
             write_json_to_file(result, result_backup_file)

@@ -154,7 +154,7 @@ def get_infer_benchmarks(inference_workloads, warmup_iters, runtime, profile_onl
 
     return infer_benchmarks
 
-def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_tally=False, result=None):
+def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_tally=False, result=None, profile_only=False):
 
     output_dict = None
     result_key = "default"
@@ -172,7 +172,14 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_tally=False
 
     bench_id = get_bench_id(benchmarks)
     if bench_id in result[result_key]:
-        return
+
+        bench_res = result[result_key][bench_id]
+
+        if len(bench_res) == 1 and list(bench_res.keys())[0] == "profiled":
+            if profile_only:
+                return
+        else:
+            return
     
     result[result_key][bench_id] = {}
     output_dict = result[result_key][bench_id]
@@ -303,9 +310,13 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_tally=False
             if bench.priority:
                 result_dict["priority"] = bench.priority
 
-            output_dict[f"{bench}_{i}"] = result_dict
+            if not profile_only:
+                output_dict[f"{bench}_{i}"] = result_dict
 
-        output_dict["metrics"] =  parse_smi_list(smi_list)
+        if not profile_only:
+            output_dict["metrics"] =  parse_smi_list(smi_list)
+        else:
+            output_dict["profiled"] = True
 
         logger.info(f"bench_id: {bench_id}")
         logger.info(output_dict)

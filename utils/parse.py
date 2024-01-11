@@ -57,10 +57,15 @@ def parse_result(file_name, single_job_result_out=None, throughput_result_out=No
 
     single_job_result = []
     for key in single_job_keys:
+
+        metrics = default_res[key]["metrics"]
         
         result_row = {
             "exp_key": key,
             "workload_type": "",
+            "mem": metrics["gmem"],
+            "mem_util": metrics["gmem_util"],
+            "gpu_util": metrics["gpu_util"],
             "original_throughput": "",
             "tally_naive_throughput": "",
             "tally_workload_aware_throughput": "",

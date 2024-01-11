@@ -56,7 +56,8 @@ do
             --use-tally \
             --runtime 10 \
             --warmup-iters 1000 \
-            --profile-only
+            --profile-only  \
+            --save-results
 
     SCHEDULER_POLICY=$policy \
         time_cmd \
