@@ -44,6 +44,7 @@ class InferMonitor:
             print("Measurement starts ...")
         
         if should_stop:
+            torch.cuda.synchronize()
             end_time = timeit.default_timer()
             self.time_elapsed = end_time - self.start_time
         
@@ -73,6 +74,10 @@ class SingleStreamInferMonitor(InferMonitor):
         return super().on_step_end()
 
     def write_to_result(self):
+
+        # remove first latency measurement
+        self.latencies.pop(0)
+
         if self.result_dict is not None:
             self.result_dict["time_elapsed"] = self.time_elapsed
             self.result_dict["latencies"] = self.latencies
@@ -117,6 +122,10 @@ class ServerInferMonitor(InferMonitor):
         return super().on_step_end()
     
     def write_to_result(self):
+
+        # remove first latency measurement
+        self.latencies.pop(0)
+        
         if self.result_dict is not None:
             self.result_dict["time_elapsed"] = self.time_elapsed
             self.result_dict["latencies"] = self.latencies

@@ -2,6 +2,7 @@ from transformers import TrainerCallback
 
 import time
 import timeit
+import torch
 
 from utils.bench_util import wait_for_signal
 
@@ -47,6 +48,7 @@ class BenchCallback(TrainerCallback):
             print("Measurement starts ...")
         
         if control.should_training_stop:
+            torch.cuda.synchronize()
             end_time = timeit.default_timer()
             self.time_elapsed = end_time - self.start_time
             self.write_to_result()

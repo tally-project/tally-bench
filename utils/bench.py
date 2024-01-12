@@ -142,12 +142,12 @@ def get_infer_benchmarks(inference_workloads, warmup_iters, runtime, profile_onl
                 infer_benchmarks.append(single_stream_bench)
             
                 if not profile_only:
-                    for load in bench_config["load"]:
+                    for load in bench_config.get("load", []):
                         server_bench = Benchmark(framework, model, warmup_iters, runtime, is_train=False, 
                                                 batch_size=1, amp=amp, infer_mode="server", infer_load=load)
                         infer_benchmarks.append(server_bench)
                 
-                for batch_size in bench_config["batch-sizes"]:
+                for batch_size in bench_config.get("batch-sizes", []):
                     offline_bench = Benchmark(framework, model, warmup_iters, runtime, is_train=False, 
                                               batch_size=batch_size, amp=amp, infer_mode="offline")
                     infer_benchmarks.append(offline_bench)

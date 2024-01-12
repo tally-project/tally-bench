@@ -50,6 +50,7 @@ class TrainMonitor:
             print("Measurement starts ...")
         
         if should_training_stop:
+            torch.cuda.synchronize()
             end_time = timeit.default_timer()
             self.time_elapsed = end_time - self.start_time
 
