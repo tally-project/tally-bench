@@ -88,21 +88,21 @@ def parse_result(file_name, single_job_result_out=None, throughput_result_out=No
         result_row["original_throughput"] = 1
         result_row["workload_type"] = get_workload_type(key)
         
-        if tally_naive_run_res:
-            result_row["tally_naive_throughput"] = compute_relative_throughput(tally_naive_run_res, original_run_res)
-        if tally_aware_run_res:
-            result_row["tally_workload_aware_throughput"] = compute_relative_throughput(tally_aware_run_res, original_run_res)
-        if tally_agnostic_run_res:
-            result_row["tally_workload_agnostic_throughput"] = compute_relative_throughput(tally_agnostic_run_res, original_run_res)
-        if tally_priority_run_res:
-            result_row["tally_priority_throughput"] = compute_relative_throughput(tally_priority_run_res, original_run_res)
-        
         if any([type in result_row["workload_type"] for type in ["single-stream", "server"]]):
-
             result_row["original_avg_latency"] = compute_avg_latency(original_run_res)
             if tally_priority_run_res:
                 result_row["tally_priority_avg_latency"] = compute_avg_latency(tally_priority_run_res)
-
+        
+        if "server" not in result_row["workload_type"]:
+            if tally_naive_run_res:
+                result_row["tally_naive_throughput"] = compute_relative_throughput(tally_naive_run_res, original_run_res)
+            if tally_aware_run_res:
+                result_row["tally_workload_aware_throughput"] = compute_relative_throughput(tally_aware_run_res, original_run_res)
+            if tally_agnostic_run_res:
+                result_row["tally_workload_agnostic_throughput"] = compute_relative_throughput(tally_agnostic_run_res, original_run_res)
+            if tally_priority_run_res:
+                result_row["tally_priority_throughput"] = compute_relative_throughput(tally_priority_run_res, original_run_res)
+        
         single_job_result.append(result_row)
 
     if single_job_result_out:
@@ -118,6 +118,10 @@ def parse_result(file_name, single_job_result_out=None, throughput_result_out=No
     for res in [mps_res, tally_naive_res, tally_aware_res, tally_agnostic_res, tally_priority_res]:
         for key in res.keys():
             job_keys = list(res[key].keys())
+
+            if "error" in job_keys:
+                continue
+
             job_keys.remove("metrics")
             if len(job_keys) == 2 and key not in co_locate_keys:
                 co_locate_keys.append(key)

@@ -21,7 +21,7 @@ training_workloads = {
             "amp": [True]
         },
         "pegasus-x-base": {
-            "batch-sizes": [1, 2],
+            "batch-sizes": [2, 4],
             "amp": [True, False]
         }
         # "dcgan": {
