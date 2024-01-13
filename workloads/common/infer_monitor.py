@@ -1,6 +1,7 @@
 import time
 import numpy as np
 import timeit
+import torch
 
 from utils.bench_util import wait_for_signal
 from utils.util import busy_sleep

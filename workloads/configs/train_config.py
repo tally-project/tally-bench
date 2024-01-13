@@ -16,12 +16,12 @@ training_workloads = {
             "batch-sizes": [16, 32],
             "amp": [True, False]
         },
-        "yolov6m": {
-            "batch-sizes": [16, 32],
-            "amp": [True]
-        },
         "pegasus-x-base": {
             "batch-sizes": [2, 4],
+            "amp": [True, False]
+        },
+        "whisper-small": {
+            "batch-sizes": [8, 16],
             "amp": [True, False]
         }
         # "dcgan": {
@@ -39,6 +39,10 @@ training_workloads = {
         # "transformer": {
         #     "batch-sizes": [8],
         #     "amp": [False]
+        # },
+        # "yolov6m": {
+        #     "batch-sizes": [16, 32],
+        #     "amp": [True]
         # },
     }
 }
