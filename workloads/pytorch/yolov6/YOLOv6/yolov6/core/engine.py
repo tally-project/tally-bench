@@ -335,15 +335,16 @@ class Trainer:
 
         LOGGER.info(('\n' + '%10s' * (self.loss_num + 2)) % (*self.loss_info,))
         self.pbar = enumerate(self.train_loader)
-        if self.main_process:
-            self.pbar = tqdm(self.pbar, total=self.max_stepnum, ncols=NCOLS, bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}')
+        # if self.main_process:
+        #     self.pbar = tqdm(self.pbar, total=self.max_stepnum, ncols=NCOLS, bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}')
 
     # Print loss after each steps
     def print_details(self):
-        if self.main_process:
-            self.mean_loss = (self.mean_loss * self.step + self.loss_items) / (self.step + 1)
-            self.pbar.set_description(('%10s' + ' %10.4g' + '%10.4g' * self.loss_num) % (f'{self.epoch}/{self.max_epoch - 1}', \
-                                                                self.scheduler.get_last_lr()[0], *(self.mean_loss)))
+        pass
+        # if self.main_process:
+        #     self.mean_loss = (self.mean_loss * self.step + self.loss_items) / (self.step + 1)
+        #     self.pbar.set_description(('%10s' + ' %10.4g' + '%10.4g' * self.loss_num) % (f'{self.epoch}/{self.max_epoch - 1}', \
+        #                                                         self.scheduler.get_last_lr()[0], *(self.mean_loss)))
 
     def strip_model(self):
         if self.main_process:

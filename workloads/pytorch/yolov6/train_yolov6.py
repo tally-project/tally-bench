@@ -49,7 +49,7 @@ class TallyYoloTrainer(Trainer):
             for self.epoch in range(self.start_epoch, self.max_epoch):
                 self.before_epoch()
                 self.train_one_epoch(self.epoch)
-                self.after_epoch()
+                # self.after_epoch()
 
                 if self.finished:
                     self.time_elapsed = self.end_time - self.start_time
@@ -73,8 +73,9 @@ class TallyYoloTrainer(Trainer):
         try:
             for self.step, self.batch_data in self.pbar:
                 self.train_in_steps(epoch_num, self.step)
-                self.print_details()
-
+                # self.print_details()
+                print(f"loss: {self.loss_items}")
+                
                 # Increment iterations
                 self.num_iters += 1
                 if self.warm:
@@ -101,6 +102,7 @@ class TallyYoloTrainer(Trainer):
                     print("Measurement starts ...")
         
             if self.finished:
+                torch.cuda.synchronize()
                 self.end_time = time.time()
 
         except Exception as _:
@@ -119,7 +121,7 @@ def train_yolov6(model_name, batch_size, amp, warmup_iters, total_time,
     args.rect = False
     args.batch_size = batch_size
     args.epochs = 100000
-    args.workers = 8
+    args.workers = 1
     args.device = '0'
     args.eval_interval = 20
     args.eval_final_only = False
@@ -154,6 +156,7 @@ def train_yolov6(model_name, batch_size, amp, warmup_iters, total_time,
     # reload envs because args was chagned in check_and_init(args)
     args.local_rank, args.rank, args.world_size = get_envs()
     LOGGER.info(f'training args are: {args}\n')
+
     if args.local_rank != -1: # if DDP mode
         torch.cuda.set_device(args.local_rank)
         device = torch.device('cuda', args.local_rank)
