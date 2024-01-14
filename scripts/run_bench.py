@@ -62,6 +62,7 @@ if __name__ == "__main__":
 
     train_benchmarks = get_train_benchmarks(training_workloads, warmup_iters, runtime)
     infer_benchmarks = get_infer_benchmarks(inference_workloads, warmup_iters, runtime)
+    all_benchmarks = train_benchmarks + infer_benchmarks
 
     train_pairs = []
     train_infer_pairs = []
@@ -79,7 +80,10 @@ if __name__ == "__main__":
     init_env(use_mps, use_tally)
 
     # Run single-job benchmark
-    for benchmark in train_benchmarks + infer_benchmarks:
+    for idx, benchmark in enumerate(all_benchmarks):
+
+        bench_id = get_bench_id((benchmark,))
+        logger.info(f"Running {idx + 1} out of {len(all_benchmarks)} single-job benchmarks: {bench_id} ...")
 
         if scheduler_policy == "WORKLOAD_AGNOSTIC_SHARING":
             if benchmark.is_latency_critical():
@@ -91,7 +95,7 @@ if __name__ == "__main__":
             if not args.profile_only and not benchmark.is_latency_critical():
                 continue
         
-            # can skip profiling server because it is the kernels as single-stream
+            # can skip profiling server because it is the same kernels as single-stream
             if args.profile_only and benchmark.infer_mode == "server":
                 continue
 
