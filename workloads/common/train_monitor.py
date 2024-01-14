@@ -46,7 +46,7 @@ class TrainMonitor:
             self.warm = True
 
             if loss:
-                print(f"loss: {loss}")
+                print(f"loss at warmup: {loss}")
 
             if self.signal:
                 wait_for_signal(self.pipe)
@@ -60,7 +60,7 @@ class TrainMonitor:
             self.time_elapsed = end_time - self.start_time
 
             if loss:
-                print(f"loss: {loss}")
+                print(f"loss at end: {loss}")
 
             self.write_to_result()
         

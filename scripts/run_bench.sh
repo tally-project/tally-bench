@@ -69,9 +69,9 @@ do
             --warmup-iters $WARMUP_ITERS
 done
 
-# else
-#     echo "Skip profiling kernel metrics for workload-agnostic and priority scheduler because GPU_MODE is not DEFAULT"
-# fi
+else
+    echo "Skip profiling kernel metrics for workload-agnostic and priority scheduler because GPU_MODE is not DEFAULT"
+fi
 
 # # 3. Run co-located experiments without MPS nor Tally (Hardware multi-processing)
 # if [[ $GPU_MODE == "Default" ]]; then
