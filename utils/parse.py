@@ -18,7 +18,7 @@ def get_workload_type(key):
     if "train" in key:
         return "training"
     elif "infer" in key:
-        for inference_type in ["single-stream", "server", "offline"]:
+        for inference_type in ["single-stream", "server"]:
             if inference_type in key:
                 return f"inference-{inference_type}"
     
@@ -49,8 +49,12 @@ def parse_result(file_name, single_job_result_out=None, throughput_result_out=No
     single_job_keys = []
     
     for key in list(default_res.keys()):
+        if "offline" in key:
+            continue
+
         job_keys = list(default_res[key].keys())
         job_keys.remove("metrics")
+
         if len(job_keys) == 1:
             single_job_keys.append(key)
 
@@ -92,12 +96,10 @@ def parse_result(file_name, single_job_result_out=None, throughput_result_out=No
         
         if "server" not in result_row["workload_type"]:
             if tally_naive_run_res:
-                result_row["tally_naive_throughput"] = compute_relative_throughput(tally_naive_run_res, original_run_res)
+                result_row["tally_naive_throughput"] = min(compute_relative_throughput(tally_naive_run_res, original_run_res), 1.)
             if tally_sharing_run_res:
                 result_row["tally_sharing_throughput"] = compute_relative_throughput(tally_sharing_run_res, original_run_res)
-            if tally_priority_run_res:
-                result_row["tally_priority_throughput"] = compute_relative_throughput(tally_priority_run_res, original_run_res)
-        
+
         single_job_result.append(result_row)
 
     if single_job_result_out:
@@ -113,6 +115,10 @@ def parse_result(file_name, single_job_result_out=None, throughput_result_out=No
     co_locate_keys = []
     for res in [mps_res, tally_naive_res, tally_sharing_res, tally_priority_res]:
         for key in res.keys():
+
+            if "offline" in key:
+                continue
+
             job_keys = list(res[key].keys())
 
             if "error" in job_keys or "profiled" in job_keys:
@@ -193,15 +199,11 @@ def parse_result(file_name, single_job_result_out=None, throughput_result_out=No
                 "best_effort_job_workload_type": get_workload_type(best_effort_job_clean),
                 "high_priority_original_avg_latency": "",
                 "high_priority_tally_avg_latency": "",
-                "high_priority_tally_throughput": "",
                 "best_effort_tally_throughput": compute_relative_throughput(tally_priority_run_res[best_effort_job], single_job_default_perf[best_effort_job_clean]),
             }
 
-            if not is_latency_critical(high_priority_job) and not is_latency_critical(best_effort_job):
-                latency_critical_result_row["high_priority_tally_throughput"] = compute_relative_throughput(tally_priority_run_res[high_priority_job], single_job_default_perf[high_priority_job_clean])
-            else:
-                latency_critical_result_row["high_priority_original_avg_latency"] = compute_avg_latency(single_job_default_perf[high_priority_job_clean])
-                latency_critical_result_row["high_priority_tally_avg_latency"] = compute_avg_latency(tally_priority_run_res[high_priority_job])
+            latency_critical_result_row["high_priority_original_avg_latency"] = compute_avg_latency(single_job_default_perf[high_priority_job_clean])
+            latency_critical_result_row["high_priority_tally_avg_latency"] = compute_avg_latency(tally_priority_run_res[high_priority_job])
 
             latency_critical_result.append(latency_critical_result_row)
 
@@ -218,6 +220,7 @@ def parse_result(file_name, single_job_result_out=None, throughput_result_out=No
 
     if priority_result_out:
         latency_critical_df = pd.DataFrame(latency_critical_result)
+        latency_critical_df = latency_critical_df.sort_values(by=['high_priority_job'], ascending=False)
         latency_critical_df.to_csv(priority_result_out, index=True)
 
     return single_job_result, co_locate_result

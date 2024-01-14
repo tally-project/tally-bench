@@ -49,8 +49,6 @@ class Benchmark:
                 pass
             elif infer_mode == "server":
                 assert(infer_mode)
-            elif infer_mode == "offline":
-                assert(batch_size)
             else:
                 assert(False)
     
@@ -145,11 +143,6 @@ def get_infer_benchmarks(inference_workloads, warmup_iters, runtime):
                     server_bench = Benchmark(framework, model, warmup_iters, runtime, is_train=False, 
                                             batch_size=1, amp=amp, infer_mode="server", infer_load=load)
                     infer_benchmarks.append(server_bench)
-                
-                for batch_size in bench_config.get("batch-sizes", []):
-                    offline_bench = Benchmark(framework, model, warmup_iters, runtime, is_train=False, 
-                                              batch_size=batch_size, amp=amp, infer_mode="offline")
-                    infer_benchmarks.append(offline_bench)
 
     return infer_benchmarks
 
