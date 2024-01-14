@@ -128,7 +128,7 @@ def get_train_benchmarks(training_workloads, warmup_iters, runtime):
 
     return train_benchmarks
 
-def get_infer_benchmarks(inference_workloads, warmup_iters, runtime, profile_only=False):
+def get_infer_benchmarks(inference_workloads, warmup_iters, runtime):
     infer_benchmarks = []
 
     for framework in inference_workloads:
@@ -141,11 +141,10 @@ def get_infer_benchmarks(inference_workloads, warmup_iters, runtime, profile_onl
                                                 batch_size=1, amp=amp, infer_mode="single-stream")
                 infer_benchmarks.append(single_stream_bench)
             
-                if not profile_only:
-                    for load in bench_config.get("load", []):
-                        server_bench = Benchmark(framework, model, warmup_iters, runtime, is_train=False, 
-                                                batch_size=1, amp=amp, infer_mode="server", infer_load=load)
-                        infer_benchmarks.append(server_bench)
+                for load in bench_config.get("load", []):
+                    server_bench = Benchmark(framework, model, warmup_iters, runtime, is_train=False, 
+                                            batch_size=1, amp=amp, infer_mode="server", infer_load=load)
+                    infer_benchmarks.append(server_bench)
                 
                 for batch_size in bench_config.get("batch-sizes", []):
                     offline_bench = Benchmark(framework, model, warmup_iters, runtime, is_train=False, 
@@ -177,9 +176,9 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_tally=False
 
         if len(bench_res) == 1 and list(bench_res.keys())[0] == "profiled":
             if profile_only:
-                return
+                return False
         else:
-            return
+            return False
     
     result[result_key][bench_id] = {}
     output_dict = result[result_key][bench_id]
@@ -327,3 +326,5 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_tally=False
         time.sleep(10)
     finally:
         tear_down_env()
+
+    return True

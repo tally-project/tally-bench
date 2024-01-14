@@ -51,6 +51,7 @@ if __name__ == "__main__":
 
     curr_dir = os.getcwd()
     os.environ["TALLY_HOME"] = f"{curr_dir}/tally"
+    scheduler_policy = None
 
     if use_tally:
         scheduler_policy = os.environ.get("SCHEDULER_POLICY", "NAIVE")
@@ -60,7 +61,7 @@ if __name__ == "__main__":
     # single_job_result, co_locate_result = parse_result(result_file)
 
     train_benchmarks = get_train_benchmarks(training_workloads, warmup_iters, runtime)
-    infer_benchmarks = get_infer_benchmarks(inference_workloads, warmup_iters, runtime, args.profile_only)
+    infer_benchmarks = get_infer_benchmarks(inference_workloads, warmup_iters, runtime)
 
     train_pairs = []
     train_infer_pairs = []
@@ -79,10 +80,25 @@ if __name__ == "__main__":
 
     # Run single-job benchmark
     for benchmark in train_benchmarks + infer_benchmarks:
-        launch_benchmark([benchmark], result=result)
+
+        if scheduler_policy == "WORKLOAD_AGNOSTIC_SHARING":
+            if benchmark.is_latency_critical():
+                continue
+
+        if scheduler_policy == "PRIORITY":
+
+            # no need to measure throughput-oriented jobs
+            if not args.profile_only and not benchmark.is_latency_critical():
+                continue
+        
+            # can skip profiling server because it is the kernels as single-stream
+            if args.profile_only and benchmark.infer_mode == "server":
+                continue
+
+        updated = launch_benchmark([benchmark], result=result)
         if use_tally:
-            launch_benchmark((benchmark, ), result=result, use_tally=use_tally, profile_only=args.profile_only)
-        if save_results:
+            updated |= launch_benchmark((benchmark, ), result=result, use_tally=use_tally, profile_only=args.profile_only)
+        if updated and save_results:
             write_json_to_file(result, result_file)
             write_json_to_file(result, result_backup_file)
 
@@ -109,17 +125,19 @@ if __name__ == "__main__":
             assert(not bench_1.is_latency_critical())
             is_latency_critical = bench_2.is_latency_critical()
 
+            if not use_tally and is_latency_critical:
+                logger.info(f"Skipping {bench_id} for latency-critical tasks")
+                continue
+
             # Do not run train_infer pairs under workload-agnostic-sharing
             if use_tally:
 
-                scheduler_policy = os.environ.get("SCHEDULER_POLICY", "NAIVE")
                 if scheduler_policy == "WORKLOAD_AGNOSTIC_SHARING":
                     if is_latency_critical:
                         logger.info(f"Skipping {bench_id} as workload-agnostic-sharing scheduler does not apply to latency-critical tasks")
                         continue
 
                 if scheduler_policy == "PRIORITY":
-
                     if not is_latency_critical:
                         logger.info(f"Skipping {bench_id} as we only run priority scheduler on LC/BE pair for now")
                         continue
@@ -130,7 +148,7 @@ if __name__ == "__main__":
                     bench_1.set_priority(1)
                     bench_2.set_priority(2)
 
-                    launch_benchmark(pair, use_mps=use_mps, use_tally=use_tally, result=result)
+                    # launch_benchmark(pair, use_mps=use_mps, use_tally=use_tally, result=result)
 
                     # # if both are training jobs, let bench 1 be high-priority job as well
                     # if pair in train_pairs:
@@ -140,15 +158,11 @@ if __name__ == "__main__":
                     #     reverse_pair = (bench_2, bench_1)
                     #     launch_benchmark(reverse_pair, use_mps=use_mps, use_tally=use_tally, result=result)
 
-                    continue
-
-            if not use_tally and is_latency_critical:
-                logger.info(f"Skipping {bench_id} for latency-critical tasks")
-                continue
+                    # continue
             
-            launch_benchmark(pair, use_mps=use_mps, use_tally=use_tally, result=result)
+            updated = launch_benchmark(pair, use_mps=use_mps, use_tally=use_tally, result=result)
             
-            if save_results:
+            if updated and save_results:
                 write_json_to_file(result, result_file)
                 write_json_to_file(result, result_backup_file)
 
