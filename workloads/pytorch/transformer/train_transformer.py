@@ -159,7 +159,7 @@ def train_transformer(model_name, batch_size, amp, warmup_iters, total_time, tot
                 # update parameters
                 optimizer.step_and_update_lr()
             
-            should_training_stop = train_monitor.on_step_end()
+            should_training_stop = train_monitor.on_step_end(loss)
             if should_training_stop:
                 break
         

@@ -23,7 +23,11 @@ training_workloads = {
         "whisper-small": {
             "batch-sizes": [8, 16],
             "amp": [True, False]
-        }
+        },
+        "yolov6m": {
+            "batch-sizes": [16, 32],
+            "amp": [True]
+        },
         # "dcgan": {
         #     "batch-sizes": [64],
         #     "amp": [True, False]
@@ -39,10 +43,6 @@ training_workloads = {
         # "transformer": {
         #     "batch-sizes": [8],
         #     "amp": [False]
-        # },
-        # "yolov6m": {
-        #     "batch-sizes": [16, 32],
-        #     "amp": [True]
         # },
     }
 }

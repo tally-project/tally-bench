@@ -21,7 +21,9 @@ class TrainMonitor:
         self.time_elapsed = None
         self.pipe = pipe
 
-    def on_step_end(self):
+    # optionally pass a loss value to be printed at warm and at end
+    # to verify the training process is ok
+    def on_step_end(self, loss=None):
 
         torch.cuda.synchronize()
 
@@ -43,6 +45,9 @@ class TrainMonitor:
         if self.num_iters == self.warmup_iters:
             self.warm = True
 
+            if loss:
+                print(f"loss: {loss}")
+
             if self.signal:
                 wait_for_signal(self.pipe)
 
@@ -53,6 +58,9 @@ class TrainMonitor:
             torch.cuda.synchronize()
             end_time = timeit.default_timer()
             self.time_elapsed = end_time - self.start_time
+
+            if loss:
+                print(f"loss: {loss}")
 
             self.write_to_result()
         

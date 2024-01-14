@@ -119,7 +119,7 @@ def parse_result(file_name, single_job_result_out=None, throughput_result_out=No
         for key in res.keys():
             job_keys = list(res[key].keys())
 
-            if "error" in job_keys:
+            if "error" in job_keys or "profiled" in job_keys:
                 continue
 
             job_keys.remove("metrics")
@@ -214,14 +214,14 @@ def parse_result(file_name, single_job_result_out=None, throughput_result_out=No
 
             latency_critical_result.append(latency_critical_result_row)
 
-    if throughput_result_out:
-        co_locate_df = pd.DataFrame(co_locate_result)
-        co_locate_df["mps_throughput_sum"] = pd.to_numeric((co_locate_df["job_1_mps_throughput"] + co_locate_df["job_2_mps_throughput"])).round(2)
-        co_locate_df["tally_workload_agnostic_throughput_sum"] = pd.to_numeric((co_locate_df["job_1_tally_agnostic_throughput"] + co_locate_df["job_2_tally_agnostic_throughput"])).round(2)
-        # co_locate_df["tally_aware_sum"] = pd.to_numeric((co_locate_df["model_1_tally_aware"] + co_locate_df["model_2_tally_aware"])).round(2)
-        co_locate_df["tally_workload_agnostic_speedup"] = pd.to_numeric((co_locate_df["tally_workload_agnostic_throughput_sum"] / co_locate_df["mps_throughput_sum"])).round(2)
-        co_locate_df = co_locate_df.sort_values(by='tally_workload_agnostic_speedup', ascending=False)
-        co_locate_df.to_csv(throughput_result_out, index=True)
+    # if throughput_result_out:
+    #     co_locate_df = pd.DataFrame(co_locate_result)
+    #     co_locate_df["mps_throughput_sum"] = pd.to_numeric((co_locate_df["job_1_mps_throughput"] + co_locate_df["job_2_mps_throughput"])).round(2)
+    #     co_locate_df["tally_workload_agnostic_throughput_sum"] = pd.to_numeric((co_locate_df["job_1_tally_agnostic_throughput"] + co_locate_df["job_2_tally_agnostic_throughput"])).round(2)
+    #     # co_locate_df["tally_aware_sum"] = pd.to_numeric((co_locate_df["model_1_tally_aware"] + co_locate_df["model_2_tally_aware"])).round(2)
+    #     co_locate_df["tally_workload_agnostic_speedup"] = pd.to_numeric((co_locate_df["tally_workload_agnostic_throughput_sum"] / co_locate_df["mps_throughput_sum"])).round(2)
+    #     co_locate_df = co_locate_df.sort_values(by='tally_workload_agnostic_speedup', ascending=False)
+    #     co_locate_df.to_csv(throughput_result_out, index=True)
 
     if priority_result_out:
         latency_critical_df = pd.DataFrame(latency_critical_result)

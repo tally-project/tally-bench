@@ -111,12 +111,18 @@ if __name__ == "__main__":
 
             # Do not run train_infer pairs under workload-agnostic-sharing
             if use_tally:
+
                 scheduler_policy = os.environ.get("SCHEDULER_POLICY", "NAIVE")
-                if scheduler_policy == "WORKLOAD_AGNOSTIC_SHARING" and is_latency_critical:
-                    logger.info(f"Skipping {bench_id} as workload-agnostic-sharing scheduler does not apply to latency-critical tasks")
-                    continue
+                if scheduler_policy == "WORKLOAD_AGNOSTIC_SHARING":
+                    if is_latency_critical:
+                        logger.info(f"Skipping {bench_id} as workload-agnostic-sharing scheduler does not apply to latency-critical tasks")
+                        continue
 
                 if scheduler_policy == "PRIORITY":
+
+                    if not is_latency_critical:
+                        logger.info(f"Skipping {bench_id} as we only run priority scheduler on LC/BE pair for now")
+                        continue
 
                     assert(bench_1.is_train)
 
@@ -126,22 +132,21 @@ if __name__ == "__main__":
 
                     launch_benchmark(pair, use_mps=use_mps, use_tally=use_tally, result=result)
 
-                    # if both are training jobs, let bench 1 be high-priority job as well
-                    if pair in train_pairs:
-                        bench_1.set_priority(2)
-                        bench_2.set_priority(1)
+                    # # if both are training jobs, let bench 1 be high-priority job as well
+                    # if pair in train_pairs:
+                    #     bench_1.set_priority(2)
+                    #     bench_2.set_priority(1)
 
-                        reverse_pair = (bench_2, bench_1)
-                        launch_benchmark(reverse_pair, use_mps=use_mps, use_tally=use_tally, result=result)
-                else:
-                    launch_benchmark(pair, use_mps=use_mps, use_tally=use_tally, result=result)
-            else:
+                    #     reverse_pair = (bench_2, bench_1)
+                    #     launch_benchmark(reverse_pair, use_mps=use_mps, use_tally=use_tally, result=result)
 
-                if is_latency_critical:
-                    logger.info(f"Skipping {bench_id} for latency-critical tasks")
                     continue
 
-                launch_benchmark(pair, use_mps=use_mps, use_tally=use_tally, result=result)
+            if not use_tally and is_latency_critical:
+                logger.info(f"Skipping {bench_id} for latency-critical tasks")
+                continue
+            
+            launch_benchmark(pair, use_mps=use_mps, use_tally=use_tally, result=result)
             
             if save_results:
                 write_json_to_file(result, result_file)

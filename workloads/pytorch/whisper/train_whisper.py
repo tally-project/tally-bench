@@ -14,7 +14,7 @@ from transformers import (
 )
 import evaluate
 
-from workloads.pytorch.common.hf_callback import BenchCallback
+from workloads.common.hf_callback import BenchCallback
 
 @dataclass
 class DataCollatorSpeechSeq2SeqWithPadding:

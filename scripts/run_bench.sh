@@ -23,8 +23,8 @@ time_cmd() {
 
 set -e
 
-export RUNTIME=5
-export WARMUP_ITERS=10
+export RUNTIME=30
+export WARMUP_ITERS=30
 
 export GPU_MODE=$(nvidia-smi --query-gpu=compute_mode --format=csv | awk 'NR==2')
 
@@ -69,9 +69,9 @@ do
             --warmup-iters $WARMUP_ITERS
 done
 
-else
-    echo "Skip profiling kernel metrics for workload-agnostic and priority scheduler because GPU_MODE is not DEFAULT"
-fi
+# else
+#     echo "Skip profiling kernel metrics for workload-agnostic and priority scheduler because GPU_MODE is not DEFAULT"
+# fi
 
 # # 3. Run co-located experiments without MPS nor Tally (Hardware multi-processing)
 # if [[ $GPU_MODE == "Default" ]]; then
