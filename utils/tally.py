@@ -29,6 +29,7 @@ def start_tally():
     logger.info("Starting Tally server ...")
     start_tally_cmd = f"bash {tally_start_script} &"
     execute_cmd(start_tally_cmd)
+    time.sleep(3)
 
 def shut_down_tally():
     logger.info("Shutting down Tally server ...")

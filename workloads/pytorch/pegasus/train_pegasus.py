@@ -100,7 +100,7 @@ def train_pegasus(model_name, batch_size, amp, warmup_iters, total_time,
         output_dir=output_dir,                      # output directory
         num_train_epochs=2000,                      # total number of training epochs
         per_device_train_batch_size=batch_size,     # batch size per device during training, can increase if memory allows
-        save_steps=500,                             # number of updates steps before checkpoint saves
+        save_steps=2000,                             # number of updates steps before checkpoint saves
         save_total_limit=5,                         # limit the total amount of checkpoints and deletes the older checkpoints
         warmup_steps=500,                           # number of warmup steps for learning rate scheduler
         weight_decay=0.01,                          # strength of weight decay

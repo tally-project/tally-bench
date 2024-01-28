@@ -74,6 +74,7 @@ class TallyYoloTrainer(Trainer):
             for self.step, self.batch_data in self.pbar:
                 self.train_in_steps(epoch_num, self.step)
                 # self.print_details()
+                print(f"loss: {self.loss_items}")
                 
                 # Increment iterations
                 self.num_iters += 1
@@ -93,7 +94,7 @@ class TallyYoloTrainer(Trainer):
 
                 if self.num_iters == self.warmup_iters:
                     self.warm = True
-                    print(f"loss: {self.loss_items}")
+                    # print(f"loss: {self.loss_items}")
 
                     if self.signal:
                         wait_for_signal(self.pipe)
@@ -104,7 +105,7 @@ class TallyYoloTrainer(Trainer):
             if self.finished:
                 torch.cuda.synchronize()
                 self.end_time = time.time()
-                print(f"loss: {self.loss_items}")
+                # print(f"loss: {self.loss_items}")
 
         except Exception as _:
             LOGGER.error('ERROR in training steps.')

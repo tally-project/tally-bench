@@ -44,6 +44,11 @@ result_file = f"{tally_bench_result_dir}/result.json"
 result_backup_file = f"{tally_bench_result_dir}/result_backup.json"
 
 
+def save_results(result, updated, save_results):
+    if updated and save_results:
+        write_json_to_file(result, result_file)
+        write_json_to_file(result, result_backup_file)
+
 if __name__ == "__main__":
 
     # cuda memory capacity
@@ -102,14 +107,12 @@ if __name__ == "__main__":
         updated = launch_benchmark([benchmark], result=result)
         if use_tally:
             updated |= launch_benchmark((benchmark, ), result=result, use_tally=use_tally, profile_only=args.profile_only)
-        if updated and save_results:
-            write_json_to_file(result, result_file)
-            write_json_to_file(result, result_backup_file)
+        save_results(result, updated, save_results)
 
     # Run pairwise training benchmark
     if run_pairwise:
 
-        all_pairs = train_pairs + train_infer_pairs
+        all_pairs = train_infer_pairs + train_pairs
 
         for idx, pair in enumerate(all_pairs):
 
@@ -127,24 +130,24 @@ if __name__ == "__main__":
                 continue
 
             assert(not bench_1.is_latency_critical())
-            is_latency_critical = bench_2.is_latency_critical()
+            is_bench_2_lc = bench_2.is_latency_critical()
 
-            if not use_tally and is_latency_critical:
-                logger.info(f"Skipping {bench_id} for latency-critical tasks")
-                continue
+            # if not use_tally and is_latency_critical:
+            #     logger.info(f"Skipping {bench_id} for latency-critical tasks")
+            #     continue
 
             # Do not run train_infer pairs under workload-agnostic-sharing
             if use_tally:
 
                 if scheduler_policy == "WORKLOAD_AGNOSTIC_SHARING":
-                    if is_latency_critical:
+                    if is_bench_2_lc:
                         logger.info(f"Skipping {bench_id} as workload-agnostic-sharing scheduler does not apply to latency-critical tasks")
                         continue
 
                 if scheduler_policy == "PRIORITY":
-                    if not is_latency_critical:
-                        logger.info(f"Skipping {bench_id} as we only run priority scheduler on LC/BE pair for now")
-                        continue
+                    # if not is_bench_2_lc:
+                    #     logger.info(f"Skipping {bench_id} as we only run priority scheduler on LC/BE pair for now")
+                    #     continue
 
                     assert(bench_1.is_train)
 
@@ -152,22 +155,20 @@ if __name__ == "__main__":
                     bench_1.set_priority(1)
                     bench_2.set_priority(2)
 
-                    # launch_benchmark(pair, use_mps=use_mps, use_tally=use_tally, result=result)
+                    updated = launch_benchmark(pair, use_mps=use_mps, use_tally=use_tally, result=result)
 
-                    # # if both are training jobs, let bench 1 be high-priority job as well
-                    # if pair in train_pairs:
-                    #     bench_1.set_priority(2)
-                    #     bench_2.set_priority(1)
+                    # if both are training jobs, let bench 1 be high-priority job as well
+                    if pair in train_pairs:
+                        bench_1.set_priority(2)
+                        bench_2.set_priority(1)
 
-                    #     reverse_pair = (bench_2, bench_1)
-                    #     launch_benchmark(reverse_pair, use_mps=use_mps, use_tally=use_tally, result=result)
-
-                    # continue
+                        reverse_pair = (bench_2, bench_1)
+                        updated |= launch_benchmark(reverse_pair, use_mps=use_mps, use_tally=use_tally, result=result)
+                    
+                    save_results(result, updated, save_results)
+                    continue
             
             updated = launch_benchmark(pair, use_mps=use_mps, use_tally=use_tally, result=result)
-            
-            if updated and save_results:
-                write_json_to_file(result, result_file)
-                write_json_to_file(result, result_backup_file)
+            save_results(result, updated, save_results)
 
     tear_down_env()

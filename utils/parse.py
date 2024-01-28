@@ -1,18 +1,34 @@
 import pandas as pd
+import numpy as np
 
 from utils.util import load_json_from_file
 
 
-def compute_relative_throughput(run_res, baseline_res):
-
+def compute_relative_tp(run_res, baseline_res):
     run_throughput = run_res["iters"] / run_res["time_elapsed"]
     baseline_throughput = baseline_res["iters"] / baseline_res["time_elapsed"]
     return round(run_throughput / baseline_throughput, 2)
 
 
 def compute_avg_latency(run_res):
-    avg_latency = sum(run_res["latencies"]) / len(run_res["latencies"])
+    
+    # avg_latency = sum(run_res["latencies"]) / len(run_res["latencies"])
+    # return round(avg_latency, 3)
+
+    filter_out_first_10 = run_res["latencies"][10:]
+    avg_latency = sum(filter_out_first_10) / len(filter_out_first_10)
     return round(avg_latency, 3)
+
+
+def compute_percentile_latency(run_res, percentile):
+    
+    # percentile_latency = np.percentile(run_res["latencies"], percentile)
+    # return round(percentile_latency, 3)
+
+    filter_out_first_10 = run_res["latencies"][10:]
+    percentile_latency = np.percentile(filter_out_first_10, percentile)
+    return round(percentile_latency, 3)
+
 
 def get_workload_type(key):
     if "train" in key:
@@ -96,9 +112,9 @@ def parse_result(file_name, single_job_result_out=None, throughput_result_out=No
         
         if "server" not in result_row["workload_type"]:
             if tally_naive_run_res:
-                result_row["tally_naive_throughput"] = min(compute_relative_throughput(tally_naive_run_res, original_run_res), 1.)
+                result_row["tally_naive_throughput"] = min(compute_relative_tp(tally_naive_run_res, original_run_res), 1.)
             if tally_sharing_run_res:
-                result_row["tally_sharing_throughput"] = compute_relative_throughput(tally_sharing_run_res, original_run_res)
+                result_row["tally_sharing_throughput"] = compute_relative_tp(tally_sharing_run_res, original_run_res)
 
         single_job_result.append(result_row)
 
@@ -137,7 +153,10 @@ def parse_result(file_name, single_job_result_out=None, throughput_result_out=No
         
         exits_run_res = None
 
-        for run_res in [mps_run_res, tally_naive_run_res, tally_sharing_run_res, tally_priority_run_res]:
+        for run_res in [mps_run_res,
+                        tally_naive_run_res,
+                        tally_sharing_run_res,
+                        tally_priority_run_res]:
             if run_res:
                 exits_run_res = run_res
 
@@ -172,11 +191,11 @@ def parse_result(file_name, single_job_result_out=None, throughput_result_out=No
             }
 
             if mps_run_res:
-                co_locate_result_row["job_1_mps_throughput"] = compute_relative_throughput(mps_run_res[job_1], job_1_default_res)
-                co_locate_result_row["job_2_mps_throughput"] = compute_relative_throughput(mps_run_res[job_2], job_2_default_res)
+                co_locate_result_row["job_1_mps_throughput"] = compute_relative_tp(mps_run_res[job_1], job_1_default_res)
+                co_locate_result_row["job_2_mps_throughput"] = compute_relative_tp(mps_run_res[job_2], job_2_default_res)
             if tally_sharing_run_res:
-                co_locate_result_row["job_1_tally_throughput"] = compute_relative_throughput(tally_sharing_run_res[job_1], job_1_default_res)
-                co_locate_result_row["job_2_tally_throughput"] = compute_relative_throughput(tally_sharing_run_res[job_2], job_2_default_res)
+                co_locate_result_row["job_1_tally_throughput"] = compute_relative_tp(tally_sharing_run_res[job_1], job_1_default_res)
+                co_locate_result_row["job_2_tally_throughput"] = compute_relative_tp(tally_sharing_run_res[job_2], job_2_default_res)
         
             co_locate_result.append(co_locate_result_row)
 
@@ -191,37 +210,36 @@ def parse_result(file_name, single_job_result_out=None, throughput_result_out=No
             high_priority_job_clean = job_1_clean if high_priority_job == job_1 else job_2_clean
             best_effort_job_clean = job_1_clean if best_effort_job == job_1 else job_2_clean
 
-            latency_critical_result_row = {
+            lc_result_row = {
                 "exp_key": key,
                 "high_priority_job": high_priority_job_clean,
                 "high_priority_job_workload_type": get_workload_type(high_priority_job_clean),
                 "best_effort_job": best_effort_job_clean,
                 "best_effort_job_workload_type": get_workload_type(best_effort_job_clean),
-                "high_priority_original_avg_latency": "",
-                "high_priority_tally_avg_latency": "",
-                "best_effort_tally_throughput": compute_relative_throughput(tally_priority_run_res[best_effort_job], single_job_default_perf[best_effort_job_clean]),
+                "best_effort_tally_throughput": compute_relative_tp(tally_priority_run_res[best_effort_job], single_job_default_perf[best_effort_job_clean]),
             }
 
-            latency_critical_result_row["high_priority_original_avg_latency"] = compute_avg_latency(single_job_default_perf[high_priority_job_clean])
-            latency_critical_result_row["high_priority_tally_avg_latency"] = compute_avg_latency(tally_priority_run_res[high_priority_job])
+            lc_result_row["high_priority_orig_avg_latency"] = compute_avg_latency(single_job_default_perf[high_priority_job_clean])
+            lc_result_row["high_priority_tally_avg_latency"] = compute_avg_latency(tally_priority_run_res[high_priority_job])
 
-            latency_critical_result.append(latency_critical_result_row)
+            for percentile in [90, 95, 99]:
+                lc_result_row[f"high_priority_orig_{percentile}th_latency"] = compute_percentile_latency(single_job_default_perf[high_priority_job_clean], percentile)
+                lc_result_row[f"high_priority_tally_{percentile}th_latency"] = compute_percentile_latency(tally_priority_run_res[high_priority_job], percentile)
+
+            latency_critical_result.append(lc_result_row)
 
     if throughput_result_out:
-        try:
-            co_locate_df = pd.DataFrame(co_locate_result)
-            co_locate_df["mps_throughput_sum"] = pd.to_numeric((co_locate_df["job_1_mps_throughput"] + co_locate_df["job_2_mps_throughput"])).round(2)
-            co_locate_df["tally_throughput_sum"] = pd.to_numeric((co_locate_df["job_1_tally_throughput"] + co_locate_df["job_2_tally_throughput"])).round(2)
-            co_locate_df["tally_speedup"] = pd.to_numeric((co_locate_df["tally_workload_throughput_sum"] / co_locate_df["mps_throughput_sum"])).round(2)
-            co_locate_df = co_locate_df.sort_values(by='tally_speedup', ascending=False)
-            co_locate_df.to_csv(throughput_result_out, index=True)
-        except:
-            pass
+        co_locate_df = pd.DataFrame(co_locate_result)
+        co_locate_df["mps_throughput_sum"] = pd.to_numeric((co_locate_df["job_1_mps_throughput"] + co_locate_df["job_2_mps_throughput"])).round(2)
+        co_locate_df["tally_throughput_sum"] = pd.to_numeric((co_locate_df["job_1_tally_throughput"] + co_locate_df["job_2_tally_throughput"])).round(2)
+        co_locate_df["tally_speedup"] = pd.to_numeric((co_locate_df["tally_throughput_sum"] / co_locate_df["mps_throughput_sum"])).round(2)
+        co_locate_df = co_locate_df.sort_values(by='tally_speedup', ascending=False)
+        co_locate_df.to_csv(throughput_result_out, index=True)
 
     if priority_result_out:
-        latency_critical_df = pd.DataFrame(latency_critical_result)
-        latency_critical_df = latency_critical_df.sort_values(by=['high_priority_job'], ascending=False)
-        latency_critical_df.to_csv(priority_result_out, index=True)
+        lc_df = pd.DataFrame(latency_critical_result)
+        lc_df = lc_df.sort_values(by=['high_priority_job'], ascending=False)
+        lc_df.to_csv(priority_result_out, index=True)
 
     return single_job_result, co_locate_result
 
