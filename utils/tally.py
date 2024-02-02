@@ -25,9 +25,13 @@ def shut_down_iox_roudi():
     stop_iox_cmd = f"bash {iox_roudi_kill_script}"
     execute_cmd(stop_iox_cmd)
 
-def start_tally():
+def start_tally(preemption_limit=None):
     logger.info("Starting Tally server ...")
     start_tally_cmd = f"bash {tally_start_script} &"
+
+    if preemption_limit:
+        start_tally_cmd = f"PRIORITY_MAX_ALLOWED_PREEMPTION_LATENCY_MS={preemption_limit} {start_tally_cmd}"
+
     execute_cmd(start_tally_cmd)
     time.sleep(3)
 

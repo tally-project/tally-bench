@@ -23,6 +23,8 @@ parser.add_argument("--run-pairwise", action="store_true", default=False)
 parser.add_argument("--runtime", type=int, default=10)
 parser.add_argument("--warmup-iters", type=int, default=100)
 parser.add_argument("--profile-only", action="store_true", default=False)
+parser.add_argument("--run-priority", action="store_true", default=False)
+parser.add_argument("--run-throughput", action="store_true", default=False)
 
 args = parser.parse_args()
 
@@ -31,6 +33,8 @@ save_results = args.save_results
 use_mps = args.use_mps
 use_tally = args.use_tally
 run_pairwise = args.run_pairwise
+run_priority = args.run_priority
+run_throughput = args.run_throughput
 assert(not (use_mps and use_tally))
 
 runtime = args.runtime
@@ -43,6 +47,7 @@ if not os.path.exists(tally_bench_result_dir):
 result_file = f"{tally_bench_result_dir}/result.json"
 result_backup_file = f"{tally_bench_result_dir}/result_backup.json"
 
+tally_priority_preemption_limits = [0.01, 0.1, 1.0]
 
 def save_results(result, updated, save_results):
     if updated and save_results:
@@ -63,33 +68,16 @@ if __name__ == "__main__":
         logger.info(f"Benchmarking tally with SCHEDULER_POLICY: {scheduler_policy}")
 
     result = load_json_from_file(result_file)
-    # single_job_result, co_locate_result = parse_result(result_file)
 
     train_benchmarks = get_train_benchmarks(training_workloads, warmup_iters, runtime)
     infer_benchmarks = get_infer_benchmarks(inference_workloads, warmup_iters, runtime)
-    all_benchmarks = train_benchmarks + infer_benchmarks
-
-    train_pairs = []
-    train_infer_pairs = []
-
-    for i in range(len(train_benchmarks)):
-
-        for j in range(i, len(train_benchmarks)):
-            train_pairs.append((copy.copy(train_benchmarks[i]), copy.copy(train_benchmarks[j])))
-        
-        for j in range(len(infer_benchmarks)):
-            train_infer_pairs.append((copy.copy(train_benchmarks[i]), copy.copy(infer_benchmarks[j])))
-
-    # random.shuffle(train_pairs)
-
+    
     init_env(use_mps, use_tally)
 
-    # Run single-job benchmark
-    for idx, benchmark in enumerate(all_benchmarks):
-
-        bench_id = get_bench_id((benchmark,))
-        logger.info(f"Running {idx + 1} out of {len(all_benchmarks)} single-job benchmarks: {bench_id} ...")
-
+    # Prepare single job benchmarks
+    single_job_benchmarks = []
+    for idx, benchmark in enumerate(train_benchmarks + infer_benchmarks):
+        
         if scheduler_policy == "WORKLOAD_AGNOSTIC_SHARING":
             if benchmark.is_latency_critical():
                 continue
@@ -99,27 +87,54 @@ if __name__ == "__main__":
             # no need to measure throughput-oriented jobs
             if not args.profile_only and not benchmark.is_latency_critical():
                 continue
-        
+                
             # can skip profiling server because it is the same kernels as single-stream
             if args.profile_only and benchmark.infer_mode == "server":
                 continue
+        
+        single_job_benchmarks.append(benchmark)
+
+    # Run single-job benchmark
+    for idx, benchmark in enumerate(single_job_benchmarks):
+
+        bench_id = get_bench_id((benchmark,))
+        logger.info(f"Running {idx + 1} out of {len(single_job_benchmarks)} single-job benchmarks: {bench_id} ...")
 
         updated = launch_benchmark([benchmark], result=result)
         if use_tally:
-            updated |= launch_benchmark((benchmark, ), result=result, use_tally=use_tally, profile_only=args.profile_only)
+            updated |= launch_benchmark((benchmark,), result=result, use_tally=use_tally,
+                                        profile_only=args.profile_only, preemption_limit=min(tally_priority_preemption_limits))
         save_results(result, updated, save_results)
+
+    # Prepare pairwise benchmarks
+    pair_wise_benchmarks = []
+
+    # if run_priority - run pairwise experiments between inference and training pairs
+    #                   such that inference is high-priority and training is best-effort
+    #                   Potentially we can also run priority on training and training pairs
+    #                   Given that training generally consumes a significant amount of memory,
+    #                   we won't consider that for now
+    if run_priority:
+        assert(not (use_tally and scheduler_policy == "WORKLOAD_AGNOSTIC_SHARING"))
+        for j in range(len(infer_benchmarks)):
+            for i in range(len(train_benchmarks)):
+                pair_wise_benchmarks.append((copy.copy(train_benchmarks[i]), copy.copy(infer_benchmarks[j])))
+
+    # if throughput - run pairwise experiments between training and training pairs
+    if run_throughput:
+        assert(not (use_tally and scheduler_policy == "PRIORITY"))
+        for i in range(len(train_benchmarks)):
+            for j in range(i, len(train_benchmarks)):
+                pair_wise_benchmarks.append((copy.copy(train_benchmarks[i]), copy.copy(train_benchmarks[j])))
 
     # Run pairwise training benchmark
     if run_pairwise:
-
-        all_pairs = train_infer_pairs + train_pairs
-
-        for idx, pair in enumerate(all_pairs):
+        for idx, pair in enumerate(pair_wise_benchmarks):
 
             bench_1, bench_2 = pair
             bench_id = get_bench_id(pair)
 
-            logger.info(f"Running {idx + 1} out of {len(all_pairs)} pairwise benchmarks: {bench_id} ...")
+            logger.info(f"Running {idx + 1} out of {len(pair_wise_benchmarks)} pairwise benchmarks: {bench_id} ...")
 
             bench_1_mem = result["tally_naive"][str(bench_1)]["metrics"]["gmem"]
             bench_2_mem = result["tally_naive"][str(bench_2)]["metrics"]["gmem"]
@@ -130,41 +145,18 @@ if __name__ == "__main__":
                 continue
 
             assert(not bench_1.is_latency_critical())
-            is_bench_2_lc = bench_2.is_latency_critical()
-
-            # if not use_tally and is_latency_critical:
-            #     logger.info(f"Skipping {bench_id} for latency-critical tasks")
-            #     continue
-
+ 
             # Do not run train_infer pairs under workload-agnostic-sharing
-            if use_tally:
-
-                if scheduler_policy == "WORKLOAD_AGNOSTIC_SHARING":
-                    if is_bench_2_lc:
-                        logger.info(f"Skipping {bench_id} as workload-agnostic-sharing scheduler does not apply to latency-critical tasks")
-                        continue
-
-                if scheduler_policy == "PRIORITY":
-                    # if not is_bench_2_lc:
-                    #     logger.info(f"Skipping {bench_id} as we only run priority scheduler on LC/BE pair for now")
-                    #     continue
-
-                    assert(bench_1.is_train)
+            if use_tally and scheduler_policy == "PRIORITY":
 
                     # let bench 2 be high-priority job
                     bench_1.set_priority(1)
                     bench_2.set_priority(2)
 
-                    updated = launch_benchmark(pair, use_mps=use_mps, use_tally=use_tally, result=result)
+                    updated = False
+                    for limit in tally_priority_preemption_limits:
+                        updated |= launch_benchmark(pair, use_mps=use_mps, use_tally=use_tally, result=result, preemption_limit=limit)
 
-                    # if both are training jobs, let bench 1 be high-priority job as well
-                    if pair in train_pairs:
-                        bench_1.set_priority(2)
-                        bench_2.set_priority(1)
-
-                        reverse_pair = (bench_2, bench_1)
-                        updated |= launch_benchmark(reverse_pair, use_mps=use_mps, use_tally=use_tally, result=result)
-                    
                     save_results(result, updated, save_results)
                     continue
             

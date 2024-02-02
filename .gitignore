@@ -48,3 +48,11 @@ coverage.xml
 
 # Sphinx documentation
 docs/_build/
+
+.vscode/
+data/
+logs/
+perf_results/
+runs/
+tally-bench-results/
+whisper-log/

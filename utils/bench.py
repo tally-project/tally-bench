@@ -146,12 +146,17 @@ def get_infer_benchmarks(inference_workloads, warmup_iters, runtime):
 
     return infer_benchmarks
 
-def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_tally=False, result=None, profile_only=False):
+def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_tally=False, result=None,
+                     profile_only=False, preemption_limit=None):
 
     output_dict = None
     result_key = "default"
     manager = Manager()
     smi_list = manager.list()
+
+    # easier for json
+    if preemption_limit is not None:
+        preemption_limit = str(preemption_limit)
 
     if use_mps:
         result_key = "mps"
@@ -167,14 +172,31 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_tally=False
 
         bench_res = result[result_key][bench_id]
 
-        if len(bench_res) == 1 and list(bench_res.keys())[0] == "profiled":
+        if use_tally and policy == "PRIORITY" and preemption_limit is not None:
+            if preemption_limit in bench_res:
+                preemption_limit_res = bench_res[preemption_limit]
+                if len(preemption_limit_res) == 1 and list(preemption_limit_res.keys())[0] == "profiled":
+                    if profile_only:
+                        return False
+                else:
+                    return False
+        elif len(bench_res) == 1 and list(bench_res.keys())[0] == "profiled":
             if profile_only:
                 return False
         else:
             return False
-    
-    result[result_key][bench_id] = {}
-    output_dict = result[result_key][bench_id]
+
+    if use_tally and policy == "PRIORITY" and preemption_limit is not None:
+
+        if bench_id not in result[result_key]:
+            result[result_key][bench_id] = {}
+        if preemption_limit not in result[result_key][bench_id]:
+            result[result_key][bench_id][preemption_limit] = {}
+        output_dict = result[result_key][bench_id][preemption_limit]
+        
+    else:
+        result[result_key][bench_id] = {}
+        output_dict = result[result_key][bench_id]
 
     processes = []
     abort = False
@@ -188,7 +210,7 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_tally=False
             shut_down_tally()
             shut_down_iox_roudi
             start_iox_roudi()
-            start_tally()
+            start_tally(preemption_limit)
 
         for idx, benchmark in enumerate(benchmarks):
 

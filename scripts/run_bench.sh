@@ -69,9 +69,9 @@ else
     echo "Skip profiling kernel metrics for workload-agnostic and priority scheduler because GPU_MODE is not DEFAULT"
 fi
 
-# 3. Run co-located experiments with Tally priority scheduler
+# 3. Run priority-related co-located experiments with Tally priority scheduler
 if [[ $GPU_MODE == "Default" ]]; then
-echo "======== Collecting pair-wise performance with Tally priority scheduler ... ========"
+echo "======== Collecting priority-related pair-wise performance with Tally priority scheduler ... ========"
 SCHEDULER_POLICY=PRIORITY \
     time_cmd \
     python3 -u scripts/run_bench.py \
@@ -79,76 +79,79 @@ SCHEDULER_POLICY=PRIORITY \
         --use-tally \
         --runtime $RUNTIME \
         --warmup-iters $WARMUP_ITERS \
-        --run-pairwise
+        --run-pairwise  \
+        --run-priority
 else
     echo "Skip collecting pair-wise performance with Tally priority scheduler because GPU_MODE is not DEFAULT"
 fi
 
-# 4. Run co-located experiments with Hardware multi-processing
+# 4. Run priority-related co-located experiments with Hardware multi-processing
 if [[ $GPU_MODE == "Default" ]]; then
-echo "======== Collecting pair-wise performance with hardware multi-processing ... ========"
+echo "======== Collecting priority-related pair-wise performance with hardware multi-processing ... ========"
 time_cmd \
     python3 -u scripts/run_bench.py \
         --save-results \
         --runtime $RUNTIME \
         --warmup-iters $WARMUP_ITERS \
-        --run-pairwise
+        --run-pairwise  \
+        --run-priority
 else
     echo "Skip collecting pair-wise performance with hardware multi-processing because GPU_MODE is not DEFAULT"
 fi
 
-# 5. Run co-located experiments with MPS
+# 5. Run priority-related co-located experiments with MPS
 if [[ $GPU_MODE == "Exclusive_Process" ]]; then
-echo "======== Collecting pair-wise performance with MPS ... ========"
+echo "======== Collecting priority-related pair-wise performance with MPS ... ========"
 time_cmd \
     python3 -u scripts/run_bench.py \
         --save-results \
         --use-mps \
         --runtime $RUNTIME \
         --warmup-iters $WARMUP_ITERS \
-        --run-pairwise
+        --run-pairwise  \
+        --run-priority
 else
     echo "Skip collecting pair-wise performance with MPS because GPU_MODE is not EXCLUSIVE"
 fi
 
-# 6. Profile PTB-based kernel metrics for throughput-oriented jobs for workload agnostic scheduler
-if [[ $GPU_MODE == "Default" ]]; then
-echo "======== Profiling kernel metrics for throughput-oriented jobs for workload agnostic scheduler ... ========"
+# # 6. Profile PTB-based kernel metrics for throughput-oriented jobs for workload agnostic scheduler
+# if [[ $GPU_MODE == "Default" ]]; then
+# echo "======== Profiling kernel metrics for throughput-oriented jobs for workload agnostic scheduler ... ========"
 
-# profile throughput-oriented jobs
-SCHEDULER_POLICY=WORKLOAD_AGNOSTIC_SHARING \
-    time_cmd \
-    python3 -u scripts/run_bench.py \
-        --use-tally \
-        --runtime 10 \
-        --warmup-iters 1000 \
-        --profile-only \
-        --save-results
+# # profile throughput-oriented jobs
+# SCHEDULER_POLICY=WORKLOAD_AGNOSTIC_SHARING \
+#     time_cmd \
+#     python3 -u scripts/run_bench.py \
+#         --use-tally \
+#         --runtime 10 \
+#         --warmup-iters 1000 \
+#         --profile-only \
+#         --save-results
 
-# for throughput-oriented jobs, collect throughput performance
-SCHEDULER_POLICY=WORKLOAD_AGNOSTIC_SHARING \
-    time_cmd \
-    python3 -u scripts/run_bench.py \
-        --use-tally \
-        --runtime $RUNTIME \
-        --warmup-iters $WARMUP_ITERS \
-        --save-results
+# # for throughput-oriented jobs, collect throughput performance
+# SCHEDULER_POLICY=WORKLOAD_AGNOSTIC_SHARING \
+#     time_cmd \
+#     python3 -u scripts/run_bench.py \
+#         --use-tally \
+#         --runtime $RUNTIME \
+#         --warmup-iters $WARMUP_ITERS \
+#         --save-results
 
-else
-    echo "Skip profiling kernel metrics for throughput-oriented jobs for workload agnostic scheduler because GPU_MODE is not DEFAULT"
-fi
+# else
+#     echo "Skip profiling kernel metrics for throughput-oriented jobs for workload agnostic scheduler because GPU_MODE is not DEFAULT"
+# fi
 
-# 6. Run co-located experiments with Tally workload agnostic sharing
-if [[ $GPU_MODE == "Default" ]]; then
-echo "======== Collecting pair-wise performance with Tally workload agnostic ... ========"
-SCHEDULER_POLICY=WORKLOAD_AGNOSTIC_SHARING \
-    time_cmd \
-    python3 -u scripts/run_bench.py \
-        --save-results \
-        --use-tally \
-        --runtime $RUNTIME \
-        --warmup-iters $WARMUP_ITERS \
-        --run-pairwise
-else
-    echo "Skip collecting pair-wise performance with Tally workload agnostic because GPU_MODE is not DEFAULT"
-fi
+# # 6. Run co-located experiments with Tally workload agnostic sharing
+# if [[ $GPU_MODE == "Default" ]]; then
+# echo "======== Collecting pair-wise performance with Tally workload agnostic ... ========"
+# SCHEDULER_POLICY=WORKLOAD_AGNOSTIC_SHARING \
+#     time_cmd \
+#     python3 -u scripts/run_bench.py \
+#         --save-results \
+#         --use-tally \
+#         --runtime $RUNTIME \
+#         --warmup-iters $WARMUP_ITERS \
+#         --run-pairwise
+# else
+#     echo "Skip collecting pair-wise performance with Tally workload agnostic because GPU_MODE is not DEFAULT"
+# fi

@@ -1,5 +1,5 @@
 training_workloads = {
-    "pytorch": {
+    "pytorch": {  
         "resnet50": {
             "batch-sizes": [64, 128],
             "amp": [True, False]
