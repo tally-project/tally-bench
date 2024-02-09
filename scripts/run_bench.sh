@@ -51,7 +51,7 @@ SCHEDULER_POLICY=PRIORITY \
     time_cmd \
     python3 -u scripts/run_bench.py \
         --use-tally \
-        --runtime 10 \
+        --runtime 60 \
         --warmup-iters 1000 \
         --profile-only \
         --save-results

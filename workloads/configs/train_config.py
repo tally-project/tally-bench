@@ -27,22 +27,6 @@ training_workloads = {
         "yolov6m": {
             "batch-sizes": [16, 32],
             "amp": [True]
-        },
-        # "dcgan": {
-        #     "batch-sizes": [64],
-        #     "amp": [True, False]
-        # },
-        # "LSTM": {
-        #     "batch-sizes": [64],
-        #     "amp": [True, False]
-        # },
-        # "NeuMF-pre": {
-        #     "batch-sizes": [64],
-        #     "amp": [True, False]
-        # },
-        # "transformer": {
-        #     "batch-sizes": [8],
-        #     "amp": [False]
-        # },
+        }
     }
 }

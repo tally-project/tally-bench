@@ -12,11 +12,7 @@ def compute_relative_tp(run_res, baseline_res):
 
 def compute_avg_latency(run_res):
     
-    # avg_latency = sum(run_res["latencies"]) / len(run_res["latencies"])
-    # return round(avg_latency, 3)
-
-    filter_out_first_10 = run_res["latencies"][10:]
-    avg_latency = sum(filter_out_first_10) / len(filter_out_first_10)
+    avg_latency = sum(run_res["latencies"]) / len(run_res["latencies"])
     return round(avg_latency, 3)
 
 

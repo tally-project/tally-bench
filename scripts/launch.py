@@ -2,10 +2,12 @@ import sys
 import argparse
 import json
 import os
+import logging
 
 sys.path.append('.')
 
-from utils.bench_util import set_deterministic, get_benchmark_func
+from workloads.common.util import get_benchmark_func
+from utils.bench_util import set_deterministic, set_all_logging_level
 from utils.util import logger
 
 set_deterministic()
@@ -39,24 +41,26 @@ if __name__ == "__main__":
     assert(not (args.train and args.infer))
 
     if args.infer:
-        assert (args.infer_type in ["single-stream", "server", "offline"])
+        assert (args.infer_type in ["single-stream", "server"])
 
-        if args.infer_type == "offline":
+        if args.infer_type == "server":
             assert(0 < args.infer_load <= 1)
 
     # Retrieve benchmark function
     benchmark_func = get_benchmark_func(args.framework, args.benchmark, args.train)
+    
+    set_all_logging_level(logging.WARN)
 
     total_iters = args.total_iters if args.total_iters else None
     result_dict = {}
 
-    logger.info(f"Running framework: {args.framework} benchmark: {args.benchmark} Batch size: {args.batch_size} amp: {args.amp}")
+    logger.info(f"Running framework: {args.framework} benchmark: {args.benchmark} Batch size: {args.batch_size}")
 
     if args.train:
         benchmark_func(args.benchmark, args.batch_size, args.amp, args.warmup_iters,
                        args.runtime, total_iters, result_dict, args.signal, args.pipe)
     else:
-        benchmark_func(args.benchmark, args.infer_type, args.batch_size, args.amp, args.warmup_iters,
+        benchmark_func(args.benchmark, args.infer_type, args.batch_size, args.warmup_iters,
                        args.runtime, args.infer_load, result_dict, args.signal, args.pipe)
     
     # Print json format result

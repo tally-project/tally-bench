@@ -126,23 +126,20 @@ def get_train_benchmarks(training_workloads, warmup_iters, runtime):
 
     return train_benchmarks
 
-def get_infer_benchmarks(inference_workloads, warmup_iters, runtime):
+def get_infer_benchmarks(inference_workloads, inference_load_factors, warmup_iters, runtime):
     infer_benchmarks = []
 
     for framework in inference_workloads:
         for model in inference_workloads[framework]:
-
-            bench_config = inference_workloads[framework][model] 
-
-            for amp in bench_config["amp"]:
-                single_stream_bench = Benchmark(framework, model, warmup_iters, runtime, is_train=False,
-                                                batch_size=1, amp=amp, infer_mode="single-stream")
-                infer_benchmarks.append(single_stream_bench)
             
-                for load in bench_config.get("load", []):
-                    server_bench = Benchmark(framework, model, warmup_iters, runtime, is_train=False, 
-                                            batch_size=1, amp=amp, infer_mode="server", infer_load=load)
-                    infer_benchmarks.append(server_bench)
+            single_stream_bench = Benchmark(framework, model, warmup_iters, runtime, is_train=False,
+                                            batch_size=1, infer_mode="single-stream")
+            infer_benchmarks.append(single_stream_bench)
+        
+            for load in inference_load_factors:
+                server_bench = Benchmark(framework, model, warmup_iters, runtime, is_train=False, 
+                                        batch_size=1, infer_mode="server", infer_load=load)
+                infer_benchmarks.append(server_bench)
 
     return infer_benchmarks
 
@@ -225,6 +222,7 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_tally=False
             logger.info(f"bench {idx} launch_cmd: {launch_cmd}")
 
             process_env = os.environ.copy()
+            process_env["REPLACE_CUBLAS"] = "TRUE"
             if benchmark.priority:
                 process_env["PRIORITY"] = str(benchmark.priority)
 

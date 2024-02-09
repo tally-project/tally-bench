@@ -12,7 +12,7 @@ from utils.bench_util import init_env, tear_down_env, get_bench_id
 from utils.parse import parse_result
 from utils.nvidia_smi import get_cuda_mem
 from workloads.configs.train_config import training_workloads
-from workloads.configs.infer_config import inference_workloads
+from workloads.configs.infer_config import inference_workloads, inference_load_factors
 
 parser = argparse.ArgumentParser(prog="benchmark suite launcher", description="Launch benchmark suite")
 
@@ -70,7 +70,7 @@ if __name__ == "__main__":
     result = load_json_from_file(result_file)
 
     train_benchmarks = get_train_benchmarks(training_workloads, warmup_iters, runtime)
-    infer_benchmarks = get_infer_benchmarks(inference_workloads, warmup_iters, runtime)
+    infer_benchmarks = get_infer_benchmarks(inference_workloads, inference_load_factors, warmup_iters, runtime)
     
     init_env(use_mps, use_tally)
 
@@ -90,6 +90,9 @@ if __name__ == "__main__":
                 
             # can skip profiling server because it is the same kernels as single-stream
             if args.profile_only and benchmark.infer_mode == "server":
+                continue
+
+            if args.profile_only and benchmark.is_latency_critical():
                 continue
         
         single_job_benchmarks.append(benchmark)
