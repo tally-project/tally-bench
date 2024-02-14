@@ -50,7 +50,7 @@ coverage.xml
 docs/_build/
 
 .vscode/
-data/
+# data/
 logs/
 perf_results/
 runs/
