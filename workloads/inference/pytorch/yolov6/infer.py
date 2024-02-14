@@ -17,7 +17,7 @@ from yolov6.layers.common import DetectBackend
 def yolov6_infer(model_name, mode, batch_size, warmup_iters, total_time,
                  load=0.5, result_dict=None, signal=False, pipe=None):
     device = torch.device("cuda")
-    model = DetectBackend(f"./data/weights/{model_name}.pt"), device=device)
+    model = DetectBackend(f"./data/weights/{model_name}.pt", device=device)
 
     torch.set_float32_matmul_precision("high")
 
