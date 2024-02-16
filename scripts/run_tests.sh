@@ -10,34 +10,38 @@ RUN_TALLY_LOCAL=FALSE
 RUN_TALLY=FALSE
 
 train_pytorch_models=(
-    "resnet50"
-    "VGG"
-    "EfficientNetB0"
-    "bert"
-    "dcgan"
-    "LSTM"
-    "pointnet"
-    "yolov6n"
-    "yolov6m"
-    "pegasus-x-base"
-    "pegasus-large"
-    "whisper-small"
-    "gpt2-xl"
+    # "resnet50"
+    # "VGG"
+    # "EfficientNetB0"
+    # "bert"
+    # "dcgan"
+    # "LSTM"
+    # "pointnet"
+    # "yolov6n"
+    # "yolov6m"
+    # "pegasus-x-base"
+    # "pegasus-large"
+    # "whisper-small"
+    # "gpt2-xl"
 )
 
 infer_hidet_models=(
-    "resnet50"
-    "efficientnet_b0"
+    # "resnet50"
+    # "efficientnet_b0"
+)
+
+infer_onnxruntime_models=(
+    "llama-2-7b"
 )
 
 infer_pytorch_models=(
-    "resnet50"
-    "efficientnet_b0"
-    "bert"
-    "yolov6m"
-    "llama-2-7b"
-    "gpt-neo-2.7B"
-    "stable-diffusion"
+    # "resnet50"
+    # "efficientnet_b0"
+    # "bert"
+    # "yolov6m"
+    # "llama-2-7b"
+    # "gpt-neo-2.7B"
+    # "stable-diffusion"
 )
 
 # Will not include TensorRT as a benchmark for the
@@ -133,6 +137,10 @@ done
 
 for model in "${infer_pytorch_models[@]}"; do
     launch_bench pytorch $model --infer --batch-size 1
+done
+
+for model in "${infer_onnxruntime_models[@]}"; do
+    launch_bench onnxruntime $model --infer --batch-size 1
 done
 
 for model in "${train_pytorch_models[@]}"; do

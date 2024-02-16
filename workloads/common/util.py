@@ -15,6 +15,14 @@ def get_benchmark_func(framework, model_name, run_training=True):
 
     torchvision_models = ["resnet50", "efficientnet_b0"]
 
+    if framework == "onnxruntime":
+
+        if inference:
+
+            if model_name == "llama-2-7b":
+                from workloads.inference.onnxruntime.llama.llama import llama2_infer
+                bench_func = llama2_infer
+
     if framework == "hidet":
 
         if inference:

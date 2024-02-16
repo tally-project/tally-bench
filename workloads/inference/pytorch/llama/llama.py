@@ -37,12 +37,12 @@ def llama2_infer(model_name, mode, batch_size, warmup_iters, total_time,
             max_length=128,
         )
 
-        # for seq in sequences:
-        #     print(f"Result: {seq['generated_text']}")
-        
         torch.cuda.synchronize()
 
         should_stop = monitor.on_step_end()
         if should_stop:
             monitor.write_to_result()
             break
+
+    for seq in sequences:
+        print(f"Generated text: {seq['generated_text']}")

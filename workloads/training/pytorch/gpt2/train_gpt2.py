@@ -23,9 +23,9 @@ from workloads.common.hf_callback import BenchCallback
 def train_gpt2(model_name, batch_size, amp, warmup_iters, total_time, total_iters=None,
                 result_dict=None, signal=False, pipe=None):
     
-    config = AutoConfig.from_pretrained("gpt2-xl")
-    tokenizer = AutoTokenizer.from_pretrained("gpt2-xl")
-    model = AutoModelForCausalLM.from_pretrained("gpt2-xl", config=config)
+    config = AutoConfig.from_pretrained(model_name)
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    model = AutoModelForCausalLM.from_pretrained(model_name, config=config)
     model.resize_token_embeddings(len(tokenizer))
 
     train_file = "./data/gpt2/train.csv"
