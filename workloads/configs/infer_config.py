@@ -5,10 +5,12 @@
 inference_load_factors = [0.5]
 
 inference_workloads = {
+    "onnxruntime": [
+        "llama-2-7b",
+    ],
     "pytorch": [
         "bert",
         "yolov6m",
-        "llama-2-7b",
         "gpt-neo-2.7B",
         "stable-diffusion"
     ],
