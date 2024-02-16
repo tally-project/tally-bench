@@ -108,6 +108,10 @@ def get_benchmark_func(framework, model_name, run_training=True):
             if model_name in ["whisper-small"]:
                 from workloads.training.pytorch.whisper.train_whisper import train_whisper
                 bench_func = train_whisper
+            
+            if model_name in ["gpt2-xl"]:
+                from workloads.training.pytorch.gpt2.train_gpt2 import train_gpt2
+                bench_func = train_gpt2
 
     if not bench_func:
         raise Exception("Cannot find benchmark function")

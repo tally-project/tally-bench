@@ -5,9 +5,9 @@ export TALLY_HOME=/home/zhaowe58/tally-bench/tally
 TALLY_PRELOAD_LOCAL="./tally/scripts/start_client_local.sh"
 TALLY_PRELOAD="./tally/scripts/start_client.sh"
 
-RUN_ORIGINAL=FALSE
+RUN_ORIGINAL=TRUE
 RUN_TALLY_LOCAL=FALSE
-RUN_TALLY=TRUE
+RUN_TALLY=FALSE
 
 train_pytorch_models=(
     "resnet50"
@@ -22,6 +22,7 @@ train_pytorch_models=(
     "pegasus-x-base"
     "pegasus-large"
     "whisper-small"
+    "gpt2-xl"
 )
 
 infer_hidet_models=(
@@ -135,8 +136,8 @@ for model in "${infer_pytorch_models[@]}"; do
 done
 
 for model in "${train_pytorch_models[@]}"; do
-    launch_bench pytorch $model --train --batch-size 2
-    launch_bench pytorch $model --train --batch-size 2 --amp
+    launch_bench pytorch $model --train --batch-size 1
+    launch_bench pytorch $model --train --batch-size 1 --amp
 done
 
 cleanup

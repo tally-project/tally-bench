@@ -27,6 +27,10 @@ training_workloads = {
         "yolov6m": {
             "batch-sizes": [16, 32],
             "amp": [True]
+        },
+        "gpt2-xl": {
+            "batch-sizes": [1],
+            "amp": [True, False]
         }
     }
 }
