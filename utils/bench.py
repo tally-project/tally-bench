@@ -197,6 +197,7 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_tally=False
 
     processes = []
     abort = False
+    smi_p = None
 
     try:
         if use_mps:
@@ -297,9 +298,12 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_tally=False
         smi_p.start()
 
         logger.info("waiting for benchmark to finish ...")
+        
+        abort_timeout = benchmarks[0].runtime * 2
+
         for i in range(len(processes)):
             process = processes[i]
-            stdout, stderr = process.communicate()
+            stdout, stderr = process.communicate(timeout=abort_timeout)
             if smi_p.is_alive():
                 smi_p.terminate()
                 
@@ -338,6 +342,10 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_tally=False
         logger.warning(f"Caught exception when running the benchmark: Error: {e}")
         time.sleep(10)
     finally:
+        if smi_p and smi_p.is_alive():
+            smi_p.terminate()
+        for process in processes:
+            process.kill()
         tear_down_env()
 
     return True

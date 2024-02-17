@@ -18,11 +18,10 @@ def compute_avg_latency(run_res):
 
 def compute_percentile_latency(run_res, percentile):
     
-    # percentile_latency = np.percentile(run_res["latencies"], percentile)
-    # return round(percentile_latency, 3)
-
-    filter_out_first_10 = run_res["latencies"][10:]
-    percentile_latency = np.percentile(filter_out_first_10, percentile)
+    latencies = run_res["latencies"]
+    if len(latencies) > 10:
+        latencies = latencies[min(10, len(latencies) // 2):]
+    percentile_latency = np.percentile(latencies, percentile)
     return round(percentile_latency, 3)
 
 
