@@ -297,7 +297,7 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_tally=False
             with open(pipe_name, 'w') as pipe:
                 pipe.write("start\n")
         
-        smi_p = Process(target=smi_getter, args=(smi_list, [0]))
+        smi_p = Process(target=smi_getter, args=(smi_list,))
         smi_p.start()
 
         logger.info("waiting for benchmark to finish ...")

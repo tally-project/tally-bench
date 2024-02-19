@@ -45,12 +45,19 @@ def get_bench_id(benchmarks: list):
 def get_pipe_name(idx):
     return f"/tmp/tally_bench_pipe_{idx}"
 
+
+def get_cuda_device_id():
+    cuda_devices = os.environ.get("CUDA_VISIBLE_DEVICES")
+    cuda_devices = cuda_devices.split(",")
+    return cuda_devices[0]
+
   
 def init_env(use_mps=False, use_tally=False):
     tear_down_env()
+    cuda_device_id = get_cuda_device_id()
 
-    out, err, rc = execute_cmd("nvidia-smi --query-gpu=compute_mode --format=csv", get_output=True)
-    mode = out.split("compute_mode")[1].strip()
+    out, err, rc = execute_cmd(f"nvidia-smi -i {cuda_device_id} --query-gpu=compute_mode --format=csv", get_output=True)
+    mode = out.split("compute_mode")[1].strip().split("\n")[0]
 
     required_mode = ""
 

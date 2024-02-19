@@ -7,6 +7,7 @@ import pandas as pd
 
 from xml.dom import minidom
 from utils.util import execute_cmd
+from utils.bench_util import get_cuda_device_id
 
 
 def parse_smi_list(smi_list):
@@ -26,14 +27,12 @@ def parse_smi_list(smi_list):
     }
 
 
-def smi_getter(smi_list, gpu_id):
+def smi_getter(smi_list):
+
+    cuda_device_id = get_cuda_device_id()
+
     metrics_output_dir = "./"
-    if len(gpu_id) == 1:
-        cmd = f"nvidia-smi -q -x -i {gpu_id[0]}".split()
-    elif len(gpu_id) == 2:
-        cmd = f"nvidia-smi -q -x -i {gpu_id[0]},{gpu_id[1]}".split()
-    elif len(gpu_id) == 4:
-        cmd = f"nvidia-smi -q -x -i {gpu_id[0]},{gpu_id[1]},{gpu_id[2]},{gpu_id[3]}".split()
+    cmd = f"nvidia-smi -q -x -i {cuda_device_id}".split()
     while True:
         try:
             p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
@@ -41,7 +40,7 @@ def smi_getter(smi_list, gpu_id):
         except Exception:
             traceback.print_exc()
             gen_empty_gpu_metric(metrics_output_dir)
-        output = parse_nvidia_smi_result(smi_output, metrics_output_dir, gpu_id)
+        output = parse_nvidia_smi_result(smi_output, metrics_output_dir, [cuda_device_id])
         smi_list.extend(output)
         # TODO: change to sleep time configurable via arguments
         time.sleep(0.2)
@@ -110,6 +109,7 @@ def gen_empty_gpu_metric(outputDir):
 
 
 def get_cuda_mem():
-    out, _, _ = execute_cmd("nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits", True)
-    mem_cap = int(out.strip())
+    cuda_device_id = get_cuda_device_id()
+    out, _, _ = execute_cmd(f"nvidia-smi -i {cuda_device_id} --query-gpu=memory.total --format=csv,noheader,nounits", True)
+    mem_cap = int(out.strip().split("\n")[0])
     return mem_cap

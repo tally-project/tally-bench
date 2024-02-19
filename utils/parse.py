@@ -249,15 +249,15 @@ def parse_result(file_name, single_job_result_out=None, throughput_result_out=No
 
                 latency_critical_result.append(lc_result_row)
 
-    # if throughput_result_out:
-    #     co_locate_df = pd.DataFrame(co_locate_result)
-    #     co_locate_df["mps_throughput_sum"] = pd.to_numeric((co_locate_df["job_1_mps_throughput"] + co_locate_df["job_2_mps_throughput"])).round(2)
-    #     co_locate_df["tally_throughput_sum"] = pd.to_numeric((co_locate_df["job_1_tally_throughput"] + co_locate_df["job_2_tally_throughput"])).round(2)
-    #     co_locate_df["tally_speedup"] = pd.to_numeric((co_locate_df["tally_throughput_sum"] / co_locate_df["mps_throughput_sum"])).round(2)
-    #     co_locate_df = co_locate_df.sort_values(by='tally_speedup', ascending=False)
-    #     co_locate_df.to_csv(throughput_result_out, index=True)
+    if throughput_result_out and co_locate_result:
+        co_locate_df = pd.DataFrame(co_locate_result)
+        co_locate_df["mps_throughput_sum"] = pd.to_numeric((co_locate_df["job_1_mps_throughput"] + co_locate_df["job_2_mps_throughput"])).round(2)
+        co_locate_df["tally_throughput_sum"] = pd.to_numeric((co_locate_df["job_1_tally_throughput"] + co_locate_df["job_2_tally_throughput"])).round(2)
+        co_locate_df["tally_speedup"] = pd.to_numeric((co_locate_df["tally_throughput_sum"] / co_locate_df["mps_throughput_sum"])).round(2)
+        co_locate_df = co_locate_df.sort_values(by='tally_speedup', ascending=False)
+        co_locate_df.to_csv(throughput_result_out, index=True)
 
-    if priority_result_out:
+    if priority_result_out and latency_critical_result:
         lc_df = pd.DataFrame(latency_critical_result)
         lc_df = lc_df.sort_values(by=['high_priority_job', "exp_key", "preemption_latency_limit"], ascending=False)
         lc_df.to_csv(priority_result_out, index=True)
