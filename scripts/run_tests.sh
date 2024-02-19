@@ -32,12 +32,12 @@ infer_hidet_models=(
 
 infer_onnxruntime_models=(
     "llama-2-7b"
+    "bert"
 )
 
 infer_pytorch_models=(
     "resnet50"
     "efficientnet_b0"
-    "bert"
     "yolov6m"
     "gpt-neo-2.7B"
     "stable-diffusion"
@@ -80,7 +80,7 @@ launch_bench() {
         fi
     done
 
-    launch_cmd="python3 ./scripts/launch.py --framework $1 --benchmark $2 --warmup-iters 30 --runtime 5 ${@:3}"
+    launch_cmd="python3 ./scripts/launch.py --framework $1 --benchmark $2 --warmup-iters 10 --runtime 5 ${@:3}"
 
     if [ "$RUN_ORIGINAL" = "TRUE" ]; then
         echo $launch_cmd

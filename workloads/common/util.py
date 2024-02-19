@@ -23,6 +23,10 @@ def get_benchmark_func(framework, model_name, run_training=True):
                 from workloads.inference.onnxruntime.llama.llama import llama2_infer
                 bench_func = llama2_infer
 
+            if model_name == "bert":
+                from workloads.inference.onnxruntime.bert.bert_infer import bert_infer
+                bench_func = bert_infer
+
     if framework == "hidet":
 
         if inference:

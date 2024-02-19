@@ -118,6 +118,8 @@ def llama2_infer(model_name, mode, batch_size, warmup_iters, total_time,
     if mode in ["single-stream", "server"]:
         assert(batch_size == 1)
 
+    assert 'CUDAExecutionProvider' in ort.get_available_providers()
+
     # User settings
     model_name = "./data/llama-2-7b-hf"
     onnx_model_path = "./data/llama2-7b-fp16-gqa/rank_0_llama-2-7b-hf_decoder_merged_model_fp16.onnx"
