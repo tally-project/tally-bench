@@ -13,7 +13,7 @@ def get_benchmark_func(framework, model_name, run_training=True):
     training = run_training
     inference = not run_training
 
-    torchvision_models = ["resnet50", "efficientnet_b0"]
+    torchvision_models = ["resnet50", "efficientnet_b0", "inception_v3"]
 
     if framework == "onnxruntime":
 
@@ -81,7 +81,7 @@ def get_benchmark_func(framework, model_name, run_training=True):
                 from workloads.training.pytorch.resnet.train_resnet import train_resnet
                 bench_func = train_resnet
             
-            if model_name in ["VGG", "EfficientNetB0", "ShuffleNetV2"]:
+            if model_name in ["VGG", "EfficientNetB0", "ShuffleNetV2", ]:
                 from workloads.training.pytorch.cifar.train_cifar import train_cifar
                 bench_func = train_cifar
 
