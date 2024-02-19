@@ -26,7 +26,11 @@ set -e
 export RUNTIME=30
 export WARMUP_ITERS=30
 
-export GPU_MODE=$(nvidia-smi --query-gpu=compute_mode --format=csv | awk 'NR==2')
+# Set a single cuda device to run the benchmarks
+export CUDA_VISIBLE_DEVICES=7
+echo "Running benchmarks on GPU: $CUDA_VISIBLE_DEVICES"
+
+export GPU_MODE=$(nvidia-smi -i $CUDA_VISIBLE_DEVICES --query-gpu=compute_mode --format=csv | awk 'NR==2')
 
 # 1. Collect single-job performance with and without Tally
 #    This should give insights of the overhead of API forwarding in Tally

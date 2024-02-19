@@ -11,7 +11,6 @@ RUN_TALLY=TRUE
 
 train_pytorch_models=(
     "resnet50"
-    "VGG"
     "EfficientNetB0"
     "bert"
     "dcgan"
