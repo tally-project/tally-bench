@@ -84,15 +84,8 @@ if __name__ == "__main__":
 
         if scheduler_policy == "PRIORITY":
 
-            # no need to measure throughput-oriented jobs
-            if not args.profile_only and not benchmark.is_latency_critical():
-                continue
-                
             # can skip profiling server because it is the same kernels as single-stream
             if args.profile_only and benchmark.infer_mode == "server":
-                continue
-
-            if args.profile_only and benchmark.is_latency_critical():
                 continue
         
         single_job_benchmarks.append(benchmark)
