@@ -29,6 +29,12 @@ class Benchmark:
     def __init__(self, framework, model_name, warmup_iters, runtime, is_train,
                  batch_size=1, amp=False, total_iters=None, infer_mode=None,
                  infer_load=None):
+        
+        if is_train:
+            assert(batch_size)
+        else:
+            assert(infer_mode in ["single-stream", "server"])
+        
         self.framework = framework
         self.model_name = model_name
         self.warmup_iters = warmup_iters
@@ -40,17 +46,13 @@ class Benchmark:
         self.infer_mode = infer_mode
         self.infer_load = infer_load
         self.priority = None
+        self.replace_cublas = False
 
-        if is_train:
-            assert(batch_size)
-        else:
-            assert(infer_mode)
-            if infer_mode == "single-stream":
-                pass
-            elif infer_mode == "server":
-                assert(infer_mode)
-            else:
-                assert(False)
+        if (
+            (not self.is_latency_critical()) or
+            any([m in self.model_name for m in ["yolo", "gpt-neo"]])
+        ):
+            self.replace_cublas = True
     
     def is_latency_critical(self):
         if not self.is_train:
@@ -223,9 +225,10 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_tally=False
             logger.info(f"bench {idx} launch_cmd: {launch_cmd}")
 
             process_env = os.environ.copy()
-            process_env["REPLACE_CUBLAS"] = "TRUE"
             if benchmark.priority:
                 process_env["PRIORITY"] = str(benchmark.priority)
+            if benchmark.replace_cublas:
+                process_env["REPLACE_CUBLAS"] = "TRUE"
 
             launch_cmd_list = launch_cmd.strip().split(" ")
             process = subprocess.Popen(launch_cmd_list, stdin=subprocess.PIPE, stdout=subprocess.PIPE,

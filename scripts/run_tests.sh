@@ -27,7 +27,7 @@ train_pytorch_models=(
 
 infer_hidet_models=(
     "resnet50"
-    "efficientnet_b0"
+    "inception_v3"
 )
 
 infer_onnxruntime_models=(
@@ -35,8 +35,6 @@ infer_onnxruntime_models=(
 )
 
 infer_pytorch_models=(
-    "resnet50"
-    "efficientnet_b0"
     "bert"
     "yolov6m"
     "gpt-neo-2.7B"
@@ -143,7 +141,7 @@ for model in "${infer_onnxruntime_models[@]}"; do
 done
 
 for model in "${train_pytorch_models[@]}"; do
-    if [ "$model" = "EfficientNetB0" ]; then
+    if [ "$model" = "EfficientNetB0" ] || [ "$model" = "pointnet" ]; then
         batch_size=2
     else
         batch_size=1

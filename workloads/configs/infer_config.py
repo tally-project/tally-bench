@@ -16,6 +16,6 @@ inference_workloads = {
     ],
     "hidet": [
         "resnet50",
-        "efficientnet_b0"
+        "inception_v3"
     ]
 }
