@@ -78,7 +78,7 @@ class SingleStreamInferMonitor(InferMonitor):
 
         # remove first 10 latency measurement
         if len(self.latencies) > 10:
-            self.latencies = self.latencies[10:]
+            self.latencies = self.latencies[min(10, len(self.latencies) // 2):]
 
         if self.result_dict is not None:
             self.result_dict["time_elapsed"] = self.time_elapsed
@@ -127,8 +127,8 @@ class ServerInferMonitor(InferMonitor):
 
         # remove first 10 latency measurement
         if len(self.latencies) > 10:
-            self.latencies = self.latencies[10:]
-        
+            self.latencies = self.latencies[min(10, len(self.latencies) // 2):]
+            
         if self.result_dict is not None:
             self.result_dict["time_elapsed"] = self.time_elapsed
             self.result_dict["latencies"] = self.latencies

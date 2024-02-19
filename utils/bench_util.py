@@ -47,7 +47,7 @@ def get_pipe_name(idx):
 
 
 def get_cuda_device_id():
-    cuda_devices = os.environ.get("CUDA_VISIBLE_DEVICES")
+    cuda_devices = os.environ.get("CUDA_VISIBLE_DEVICES", "0")
     cuda_devices = cuda_devices.split(",")
     return cuda_devices[0]
 

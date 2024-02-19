@@ -125,7 +125,7 @@ def train_yolov6(model_name, batch_size, amp, warmup_iters, total_time,
     args.batch_size = batch_size
     args.epochs = 100000
     args.workers = 4
-    args.device = '0'
+    args.device = os.environ.get("CUDA_VISIBLE_DEVICES", "0")
     args.eval_interval = 20
     args.eval_final_only = False
     args.heavy_eval_range = 50

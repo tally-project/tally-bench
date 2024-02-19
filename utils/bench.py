@@ -50,7 +50,7 @@ class Benchmark:
 
         if (
             (not self.is_latency_critical()) or
-            any([m in self.model_name for m in ["yolo", "gpt-neo"]])
+            any([m in self.model_name for m in ["yolo", "gpt-neo", "stable", "stable-diffusion"]])
         ):
             self.replace_cublas = True
     
