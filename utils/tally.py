@@ -18,7 +18,7 @@ def start_iox_roudi():
     logger.info("Starting Iox Roudi ...")
     start_iox_cmd = f"bash {iox_roudi_start_script} &"
     execute_cmd(start_iox_cmd)
-    time.sleep(5)
+    time.sleep(20)
 
 def shut_down_iox_roudi():
     logger.info("Shutting down Iox Roudi ...")
