@@ -86,7 +86,8 @@ def train_gpt2(model_name, batch_size, amp, warmup_iters, total_time, total_iter
         fp16=amp,
         num_train_epochs=1,
         gradient_accumulation_steps=1,
-        per_device_train_batch_size=batch_size
+        per_device_train_batch_size=batch_size,
+        save_steps=4000,
     )
 
     trainer = Trainer(

@@ -84,8 +84,8 @@ if __name__ == "__main__":
 
         if scheduler_policy == "PRIORITY":
 
-            # can skip profiling server because it is the same kernels as single-stream
-            if args.profile_only and benchmark.infer_mode == "server":
+            # can skip profiling latency critical jobs as they will always be high-priority
+            if args.profile_only and benchmark.is_latency_critical():
                 continue
         
         single_job_benchmarks.append(benchmark)
@@ -96,15 +96,15 @@ if __name__ == "__main__":
         bench_id = get_bench_id((benchmark,))
         logger.info(f"Running {idx + 1} out of {len(single_job_benchmarks)} single-job benchmarks: {bench_id} ...")
 
-        if args.profile_only:
-            job_perf = result["default"][bench_id][f"{bench_id}_0"]
-            iter_latency = job_perf["time_elapsed"] / job_perf["iters"]
-            profile_time = benchmark.warmup_iters * iter_latency
+        # if args.profile_only:
+        #     job_perf = result["default"][bench_id][f"{bench_id}_0"]
+        #     iter_latency = job_perf["time_elapsed"] / job_perf["iters"]
+        #     profile_time = benchmark.warmup_iters * iter_latency
 
-            # at most profile for half an hour
-            if profile_time > 1800:
-                benchmark.warmup_iters = int(1800 / iter_latency)
-                logger.info(f"Resetting warmup_iters to {benchmark.warmup_iters} to avoid overly long profiling time")
+        #     # at most profile for half an hour
+        #     if profile_time > 1800:
+        #         benchmark.warmup_iters = int(1800 / iter_latency)
+        #         logger.info(f"Resetting warmup_iters to {benchmark.warmup_iters} to avoid overly long profiling time")
 
         updated = launch_benchmark([benchmark], result=result)
         if use_tally:

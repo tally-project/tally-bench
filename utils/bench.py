@@ -172,13 +172,13 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_tally=False
         bench_res = result[result_key][bench_id]
 
         if use_tally and policy == "PRIORITY" and preemption_limit is not None:
+
+            if len(benchmarks) == 1 and benchmarks[0].is_latency_critical():
+                return False
+
             if preemption_limit in bench_res:
-                preemption_limit_res = bench_res[preemption_limit]
-                if len(preemption_limit_res) == 1 and list(preemption_limit_res.keys())[0] == "profiled":
-                    if profile_only:
-                        return False
-                else:
-                    return False
+                return False
+            
         elif len(bench_res) == 1 and list(bench_res.keys())[0] == "profiled":
             if profile_only:
                 return False

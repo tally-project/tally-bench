@@ -60,14 +60,14 @@ SCHEDULER_POLICY=PRIORITY \
         --profile-only \
         --save-results
 
-# for latency-critical jobs, collect latency performance
-SCHEDULER_POLICY=PRIORITY \
-    time_cmd \
-    python3 -u scripts/run_bench.py \
-        --use-tally \
-        --runtime $RUNTIME \
-        --warmup-iters $WARMUP_ITERS \
-        --save-results
+# # for latency-critical jobs, collect latency performance
+# SCHEDULER_POLICY=PRIORITY \
+#     time_cmd \
+#     python3 -u scripts/run_bench.py \
+#         --use-tally \
+#         --runtime $RUNTIME \
+#         --warmup-iters $WARMUP_ITERS \
+#         --save-results
 
 else
     echo "Skip profiling kernel metrics for workload-agnostic and priority scheduler because GPU_MODE is not DEFAULT"
