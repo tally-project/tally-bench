@@ -64,7 +64,7 @@ def init_env(use_mps=False, use_tally=False):
     if use_mps:
         required_mode = "Exclusive_Process"
     elif use_tally:
-        required_mode = "Default"
+        required_mode = "Exclusive_Process"
     else:
         required_mode = "Default"
 

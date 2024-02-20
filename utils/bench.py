@@ -50,7 +50,7 @@ class Benchmark:
 
         if (
             (not self.is_latency_critical()) or
-            any([m in self.model_name for m in ["yolo", "gpt-neo", "stable", "stable-diffusion"]])
+            any([m in self.model_name for m in ["bert", "yolo", "gpt-neo", "stable", "stable-diffusion"]])
         ):
             self.replace_cublas = True
     
@@ -173,9 +173,6 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_tally=False
 
         if use_tally and policy == "PRIORITY" and preemption_limit is not None:
 
-            if len(benchmarks) == 1 and benchmarks[0].is_latency_critical():
-                return False
-
             if preemption_limit in bench_res:
                 return False
             
@@ -186,6 +183,9 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_tally=False
             return False
 
     if use_tally and policy == "PRIORITY" and preemption_limit is not None:
+
+        if len(benchmarks) == 1 and benchmarks[0].is_latency_critical():
+            return False
 
         if bench_id not in result[result_key]:
             result[result_key][bench_id] = {}

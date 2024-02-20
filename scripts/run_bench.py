@@ -7,7 +7,7 @@ import copy
 sys.path.append('.')
 
 from utils.util import load_json_from_file, write_json_to_file, execute_cmd, logger
-from utils.bench import launch_benchmark, get_train_benchmarks, get_infer_benchmarks
+from utils.bench import launch_benchmark, get_train_benchmarks, get_infer_benchmarks, Benchmark
 from utils.bench_util import init_env, tear_down_env, get_bench_id
 from utils.parse import parse_result
 from utils.nvidia_smi import get_cuda_mem
@@ -49,7 +49,7 @@ result_backup_file = f"{tally_bench_result_dir}/result_backup.json"
 
 tally_priority_preemption_limits = [0.01, 0.1, 1.0]
 
-def save_results(result, updated, save_results):
+def save_results_to_file(result, updated, save_results):
     if updated and save_results:
         write_json_to_file(result, result_file)
         write_json_to_file(result, result_backup_file)
@@ -110,10 +110,16 @@ if __name__ == "__main__":
         if use_tally:
             updated |= launch_benchmark((benchmark,), result=result, use_tally=use_tally,
                                         profile_only=args.profile_only, preemption_limit=min(tally_priority_preemption_limits))
-        save_results(result, updated, save_results)
+        save_results_to_file(result, updated, save_results)
 
     # Prepare pairwise benchmarks
     pair_wise_benchmarks = []
+
+    # To experiment with a specific job pair
+    # pair_wise_benchmarks = [
+    #     (Benchmark("pytorch", "pointnet", warmup_iters, runtime, True, batch_size=128, amp=False),
+    #      Benchmark("onnxruntime", "bert", warmup_iters, runtime, False, batch_size=1, infer_mode="single-stream", infer_load=1))
+    # ]
 
     # if run_priority - run pairwise experiments between inference and training pairs
     #                   such that inference is high-priority and training is best-effort
@@ -166,10 +172,10 @@ if __name__ == "__main__":
                     for limit in tally_priority_preemption_limits:
                         updated |= launch_benchmark(pair, use_mps=use_mps, use_tally=use_tally, result=result, preemption_limit=limit)
 
-                    save_results(result, updated, save_results)
+                    save_results_to_file(result, updated, save_results)
                     continue
             
             updated = launch_benchmark(pair, use_mps=use_mps, use_tally=use_tally, result=result)
-            save_results(result, updated, save_results)
+            save_results_to_file(result, updated, save_results)
 
     tear_down_env()
