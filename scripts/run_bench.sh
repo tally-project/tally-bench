@@ -34,7 +34,6 @@ export GPU_MODE=$(nvidia-smi -i $CUDA_VISIBLE_DEVICES --query-gpu=compute_mode -
 
 # 1. Collect single-job performance with and without Tally
 #    This should give insights of the overhead of API forwarding in Tally
-if [[ $GPU_MODE == "Default" ]]; then
 echo "======== Collecting single-job performance with and without Tally ... ========"
 time_cmd \
     python3 -u scripts/run_bench.py \
@@ -42,15 +41,9 @@ time_cmd \
         --use-tally \
         --runtime $RUNTIME \
         --warmup-iters $WARMUP_ITERS
-else
-    echo "Skip collecting single-job performance with and without Tally because GPU_MODE is not DEFAULT"
-fi
 
 # 2. Profile preemptive kernel metrics for throughput-oriented jobs for priority scheduler
-if [[ $GPU_MODE == "Default" ]]; then
 echo "======== Profiling kernel metrics for throughput-oriented jobs for priority scheduler ... ========"
-
-# profile throughput-oriented jobs
 SCHEDULER_POLICY=PRIORITY \
     time_cmd \
     python3 -u scripts/run_bench.py \
@@ -60,21 +53,8 @@ SCHEDULER_POLICY=PRIORITY \
         --profile-only \
         --save-results
 
-# # for latency-critical jobs, collect latency performance
-# SCHEDULER_POLICY=PRIORITY \
-#     time_cmd \
-#     python3 -u scripts/run_bench.py \
-#         --use-tally \
-#         --runtime $RUNTIME \
-#         --warmup-iters $WARMUP_ITERS \
-#         --save-results
-
-else
-    echo "Skip profiling kernel metrics for workload-agnostic and priority scheduler because GPU_MODE is not DEFAULT"
-fi
-
 # 3. Run priority-related co-located experiments with Tally priority scheduler
-if [[ $GPU_MODE == "Default" ]]; then
+if [[ $GPU_MODE == "Exclusive_Process" ]]; then
 echo "======== Collecting priority-related pair-wise performance with Tally priority scheduler ... ========"
 SCHEDULER_POLICY=PRIORITY \
     time_cmd \
@@ -86,7 +66,7 @@ SCHEDULER_POLICY=PRIORITY \
         --run-pairwise  \
         --run-priority
 else
-    echo "Skip collecting pair-wise performance with Tally priority scheduler because GPU_MODE is not DEFAULT"
+    echo "Skip collecting pair-wise performance with Tally priority scheduler because GPU_MODE is not Exclusive_Process"
 fi
 
 # 4. Run priority-related co-located experiments with Hardware multi-processing
