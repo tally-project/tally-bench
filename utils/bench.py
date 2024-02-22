@@ -263,6 +263,10 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_tally=False
             # sel.register(process.stderr, selectors.EVENT_READ)
 
             p_stdout = ""
+            timeout = None
+            if not profile_only:
+                timeout = 1800
+            start_t = time.time()
         
             while True:
                 poll = process.poll()
@@ -279,6 +283,10 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_tally=False
 
                 if not wait_t.is_alive():
                     break
+            
+                curr_t = time.time()
+                if timeout and curr_t - start_t >= timeout:
+                    raise Exception("Timeout while waiting for benchmark to warm up")
             
             print(p_stdout.strip())
 
