@@ -216,10 +216,9 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_tally=False
 
             pipe_name = get_pipe_name(idx)
 
-            try:
-                os.mkfifo(pipe_name)
-            except OSError:
-                pass
+            if os.path.exists(pipe_name):
+                os.remove(pipe_name)
+            os.mkfifo(pipe_name)
 
             launch_cmd = benchmark.get_launch_cmd(pipe_name=pipe_name, use_tally=use_tally)
             logger.info(f"bench {idx} launch_cmd: {launch_cmd}")
