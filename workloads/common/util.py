@@ -55,7 +55,7 @@ def get_benchmark_func(framework, model_name, run_training=True):
                 from workloads.inference.pytorch.vision.infer import vision_infer
                 bench_func = vision_infer
 
-            if model_name in ["yolov6n", "yolov6m"]:
+            if model_name in ["yolov6n", "yolov6m", "yolov6l"]:
                 from workloads.inference.pytorch.yolov6.infer import yolov6_infer
                 bench_func = yolov6_infer
 
@@ -109,7 +109,7 @@ def get_benchmark_func(framework, model_name, run_training=True):
                 from workloads.training.pytorch.transformer.train_transformer import train_transformer
                 bench_func = train_transformer
 
-            if model_name in ["yolov6n", "yolov6m"]:
+            if model_name in ["yolov6n", "yolov6m", "yolov6l"]:
                 from workloads.training.pytorch.yolov6.train_yolov6 import train_yolov6
                 bench_func = train_yolov6
         

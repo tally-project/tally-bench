@@ -107,7 +107,7 @@ def parse_result(file_name, single_job_result_out=None, throughput_result_out=No
         
         if "server" not in result_row["workload_type"]:
             if tally_naive_run_res:
-                result_row["tally_naive_throughput"] = min(compute_relative_tp(tally_naive_run_res, original_run_res), 1.)
+                result_row["tally_naive_throughput"] = compute_relative_tp(tally_naive_run_res, original_run_res)
             if tally_sharing_run_res:
                 result_row["tally_sharing_throughput"] = compute_relative_tp(tally_sharing_run_res, original_run_res)
 
