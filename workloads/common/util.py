@@ -121,7 +121,7 @@ def get_benchmark_func(framework, model_name, run_training=True):
                 from workloads.training.pytorch.whisper.train_whisper import train_whisper
                 bench_func = train_whisper
             
-            if model_name in ["gpt2-xl"]:
+            if model_name in ["gpt2-xl", "gpt2-large"]:
                 from workloads.training.pytorch.gpt2.train_gpt2 import train_gpt2
                 bench_func = train_gpt2
 

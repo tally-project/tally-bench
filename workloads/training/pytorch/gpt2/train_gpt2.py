@@ -28,11 +28,7 @@ def train_gpt2(model_name, batch_size, amp, warmup_iters, total_time, total_iter
     model = AutoModelForCausalLM.from_pretrained(model_name, config=config)
     model.resize_token_embeddings(len(tokenizer))
 
-    train_file = "./data/gpt2/train.csv"
-    extension = train_file.split(".")[-1]
-    data_files = {"train": train_file}
-    datasets = load_dataset(extension, data_files=data_files)
-
+    datasets = load_dataset("bookcorpus")
     column_names = datasets["train"].column_names
     text_column_name = "text" if "text" in column_names else column_names[0]
 
@@ -43,7 +39,7 @@ def train_gpt2(model_name, batch_size, amp, warmup_iters, total_time, total_iter
         tokenize_function,
         batched=True,
         remove_columns=column_names,
-        load_from_cache_file=False,
+        load_from_cache_file=True,
     )
 
     block_size = 512
@@ -76,7 +72,7 @@ def train_gpt2(model_name, batch_size, amp, warmup_iters, total_time, total_iter
     lm_datasets = tokenized_datasets.map(
         group_texts,
         batched=True,
-        load_from_cache_file=False,
+        load_from_cache_file=True,
     )
     train_dataset = lm_datasets["train"]
 

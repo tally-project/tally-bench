@@ -94,14 +94,14 @@ class Benchmark:
         if self.total_iters:
             launch_cmd += f"--total-iters {self.total_iters} "
         
-        if pipe_name:
-            launch_cmd += f"--signal --pipe {pipe_name} "
-        
         if self.infer_mode:
             launch_cmd += f"--infer-type {self.infer_mode} "
         
             if self.infer_load:
                 launch_cmd += f"--infer-load {self.infer_load} "
+        
+        if pipe_name:
+            launch_cmd += f"--signal --pipe {pipe_name} "
         
         if use_tally:
             launch_cmd = f"{tally_client_script} {launch_cmd}"
@@ -226,8 +226,11 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_tally=False
             process_env = os.environ.copy()
             if benchmark.priority:
                 process_env["PRIORITY"] = str(benchmark.priority)
+                process_env["CUDA_MPS_CLIENT_PRIORITY"] = str(benchmark.priority)
             if benchmark.replace_cublas:
                 process_env["REPLACE_CUBLAS"] = "TRUE"
+            if use_mps:
+                process_env["CUDA_VISIBLE_DEVICES"] = "0"
 
             launch_cmd_list = launch_cmd.strip().split(" ")
             process = subprocess.Popen(launch_cmd_list, stdin=subprocess.PIPE, stdout=subprocess.PIPE,

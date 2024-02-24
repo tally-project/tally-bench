@@ -2,6 +2,7 @@ import time
 import numpy as np
 import timeit
 import torch
+import random
 
 from utils.bench_util import wait_for_signal
 from utils.util import busy_sleep
@@ -107,7 +108,7 @@ class ServerInferMonitor(InferMonitor):
         if not self.query_latency and self.num_iters >= 5:
             elapsed_time_seconds = self.step_end_time - self.step_begin_time
             self.query_latency = elapsed_time_seconds
-            self.poisson_lambda = (1 / self.query_latency) * self.load
+            self.poisson_lambda = (self.total_time / self.query_latency) * self.load / self.total_time
             print(f"Poisson lambda rate: {self.poisson_lambda}")
 
         if self.query_latency:
@@ -116,10 +117,10 @@ class ServerInferMonitor(InferMonitor):
             if self.warm:
                 self.latencies.append(elapsed_time_ms)
 
-            # wait time to simulate arrival rate of poisson distribution
-            assert(self.poisson_lambda)
-            interval = np.random.exponential(1 / self.poisson_lambda)
-            busy_sleep(interval)
+                # wait time to simulate arrival rate of poisson distribution
+                assert(self.poisson_lambda)
+                interval = random.expovariate(self.poisson_lambda)
+                busy_sleep(interval)
             
         return super().on_step_end()
     

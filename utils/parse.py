@@ -237,15 +237,23 @@ def parse_result(file_name, single_job_result_out=None, throughput_result_out=No
                     "high_priority_job_workload_type": get_workload_type(high_priority_job_clean),
                     "best_effort_job": best_effort_job_clean,
                     "best_effort_job_workload_type": get_workload_type(best_effort_job_clean),
-                    "best_effort_tally_throughput": compute_relative_tp(tally_priority_limit_run_res[best_effort_job], single_job_default_perf[best_effort_job_clean]),
                 }
+
+                lc_result_row["best_effort_tally_throughput"] = compute_relative_tp(tally_priority_limit_run_res[best_effort_job], single_job_default_perf[best_effort_job_clean])
+                if mps_run_res:
+                    lc_result_row["best_effort_mps_throughput"] = compute_relative_tp(mps_run_res[best_effort_job], single_job_default_perf[best_effort_job_clean])
 
                 lc_result_row["high_priority_orig_avg_latency"] = compute_avg_latency(single_job_default_perf[high_priority_job_clean])
                 lc_result_row["high_priority_tally_avg_latency"] = compute_avg_latency(tally_priority_limit_run_res[high_priority_job])
+                if mps_run_res:
+                    lc_result_row["high_priority_mps_avg_latency"] = compute_avg_latency(mps_run_res[high_priority_job])
 
                 for percentile in [90, 95, 99]:
                     lc_result_row[f"high_priority_orig_{percentile}th_latency"] = compute_percentile_latency(single_job_default_perf[high_priority_job_clean], percentile)
                     lc_result_row[f"high_priority_tally_{percentile}th_latency"] = compute_percentile_latency(tally_priority_limit_run_res[high_priority_job], percentile)
+
+                    if mps_run_res:
+                        lc_result_row[f"high_priority_mps_{percentile}th_latency"] = compute_percentile_latency(mps_run_res[high_priority_job], percentile)
 
                 latency_critical_result.append(lc_result_row)
 
@@ -259,7 +267,7 @@ def parse_result(file_name, single_job_result_out=None, throughput_result_out=No
 
     if priority_result_out and latency_critical_result:
         lc_df = pd.DataFrame(latency_critical_result)
-        lc_df = lc_df.sort_values(by=['high_priority_job', "exp_key", "preemption_latency_limit"], ascending=False)
+        lc_df = lc_df.sort_values(by=["preemption_latency_limit", 'high_priority_job', "exp_key"], ascending=False)
         lc_df.to_csv(priority_result_out, index=True)
 
     return single_job_result, co_locate_result
