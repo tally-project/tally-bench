@@ -38,7 +38,7 @@ echo "======== Collecting single-job performance with and without Tally ... ====
 time_cmd \
     python3 -u scripts/run_bench.py \
         --save-results \
-        --use-tally \
+        --use-tally-naive \
         --runtime $RUNTIME \
         --warmup-iters $WARMUP_ITERS
 
@@ -47,9 +47,9 @@ echo "======== Profiling kernel metrics for throughput-oriented jobs for priorit
 SCHEDULER_POLICY=PRIORITY \
     time_cmd \
     python3 -u scripts/run_bench.py \
-        --use-tally \
+        --use-tally-priority \
         --runtime 60 \
-        --warmup-iters 1000 \
+        --warmup-iters 100 \
         --profile-only \
         --save-results
 
@@ -60,11 +60,10 @@ SCHEDULER_POLICY=PRIORITY \
     time_cmd \
     python3 -u scripts/run_bench.py \
         --save-results \
-        --use-tally \
+        --use-tally-priority \
         --runtime $RUNTIME \
         --warmup-iters $WARMUP_ITERS \
-        --run-pairwise  \
-        --run-priority
+        --run-pairwise
 else
     echo "Skip collecting pair-wise performance with Tally priority scheduler because GPU_MODE is not Exclusive_Process"
 fi
@@ -78,8 +77,7 @@ time_cmd \
         --use-mps \
         --runtime $RUNTIME \
         --warmup-iters $WARMUP_ITERS \
-        --run-pairwise  \
-        --run-priority
+        --run-pairwise
 else
     echo "Skip collecting pair-wise performance with MPS because GPU_MODE is not EXCLUSIVE"
 fi

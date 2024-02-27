@@ -4,11 +4,11 @@ import json
 import os
 import logging
 
-sys.path.append('.')
+sys.path.append('python')
 
 from workloads.common.util import get_benchmark_func
-from utils.bench_util import set_deterministic, set_all_logging_level
-from utils.util import logger
+from bench_utils.bench_utils import set_deterministic, set_all_logging_level
+from bench_utils.utils import logger
 
 set_deterministic()
 
