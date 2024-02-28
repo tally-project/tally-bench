@@ -27,7 +27,7 @@ export RUNTIME=30
 export WARMUP_ITERS=30
 
 # Set a single cuda device to run the benchmarks
-export CUDA_VISIBLE_DEVICES=7
+export CUDA_VISIBLE_DEVICES=0
 echo "Running benchmarks on GPU: $CUDA_VISIBLE_DEVICES"
 
 export GPU_MODE=$(nvidia-smi -i $CUDA_VISIBLE_DEVICES --query-gpu=compute_mode --format=csv | awk 'NR==2')

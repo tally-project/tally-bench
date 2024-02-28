@@ -15,6 +15,7 @@ default_configs = [
     TallyConfig("priority", max_allowed_latency=5.0),
     TallyConfig("priority", use_original_configs=True),
     TallyConfig("priority", use_original_configs=True, min_wait_time=1.0),
+    TallyConfig("priority", use_space_share=True),
 ]
 
 inference_workloads = {
@@ -22,6 +23,7 @@ inference_workloads = {
         "bert": [],
         "llama-2-7b": [
             TallyConfig("priority", use_original_configs=True, min_wait_time=5.0),
+            TallyConfig("priority", use_original_configs=True, min_wait_time=10.0),
         ],
     },
     "pytorch": {

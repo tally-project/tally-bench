@@ -134,6 +134,9 @@ def parse_result(file_name, single_job_result_out=None, priority_result_out=None
 
         for tally_measurement in tally_measurments:
 
+            if job_1 not in tally_measurement or job_2 not in tally_measurement:
+                continue
+
             job_1_priority = tally_measurement[job_1]["priority"]
             job_2_priority = tally_measurement[job_2]["priority"]
 
@@ -147,12 +150,14 @@ def parse_result(file_name, single_job_result_out=None, priority_result_out=None
             max_allowed_latency = tally_config.get("PRIORITY_MAX_ALLOWED_PREEMPTION_LATENCY_MS")
             min_wait_time = tally_config.get("PRIORITY_MIN_WAIT_TIME_MS")
             use_original_configs = tally_config.get("PRIORITY_USE_ORIGINAL_CONFIGS")
+            use_space_share = tally_config.get("PRIORITY_USE_SPACE_SHARE")
 
             lc_result_row = {
                 "exp_key": key,
                 "preemption_latency_limit": max_allowed_latency,
                 "min_wait_time": min_wait_time,
                 "use_original_configs" : use_original_configs,
+                "use_space_share" : use_space_share,
                 "high_priority_job": high_priority_job_clean,
                 "high_priority_job_workload_type": get_workload_type(high_priority_job_clean),
                 "best_effort_job": best_effort_job_clean,
