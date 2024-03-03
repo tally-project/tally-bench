@@ -407,7 +407,7 @@ def run_benchmark_suite(
     train_benchmarks = get_train_benchmarks(training_workloads, warmup_iters, runtime)
     infer_benchmarks = get_infer_benchmarks(inference_workloads, inference_load_factors, warmup_iters, runtime)
     
-    init_env(use_mps, use_tally)
+    init_env(use_mps, use_tally, run_pairwise)
 
     single_job_benchmarks = train_benchmarks + infer_benchmarks
     if use_tally_priority:

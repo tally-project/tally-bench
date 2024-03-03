@@ -58,7 +58,7 @@ def parse_result(file_name, single_job_result_out=None, priority_result_out=None
 
     single_job_default_perf = {}
     single_job_result = []
-    single_job_keys = default_res.keys()
+    single_job_keys = [key for key in default_res.keys() if not ("infer" in key and "train" in key)]
     
     for key in single_job_keys:
 
@@ -108,15 +108,18 @@ def parse_result(file_name, single_job_result_out=None, priority_result_out=None
             continue
 
         mps_run_res = mps_res.get(key, {})
+        hardware_mp_run_res = default_res.get(key, {})
         tally_priority_run_res = tally_priority_res.get(key, {})
     
         tally_measurments = tally_priority_run_res.get("measurements", [])
         mps_measurments = mps_run_res.get("measurements", [{}])
+        hardware_mp_measurments = hardware_mp_run_res.get("measurements", [{}])
         if not tally_measurments:
             continue
 
         tally_measurement = tally_measurments[0]
         mps_measurment = mps_measurments[0]
+        hardware_mp_measurment = hardware_mp_measurments[0]
         measurment_keys = list(tally_measurement.keys())
         
         if "error" in measurment_keys:
@@ -164,35 +167,46 @@ def parse_result(file_name, single_job_result_out=None, priority_result_out=None
                 "best_effort_job_workload_type": get_workload_type(best_effort_job_clean),
                 "best_effort_tally_throughput": "",
                 "best_effort_mps_throughput": "",
+                "best_effort_hardware_mp_throughput": "",
                 "high_priority_orig_avg_latency": "",
                 "high_priority_tally_avg_latency": "",
                 "high_priority_mps_avg_latency": "",
+                "high_priority_hardware_mp_avg_latency": "",
                 "high_priority_orig_90th_latency": "",
                 "high_priority_tally_90th_latency": "",
                 "high_priority_mps_90th_latency": "",
+                "high_priority_hardware_mp_90th_latency": "",
                 "high_priority_orig_95th_latency": "",
                 "high_priority_tally_95th_latency": "",
                 "high_priority_mps_95th_latency": "",
+                "high_priority_hardware_mp_95th_latency": "",
                 "high_priority_orig_99th_latency": "",
                 "high_priority_tally_99th_latency": "",
                 "high_priority_mps_99th_latency": "",
+                "high_priority_hardware_mp_99th_latency": "",
             }
 
             lc_result_row["best_effort_tally_throughput"] = compute_relative_tp(tally_measurement[best_effort_job], single_job_default_perf[best_effort_job_clean])
             if mps_measurment:
                 lc_result_row["best_effort_mps_throughput"] = compute_relative_tp(mps_measurment[best_effort_job], single_job_default_perf[best_effort_job_clean])
+            if hardware_mp_measurment:
+                lc_result_row["best_effort_hardware_mp_throughput"] = compute_relative_tp(hardware_mp_measurment[best_effort_job], single_job_default_perf[best_effort_job_clean])
 
             lc_result_row["high_priority_orig_avg_latency"] = compute_avg_latency(single_job_default_perf[high_priority_job_clean])
             lc_result_row["high_priority_tally_avg_latency"] = compute_avg_latency(tally_measurement[high_priority_job])
-            if mps_run_res:
+            if mps_measurment:
                 lc_result_row["high_priority_mps_avg_latency"] = compute_avg_latency(mps_measurment[high_priority_job])
+            if hardware_mp_measurment:
+                lc_result_row["high_priority_hardware_mp_avg_latency"] = compute_avg_latency(hardware_mp_measurment[high_priority_job])
 
             for percentile in [90, 95, 99]:
                 lc_result_row[f"high_priority_orig_{percentile}th_latency"] = compute_percentile_latency(single_job_default_perf[high_priority_job_clean], percentile)
                 lc_result_row[f"high_priority_tally_{percentile}th_latency"] = compute_percentile_latency(tally_measurement[high_priority_job], percentile)
 
-                if mps_run_res:
+                if mps_measurment:
                     lc_result_row[f"high_priority_mps_{percentile}th_latency"] = compute_percentile_latency(mps_measurment[high_priority_job], percentile)
+                if hardware_mp_measurment:
+                    lc_result_row[f"high_priority_hardware_mp_{percentile}th_latency"] = compute_percentile_latency(hardware_mp_measurment[high_priority_job], percentile)
 
             latency_critical_result.append(lc_result_row)
 

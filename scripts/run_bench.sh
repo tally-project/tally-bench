@@ -81,3 +81,17 @@ time_cmd \
 else
     echo "Skip collecting pair-wise performance with MPS because GPU_MODE is not EXCLUSIVE"
 fi
+
+# Run priority-related co-located experiments with hardware multi-processing
+if [[ $GPU_MODE == "Default" ]]; then
+echo "======== Collecting priority-related pair-wise performance with hardware multi-processing ... ========"
+SCHEDULER_POLICY=PRIORITY \
+    time_cmd \
+    python3 -u scripts/run_bench.py \
+        --save-results \
+        --runtime $RUNTIME \
+        --warmup-iters $WARMUP_ITERS \
+        --run-pairwise
+else
+    echo "Skip collecting pair-wise performance with hardware multi-processing because GPU_MODE is not Default"
+fi

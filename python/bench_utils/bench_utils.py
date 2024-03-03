@@ -52,8 +52,13 @@ def get_cuda_device_id():
     return cuda_devices[0]
 
   
-def init_env(use_mps=False, use_tally=False):
+def init_env(use_mps=False, use_tally=False, run_pairwise=True):
     tear_down_env()
+
+    # does not matter if not running pairwise
+    if not run_pairwise:
+        return
+
     cuda_device_id = get_cuda_device_id()
 
     out, err, rc = execute_cmd(f"nvidia-smi -i {cuda_device_id} --query-gpu=compute_mode --format=csv", get_output=True)
