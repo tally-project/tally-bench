@@ -25,7 +25,7 @@ from bench_utils.tally import (
     TallyConfig
 )
 
-from configs.train_config import training_workloads
+from configs.train_config import training_workloads_3090 as training_workloads
 from configs.infer_config import inference_workloads, inference_load_factors
 
 

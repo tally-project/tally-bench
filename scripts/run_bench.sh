@@ -42,56 +42,56 @@ time_cmd \
         --runtime $RUNTIME \
         --warmup-iters $WARMUP_ITERS
 
-# Profile preemptive kernel metrics for throughput-oriented jobs for priority scheduler
-echo "======== Profiling kernel metrics for throughput-oriented jobs for priority scheduler ... ========"
-SCHEDULER_POLICY=PRIORITY \
-    time_cmd \
-    python3 -u scripts/run_bench.py \
-        --use-tally-priority \
-        --runtime 60 \
-        --warmup-iters 100 \
-        --profile-only \
-        --save-results
+# # Profile preemptive kernel metrics for throughput-oriented jobs for priority scheduler
+# echo "======== Profiling kernel metrics for throughput-oriented jobs for priority scheduler ... ========"
+# SCHEDULER_POLICY=PRIORITY \
+#     time_cmd \
+#     python3 -u scripts/run_bench.py \
+#         --use-tally-priority \
+#         --runtime 60 \
+#         --warmup-iters 100 \
+#         --profile-only \
+#         --save-results
 
-# Run priority-related co-located experiments with Tally priority scheduler
-if [[ $GPU_MODE == "Exclusive_Process" ]]; then
-echo "======== Collecting priority-related pair-wise performance with Tally priority scheduler ... ========"
-SCHEDULER_POLICY=PRIORITY \
-    time_cmd \
-    python3 -u scripts/run_bench.py \
-        --save-results \
-        --use-tally-priority \
-        --runtime $RUNTIME \
-        --warmup-iters $WARMUP_ITERS \
-        --run-pairwise
-else
-    echo "Skip collecting pair-wise performance with Tally priority scheduler because GPU_MODE is not Exclusive_Process"
-fi
+# # Run priority-related co-located experiments with Tally priority scheduler
+# if [[ $GPU_MODE == "Exclusive_Process" ]]; then
+# echo "======== Collecting priority-related pair-wise performance with Tally priority scheduler ... ========"
+# SCHEDULER_POLICY=PRIORITY \
+#     time_cmd \
+#     python3 -u scripts/run_bench.py \
+#         --save-results \
+#         --use-tally-priority \
+#         --runtime $RUNTIME \
+#         --warmup-iters $WARMUP_ITERS \
+#         --run-pairwise
+# else
+#     echo "Skip collecting pair-wise performance with Tally priority scheduler because GPU_MODE is not Exclusive_Process"
+# fi
 
-# Run priority-related co-located experiments with MPS
-if [[ $GPU_MODE == "Exclusive_Process" ]]; then
-echo "======== Collecting priority-related pair-wise performance with MPS ... ========"
-time_cmd \
-    python3 -u scripts/run_bench.py \
-        --save-results \
-        --use-mps \
-        --runtime $RUNTIME \
-        --warmup-iters $WARMUP_ITERS \
-        --run-pairwise
-else
-    echo "Skip collecting pair-wise performance with MPS because GPU_MODE is not EXCLUSIVE"
-fi
+# # Run priority-related co-located experiments with MPS
+# if [[ $GPU_MODE == "Exclusive_Process" ]]; then
+# echo "======== Collecting priority-related pair-wise performance with MPS ... ========"
+# time_cmd \
+#     python3 -u scripts/run_bench.py \
+#         --save-results \
+#         --use-mps \
+#         --runtime $RUNTIME \
+#         --warmup-iters $WARMUP_ITERS \
+#         --run-pairwise
+# else
+#     echo "Skip collecting pair-wise performance with MPS because GPU_MODE is not EXCLUSIVE"
+# fi
 
-# Run priority-related co-located experiments with hardware multi-processing
-if [[ $GPU_MODE == "Default" ]]; then
-echo "======== Collecting priority-related pair-wise performance with hardware multi-processing ... ========"
-SCHEDULER_POLICY=PRIORITY \
-    time_cmd \
-    python3 -u scripts/run_bench.py \
-        --save-results \
-        --runtime $RUNTIME \
-        --warmup-iters $WARMUP_ITERS \
-        --run-pairwise
-else
-    echo "Skip collecting pair-wise performance with hardware multi-processing because GPU_MODE is not Default"
-fi
+# # Run priority-related co-located experiments with hardware multi-processing
+# if [[ $GPU_MODE == "Default" ]]; then
+# echo "======== Collecting priority-related pair-wise performance with hardware multi-processing ... ========"
+# SCHEDULER_POLICY=PRIORITY \
+#     time_cmd \
+#     python3 -u scripts/run_bench.py \
+#         --save-results \
+#         --runtime $RUNTIME \
+#         --warmup-iters $WARMUP_ITERS \
+#         --run-pairwise
+# else
+#     echo "Skip collecting pair-wise performance with hardware multi-processing because GPU_MODE is not Default"
+# fi
