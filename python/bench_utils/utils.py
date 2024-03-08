@@ -53,3 +53,5 @@ def get_possion_arrival_ts(poisson_lambda, total_time):
 
         if curr_ts > total_time * 2:
             break
+    
+    return arrival_ts

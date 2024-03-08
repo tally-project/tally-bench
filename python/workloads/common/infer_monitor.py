@@ -96,7 +96,7 @@ class ServerInferMonitor(InferMonitor):
         self.step_end_time = None
         self.latencies = []
         self.load = load
-        self.query_latency = None
+        self.query_latency = float('inf')
         self.poisson_lambda = None
         self.arrivial_ts = []
 
@@ -105,18 +105,20 @@ class ServerInferMonitor(InferMonitor):
 
     def on_step_end(self):
         self.step_end_time = timeit.default_timer()
+        elapsed_time_seconds = self.step_end_time - self.step_begin_time
 
-        if not self.query_latency and self.num_iters >= 5:
-            elapsed_time_seconds = self.step_end_time - self.step_begin_time
-            self.query_latency = elapsed_time_seconds
-            self.poisson_lambda = (self.total_time / self.query_latency) * self.load / self.total_time
-            print(f"Poisson lambda rate: {self.poisson_lambda}")
-            
-            # simulate arrivial timestamps
-            self.arrivial_ts = get_possion_arrival_ts(self.poisson_lambda, self.total_time)
+        if not self.poisson_lambda:
 
-        if self.query_latency:
-            elapsed_time_ms = (self.step_end_time - self.step_begin_time) * 1000
+            self.query_latency = min(self.query_latency, elapsed_time_seconds)
+            if self.num_iters == self.warmup_iters:
+                self.poisson_lambda = (self.total_time / self.query_latency) * self.load / self.total_time
+                print(f"Poisson lambda rate: {self.poisson_lambda}")
+                
+                # simulate arrivial timestamps
+                self.arrivial_ts = get_possion_arrival_ts(self.poisson_lambda, self.total_time)
+
+        if self.poisson_lambda:
+            elapsed_time_ms = elapsed_time_seconds * 1000
 
             if self.warm:
                 self.latencies.append(elapsed_time_ms)
