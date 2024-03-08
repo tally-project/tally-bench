@@ -28,15 +28,23 @@ small_batch_jobs =  [
     'pytorch_bert_train_16_amp',
 ]
 
-def get_best_effort_job_label(best_effort_job):
+def get_best_effort_job_label(best_effort_job, break_lines=False):
     for word in ["pytorch_", "train_"]:
         best_effort_job = best_effort_job.replace(word, "")
+    if break_lines:
+        best_effort_job = best_effort_job.replace("_", " ")
+        best_effort_job = best_effort_job.replace("-", " ")
+        best_effort_job = best_effort_job.replace(" ", "\n")
     return best_effort_job
 
 
-def get_high_priority_job_label(high_priority_job):
+def get_high_priority_job_label(high_priority_job, break_lines=False):
     for word in ["infer_", "_1"]:
         high_priority_job = high_priority_job.replace(word, "")
+    if break_lines:
+        high_priority_job = high_priority_job.replace("_", " ")
+        high_priority_job = high_priority_job.replace("-", " ")
+        high_priority_job = high_priority_job.replace(" ", "\n")
     return high_priority_job
 
 
@@ -103,7 +111,7 @@ def plot_tally_slo_achievable_throughput(priority_df, high_priority_jobs, best_e
     ax.set_title(f"Achievable Throughput for {metric} latency with tolerance level {tolerance_level}")
 
     ax.legend(loc='upper left', bbox_to_anchor=(1,1), fontsize=20)
-    plt.subplots_adjust(right=0.75)
+    plt.subplots_adjust(right=0.80)
     plt.savefig(f"{savefig_dir}/tolerance_level_{tolerance_level}.png")
 
 
@@ -147,7 +155,7 @@ def plot_motivation_latency_comparison(priority_df, high_priority_job, best_effo
     
     num_targets = 3
     ax.set_xticks(pos + ((num_targets - 1) / 2) * width)
-    ax.set_xticklabels([get_best_effort_job_label(best_effort_job) for best_effort_job in plotted_best_effort_jobs])
+    ax.set_xticklabels([get_best_effort_job_label(best_effort_job, break_lines=True) for best_effort_job in plotted_best_effort_jobs])
     ax.set_xlabel("Best-Effort Jobs")
     ax.set_ylabel(f"Latency (ms)")
     
@@ -228,7 +236,7 @@ def plot_slo_comparison(priority_df, high_priority_job, best_effort_jobs, metric
 
     num_targets = 4
     ax2.set_xticks(pos + ((num_targets - 1) / 2) * width)
-    ax2.set_xticklabels([get_best_effort_job_label(best_effort_job) for best_effort_job in plotted_best_effort_jobs])
+    ax2.set_xticklabels([get_best_effort_job_label(best_effort_job, break_lines=True) for best_effort_job in plotted_best_effort_jobs])
     ax2.set_xlabel("Best-Effort Jobs")
     plt.savefig(f"{savefig_dir}/{high_priority_job}.png")
 
@@ -241,15 +249,15 @@ def main():
 
     metrics = ["avg", "90th", "95th", "99th"]
 
-    # # plot Baseline, MPS, Time-sliced latency comparison
-    # for high_priority_job in high_priority_jobs:
-    #     for metric in metrics:
-    #         plot_motivation_latency_comparison(priority_df, high_priority_job, best_effort_jobs, metric=metric)
+    # plot Baseline, MPS, Time-sliced latency comparison
+    for high_priority_job in high_priority_jobs:
+        for metric in metrics:
+            plot_motivation_latency_comparison(priority_df, high_priority_job, best_effort_jobs, metric=metric)
 
-    # # plot Tally Achievable Throughput under a certain SLO
-    # for metric in metrics:
-    #     for tolerance_level in [0.1, 0.2, 0.3]:
-    #         plot_tally_slo_achievable_throughput(priority_df, high_priority_jobs, best_effort_jobs, tolerance_level=tolerance_level, metric=metric)
+    # plot Tally Achievable Throughput under a certain SLO
+    for metric in metrics:
+        for tolerance_level in [0.1, 0.2, 0.3]:
+            plot_tally_slo_achievable_throughput(priority_df, high_priority_jobs, best_effort_jobs, tolerance_level=tolerance_level, metric=metric)
 
     # plot Baseline, MPS, Time-sliced, Tally latency and Throughput comparison under a certain SLO
     for high_priority_job in high_priority_jobs:
