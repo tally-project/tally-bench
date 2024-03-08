@@ -3,6 +3,7 @@ import json
 import os
 import logging
 import time
+import random
 
 logger = logging.getLogger("tally-bench")
 logger.setLevel(logging.INFO)
@@ -40,3 +41,15 @@ def busy_sleep(seconds):
     start_time = time.time()
     while (time.time() < start_time + seconds):
         pass
+
+def get_possion_arrival_ts(poisson_lambda, total_time):
+    # simulate arrivial timestamps
+    curr_ts = 0.
+    arrival_ts = [curr_ts]
+    while True:
+        interval = random.expovariate(poisson_lambda)
+        curr_ts += interval
+        arrival_ts.append(curr_ts)
+
+        if curr_ts > total_time * 2:
+            break

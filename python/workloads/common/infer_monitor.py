@@ -5,7 +5,7 @@ import torch
 import random
 
 from bench_utils.bench_utils import wait_for_signal
-from bench_utils.utils import busy_sleep
+from bench_utils.utils import busy_sleep, get_possion_arrival_ts
 
 
 class InferMonitor:
@@ -98,6 +98,7 @@ class ServerInferMonitor(InferMonitor):
         self.load = load
         self.query_latency = None
         self.poisson_lambda = None
+        self.arrivial_ts = []
 
     def on_step_begin(self):
         self.step_begin_time = timeit.default_timer()
@@ -110,6 +111,9 @@ class ServerInferMonitor(InferMonitor):
             self.query_latency = elapsed_time_seconds
             self.poisson_lambda = (self.total_time / self.query_latency) * self.load / self.total_time
             print(f"Poisson lambda rate: {self.poisson_lambda}")
+            
+            # simulate arrivial timestamps
+            self.arrivial_ts = get_possion_arrival_ts(self.poisson_lambda, self.total_time)
 
         if self.query_latency:
             elapsed_time_ms = (self.step_end_time - self.step_begin_time) * 1000
@@ -117,10 +121,12 @@ class ServerInferMonitor(InferMonitor):
             if self.warm:
                 self.latencies.append(elapsed_time_ms)
 
-                # wait time to simulate arrival rate of poisson distribution
-                assert(self.poisson_lambda)
-                interval = random.expovariate(self.poisson_lambda)
-                busy_sleep(interval)
+                # wait to simulate arrival rate of poisson distribution
+                next_arrival_ts = self.arrivial_ts[len(self.latencies)]
+                elapsed_from_start = self.step_end_time - self.start_time
+                if elapsed_from_start < next_arrival_ts:
+                    wait_time = next_arrival_ts - elapsed_from_start
+                    busy_sleep(wait_time)
             
         return super().on_step_end()
     
