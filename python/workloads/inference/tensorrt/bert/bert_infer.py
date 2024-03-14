@@ -5,7 +5,7 @@ from transformers import BertModel
 from workloads.common.infer_monitor import get_infer_monitor
 
 def bert_infer(model_name, mode, batch_size, warmup_iters, total_time,
-                 load=0.5, result_dict=None, signal=False, pipe=None):
+                 load=0.5, trace_file=None, result_dict=None, signal=False, pipe=None):
 
     # Initialize model with float precision and sample inputs
     model = BertModel.from_pretrained("bert-base-uncased").eval().to("cuda")
@@ -46,7 +46,7 @@ def bert_infer(model_name, mode, batch_size, warmup_iters, total_time,
     if mode in ["single-stream", "server"]:
         assert(batch_size == 1)
         
-    monitor = get_infer_monitor(mode, warmup_iters, total_time, result_dict, signal, pipe, load)
+    monitor = get_infer_monitor(mode, warmup_iters, total_time, result_dict, signal, pipe, load, trace_file)
 
     while True:
 

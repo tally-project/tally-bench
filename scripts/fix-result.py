@@ -12,9 +12,14 @@ result = load_json_from_file("tally_bench_results/result.json")
 
 def fix_result(result):
     if isinstance(result, dict):
-        for key in result:
-            val = result[key]
-            fix_result(val)
+
+        keys = list(result.keys())
+        for key in keys:
+            if "server" in key:
+                del result[key]
+            else:
+                val = result[key]
+                fix_result(val)
     elif isinstance(result, list):
         for item in result:
             fix_result(item)

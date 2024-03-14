@@ -121,7 +121,7 @@ def plot_motivation_latency_comparison(priority_df, high_priority_job, best_effo
     mkdir_if_not_exists(savefig_dir)
     
     high_priority_job_df = priority_df[priority_df["high_priority_job"] == high_priority_job]
-    baseline_latencies, time_sliced_latencies, mps_latencies = [], [], []
+    baseline_latencies, time_sliced_latencies, mps_latencies, mps_priority_latencies = [], [], [], []
     plotted_best_effort_jobs = []
 
     for best_effort_job in best_effort_jobs:
@@ -135,10 +135,12 @@ def plot_motivation_latency_comparison(priority_df, high_priority_job, best_effo
         baseline_latency = best_effort_job_df[f"high_priority_orig_{metric}_latency"].values[0]
         time_sliced_latency = best_effort_job_df[f"high_priority_hardware_mp_{metric}_latency"].values[0]
         mps_latency = best_effort_job_df[f"high_priority_mps_{metric}_latency"].values[0]
+        mps_priority_latency = best_effort_job_df[f"high_priority_mps_priority_{metric}_latency"].values[0]
 
         baseline_latencies.append(baseline_latency)
         time_sliced_latencies.append(time_sliced_latency)
         mps_latencies.append(mps_latency)
+        mps_priority_latencies.append(mps_priority_latency)
 
     # plotting
     plt.clf()
@@ -152,8 +154,9 @@ def plot_motivation_latency_comparison(priority_df, high_priority_job, best_effo
     ax.bar(pos, baseline_latencies, width, label=f"Baseline", color=colors[0], alpha=0.8, edgecolor='black')
     ax.bar(pos + 1 * width, time_sliced_latencies, width, label=f"Time-sliced", color=colors[1], alpha=0.8, edgecolor='black')
     ax.bar(pos + 2 * width, mps_latencies, width, label=f"MPS", color=colors[2], alpha=0.8, edgecolor='black')
+    ax.bar(pos + 3 * width, mps_priority_latencies, width, label=f"MPS-Priority", color=colors[3], alpha=0.8, edgecolor='black')
     
-    num_targets = 3
+    num_targets = 4
     ax.set_xticks(pos + ((num_targets - 1) / 2) * width)
     ax.set_xticklabels([get_best_effort_job_label(best_effort_job, break_lines=True) for best_effort_job in plotted_best_effort_jobs])
     ax.set_xlabel("Best-Effort Jobs")
@@ -169,8 +172,9 @@ def plot_slo_comparison(priority_df, high_priority_job, best_effort_jobs, metric
     mkdir_if_not_exists(savefig_dir)
     
     high_priority_job_df = priority_df[priority_df["high_priority_job"] == high_priority_job]
-    baseline_latencies, time_sliced_latencies, mps_latencies, tally_latencies = [], [], [], []
-    time_sliced_throughputs, mps_throughputs, tally_throughputs = [], [], []
+    baseline_latencies, time_sliced_latencies, mps_latencies, mps_priority_latencies, tally_latencies, = [], [], [], [], []
+    priority_time_sliced_throughputs, priority_mps_throughputs, priority_mps_priority_throughputs, priority_tally_throughputs = [], [], [], []
+    time_sliced_throughputs, mps_throughputs, mps_priority_throughputs, tally_throughputs = [], [], [], []
     plotted_best_effort_jobs = []
 
     for best_effort_job in best_effort_jobs:
@@ -181,9 +185,14 @@ def plot_slo_comparison(priority_df, high_priority_job, best_effort_jobs, metric
 
         baseline_latency = best_effort_job_df[f"high_priority_orig_{metric}_latency"].values[0]
         time_sliced_latency = best_effort_job_df[f"high_priority_hardware_mp_{metric}_latency"].values[0]
+        priority_time_sliced_throughput = best_effort_job_df[f"high_priority_hardware_mp_throughput"].values[0]
         time_sliced_throughput = best_effort_job_df[f"best_effort_hardware_mp_throughput"].values[0]
         mps_latency = best_effort_job_df[f"high_priority_mps_{metric}_latency"].values[0]
+        priority_mps_throughput = best_effort_job_df[f"high_priority_mps_throughput"].values[0]
         mps_throughput = best_effort_job_df[f"best_effort_mps_throughput"].values[0]
+        mps_priority_latency = best_effort_job_df[f"high_priority_mps_priority_{metric}_latency"].values[0]
+        priority_mps_priority_throughput = best_effort_job_df[f"high_priority_mps_priority_throughput"].values[0]
+        mps_priority_throughput = best_effort_job_df[f"best_effort_mps_priority_throughput"].values[0]
 
         acceptable_latency_bound = (1 + tolerance_level) * baseline_latency
         tally_acceptable_df = best_effort_job_df[best_effort_job_df[f"high_priority_tally_{metric}_latency"] <= acceptable_latency_bound]
@@ -191,53 +200,77 @@ def plot_slo_comparison(priority_df, high_priority_job, best_effort_jobs, metric
         if tally_acceptable_df.empty:
             tally_latency = 0.
             tally_throughput = 0.
+            priority_tally_throughput = 0.
         else:
             best_achievable_throughput = tally_acceptable_df[f"best_effort_tally_throughput"].max()
             best_measurement = tally_acceptable_df[tally_acceptable_df[f"best_effort_tally_throughput"] == best_achievable_throughput]
             tally_latency = best_measurement[f"high_priority_tally_{metric}_latency"].values[0]
             tally_throughput = best_measurement[f"best_effort_tally_throughput"].values[0]
-        
+            priority_tally_throughput = best_measurement[f"high_priority_tally_throughput"].values[0]
+
         baseline_latencies.append(baseline_latency)
         time_sliced_latencies.append(time_sliced_latency)
         mps_latencies.append(mps_latency)
+        mps_priority_latencies.append(mps_priority_latency)
         tally_latencies.append(tally_latency)
+
+        priority_time_sliced_throughputs.append(priority_time_sliced_throughput)
+        priority_mps_throughputs.append(priority_mps_throughput)
+        priority_mps_priority_throughputs.append(priority_mps_priority_throughput)
+        priority_tally_throughputs.append(priority_tally_throughput)
 
         time_sliced_throughputs.append(time_sliced_throughput)
         mps_throughputs.append(mps_throughput)
+        mps_priority_throughputs.append(mps_priority_throughput)
         tally_throughputs.append(tally_throughput)
 
         plotted_best_effort_jobs.append(best_effort_job)
     
     # plotting
     plt.clf()
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8), sharex=True)
+    fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(len(plotted_best_effort_jobs) * 1, 8), sharex=True)
 
     # Width of a bar
-    width = 0.2
+    width = 0.15
     
     pos = np.arange(len(plotted_best_effort_jobs))
 
     # plot latency
     ax1.bar(pos, baseline_latencies, width, label=f"Baseline", color=colors[0], alpha=0.8, edgecolor='black')
-    ax1.bar(pos + 1 * width, time_sliced_latencies, width, label=f"Time-sliced", color=colors[1], alpha=0.8, edgecolor='black')
+    ax1.bar(pos + 1 * width, time_sliced_latencies, width, label=f"Time-Sliced", color=colors[1], alpha=0.8, edgecolor='black')
     ax1.bar(pos + 2 * width, mps_latencies, width, label=f"MPS", color=colors[2], alpha=0.8, edgecolor='black')
-    ax1.bar(pos + 3 * width, tally_latencies, width, label=f"Tally", color=colors[3], alpha=0.8, edgecolor='black')
+    ax1.bar(pos + 3 * width, mps_priority_latencies, width, label=f"MPS-Priority", color=colors[3], alpha=0.8, edgecolor='black')
+    ax1.bar(pos + 4 * width, tally_latencies, width, label=f"Tally", color=colors[4], alpha=0.8, edgecolor='black')
 
+    ax1.set_title("High-Priority Latency Comparison")
     ax1.set_ylabel(f"Latency (ms)")
     ax1.legend()
 
-    # plot throughput
-    ax2.bar(pos + 1 * width, time_sliced_throughputs, width, label=f"Time-sliced", color=colors[1], alpha=0.8, edgecolor='black')
-    ax2.bar(pos + 2 * width, mps_throughputs, width, label=f"MPS", color=colors[2], alpha=0.8, edgecolor='black')
-    ax2.bar(pos + 3 * width, tally_throughputs, width, label=f"Tally", color=colors[3], alpha=0.8, edgecolor='black')
+    # plot high-priority throughput
+    ax2.bar(pos + 1 * width, priority_time_sliced_throughputs, width, label=f"Time-sliced", color=colors[1], alpha=0.8, edgecolor='black')
+    ax2.bar(pos + 2 * width, priority_mps_throughputs, width, label=f"MPS", color=colors[2], alpha=0.8, edgecolor='black')
+    ax2.bar(pos + 3 * width, priority_mps_priority_throughputs, width, label=f"MPS-Priority", color=colors[3], alpha=0.8, edgecolor='black')
+    ax2.bar(pos + 4 * width, priority_tally_throughputs, width, label=f"Tally", color=colors[4], alpha=0.8, edgecolor='black')
 
-    ax2.set_ylabel(f"Best-effort Throughput")
-    ax2.legend()
+    ax2.set_title("High-Priority Throughput Comparison")
+    ax2.set_ylabel(f"Normalized Throughput")
+    # ax2.legend()
 
-    num_targets = 4
-    ax2.set_xticks(pos + ((num_targets - 1) / 2) * width)
-    ax2.set_xticklabels([get_best_effort_job_label(best_effort_job, break_lines=True) for best_effort_job in plotted_best_effort_jobs])
-    ax2.set_xlabel("Best-Effort Jobs")
+    # plot best-effort throughput
+    ax3.bar(pos + 1 * width, time_sliced_throughputs, width, label=f"Time-sliced", color=colors[1], alpha=0.8, edgecolor='black')
+    ax3.bar(pos + 2 * width, mps_throughputs, width, label=f"MPS", color=colors[2], alpha=0.8, edgecolor='black')
+    ax3.bar(pos + 3 * width, mps_priority_throughputs, width, label=f"MPS-Priority", color=colors[3], alpha=0.8, edgecolor='black')
+    ax3.bar(pos + 4 * width, tally_throughputs, width, label=f"Tally", color=colors[4], alpha=0.8, edgecolor='black')
+
+    ax3.set_title("Best-effort Throughput Comparison")
+    ax3.set_ylabel(f"Normalized Throughput")
+    # ax3.legend()
+
+    num_targets = 5
+    ax3.set_xticks(pos + ((num_targets - 1) / 2) * width)
+    ax3.set_xticklabels([get_best_effort_job_label(best_effort_job, break_lines=True) for best_effort_job in plotted_best_effort_jobs])
+    ax3.set_xlabel("Best-Effort Jobs")
+
     plt.savefig(f"{savefig_dir}/{high_priority_job}.png")
 
 

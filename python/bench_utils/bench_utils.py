@@ -95,12 +95,14 @@ def wait_for_signal(pipe_name):
                 break
 
 
-def get_backend_name(use_tally=False, use_mps=False, tally_config=None):
+def get_backend_name(use_tally=False, use_mps=False, use_mps_priority=False, tally_config=None):
     backend = "default"
 
-    if use_mps:
+    if use_mps_priority:
+        backend = "mps-priority"
+    elif use_mps:
         backend = "mps"
     elif use_tally:
         backend = f"tally_{tally_config.scheduler_policy}".lower()
-    
+
     return backend

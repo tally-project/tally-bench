@@ -15,7 +15,7 @@ from yolov6.layers.common import DetectBackend
 
 
 def yolov6_infer(model_name, mode, batch_size, warmup_iters, total_time,
-                 load=0.5, result_dict=None, signal=False, pipe=None):
+                 load=0.5, trace_file=None, result_dict=None, signal=False, pipe=None):
     device = torch.device("cuda")
     model = DetectBackend(f"./data/weights/{model_name}.pt", device=device).eval()
 
@@ -27,7 +27,7 @@ def yolov6_infer(model_name, mode, batch_size, warmup_iters, total_time,
     if mode in ["single-stream", "server"]:
         assert(batch_size == 1)
 
-    monitor = get_infer_monitor(mode, warmup_iters, total_time, result_dict, signal, pipe, load)
+    monitor = get_infer_monitor(mode, warmup_iters, total_time, result_dict, signal, pipe, load, trace_file)
     data = torch.randn(batch_size, 3, 640, 640).cuda()
 
     while True:

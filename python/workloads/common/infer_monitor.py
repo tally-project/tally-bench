@@ -5,7 +5,7 @@ import torch
 import random
 
 from bench_utils.bench_utils import wait_for_signal
-from bench_utils.utils import busy_sleep, get_possion_arrival_ts
+from bench_utils.utils import busy_sleep, get_possion_arrival_trace, load_json_from_file
 
 
 class InferMonitor:
@@ -89,16 +89,18 @@ class SingleStreamInferMonitor(InferMonitor):
 
 class ServerInferMonitor(InferMonitor):
 
-    def __init__(self, warmup_iters, total_time, result_dict, signal, pipe, load):
+    def __init__(self, warmup_iters, total_time, result_dict, signal, pipe, load=None, trace_file=None):
         super().__init__(warmup_iters, total_time, result_dict, signal, pipe)
 
         self.step_begin_time = None
         self.step_end_time = None
         self.latencies = []
         self.load = load
+        if trace_file:
+            self.trace = load_json_from_file(trace_file)
+        else:
+            self.trace = None
         self.query_latency = float('inf')
-        self.poisson_lambda = None
-        self.arrivial_ts = []
 
     def on_step_begin(self):
         self.step_begin_time = timeit.default_timer()
@@ -107,28 +109,34 @@ class ServerInferMonitor(InferMonitor):
         self.step_end_time = timeit.default_timer()
         elapsed_time_seconds = self.step_end_time - self.step_begin_time
 
-        if not self.poisson_lambda:
+        if not self.trace:
 
             self.query_latency = min(self.query_latency, elapsed_time_seconds)
-            if self.num_iters == self.warmup_iters:
-                self.poisson_lambda = (self.total_time / self.query_latency) * self.load / self.total_time
-                print(f"Poisson lambda rate: {self.poisson_lambda}")
-                
+            if self.num_iters + 1 == self.warmup_iters:
                 # simulate arrivial timestamps
-                self.arrivial_ts = get_possion_arrival_ts(self.poisson_lambda, self.total_time)
+                self.trace = get_possion_arrival_trace(self.query_latency, self.load, self.total_time)
 
-        if self.poisson_lambda:
+        if self.warm:
+            assert(self.trace)
             elapsed_time_ms = elapsed_time_seconds * 1000
+            self.latencies.append(elapsed_time_ms)
 
-            if self.warm:
-                self.latencies.append(elapsed_time_ms)
+            # wait to simulate arrival rate of poisson distribution
+            next_arrival_ts = self.trace[len(self.latencies)]
+            elapsed_from_start = self.step_end_time - self.start_time
+            if elapsed_from_start < next_arrival_ts:
+                wait_time = next_arrival_ts - elapsed_from_start
+                # busy_sleep(wait_time)
 
-                # wait to simulate arrival rate of poisson distribution
-                next_arrival_ts = self.arrivial_ts[len(self.latencies)]
-                elapsed_from_start = self.step_end_time - self.start_time
-                if elapsed_from_start < next_arrival_ts:
-                    wait_time = next_arrival_ts - elapsed_from_start
-                    busy_sleep(wait_time)
+                # sleep for `wait_time` seconds or until timeup
+                start_wait_time = timeit.default_timer()
+                while True:
+
+                    curr_time = timeit.default_timer()
+                    if curr_time - self.start_time >= self.total_time:
+                        break
+                    if curr_time - start_wait_time >= wait_time:
+                        break
             
         return super().on_step_end()
     
@@ -144,12 +152,12 @@ class ServerInferMonitor(InferMonitor):
             self.result_dict["iters"] = self.warm_iters
 
 
-def get_infer_monitor(mode, warmup_iters, total_time, result_dict, signal, pipe, load=None):
+def get_infer_monitor(mode, warmup_iters, total_time, result_dict, signal, pipe, load=None, trace_file=None):
 
     if mode == "single-stream":
         return SingleStreamInferMonitor(warmup_iters, total_time, result_dict, signal, pipe)
     elif mode == "server":
         assert(load)
-        return ServerInferMonitor(warmup_iters, total_time, result_dict, signal, pipe, load)
+        return ServerInferMonitor(warmup_iters, total_time, result_dict, signal, pipe, load, trace_file)
     else:
         raise Exception("unknown mode")

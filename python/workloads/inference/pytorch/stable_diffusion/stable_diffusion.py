@@ -6,12 +6,12 @@ from workloads.common.util import get_torch_compile_options
 from workloads.common.infer_monitor import get_infer_monitor
 
 def stable_diffusion_infer(model_name, mode, batch_size, warmup_iters, total_time,
-                 load=0.5, result_dict=None, signal=False, pipe=None):
+                 load=0.5, trace_file=None, result_dict=None, signal=False, pipe=None):
 
     if mode in ["single-stream", "server"]:
         assert(batch_size == 1)
         
-    monitor = get_infer_monitor(mode, warmup_iters, total_time, result_dict, signal, pipe, load)
+    monitor = get_infer_monitor(mode, warmup_iters, total_time, result_dict, signal, pipe, load, trace_file)
 
     model_id = "CompVis/stable-diffusion-v1-4"
 

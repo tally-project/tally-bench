@@ -4,6 +4,7 @@ import os
 import logging
 import time
 import random
+import numpy as np
 
 logger = logging.getLogger("tally-bench")
 logger.setLevel(logging.INFO)
@@ -27,6 +28,11 @@ def execute_cmd(cmd, get_output=False):
         process.wait()
 
 def write_json_to_file(_dict, f_name):
+
+    dir = os.path.dirname(f_name)
+    if not os.path.exists(dir):
+        os.makedirs(dir, exist_ok=True)
+
     with open(f_name, 'w') as f:
         json.dump(_dict, f, indent=4, sort_keys=True)
 
@@ -42,16 +48,9 @@ def busy_sleep(seconds):
     while (time.time() < start_time + seconds):
         pass
 
-def get_possion_arrival_ts(poisson_lambda, total_time):
-    # simulate arrivial timestamps
-    curr_ts = 0.
-    arrival_ts = [curr_ts]
-    while True:
-        interval = random.expovariate(poisson_lambda)
-        curr_ts += interval
-        arrival_ts.append(curr_ts)
-
-        if curr_ts > total_time * 2:
-            break
-    
-    return arrival_ts
+def get_possion_arrival_trace(latency, load, total_time):
+    num_events = total_time / latency * load
+    lambda_rate = 1 / latency * load
+    arrival_intervals = np.random.exponential(1 / lambda_rate, int(num_events * 2))
+    trace = np.cumsum(arrival_intervals).tolist()
+    return trace

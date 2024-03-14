@@ -9,6 +9,7 @@ parser = argparse.ArgumentParser(prog="benchmark suite launcher", description="L
 
 parser.add_argument("--save-results", action="store_true", default=False)
 parser.add_argument("--use-mps", action="store_true", default=False)
+parser.add_argument("--use-mps-priority", action="store_true", default=False)
 parser.add_argument("--use-tally-naive", action="store_true", default=False)
 parser.add_argument("--use-tally-priority", action="store_true", default=False)
 parser.add_argument("--run-pairwise", action="store_true", default=False)
@@ -17,13 +18,14 @@ parser.add_argument("--warmup-iters", type=int, default=100)
 parser.add_argument("--profile-only", action="store_true", default=False)
 
 args = parser.parse_args()
-assert(not (args.use_mps and args.use_tally_naive and args.use_tally_priority))
+assert(sum([args.use_mps, args.use_mps_priority, args.use_tally_naive, args.use_tally_priority]) <= 1)
 
 
 if __name__ == "__main__":
 
     run_benchmark_suite(
         use_mps=args.use_mps,
+        use_mps_priority=args.use_mps_priority,
         use_tally_naive=args.use_tally_naive,
         use_tally_priority=args.use_tally_priority,
         run_pairwise=args.run_pairwise,

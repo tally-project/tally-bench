@@ -10,7 +10,7 @@ import selectors
 import copy
 from multiprocessing import Process, Manager
 
-from bench_utils.utils import load_json_from_file, write_json_to_file, logger
+from bench_utils.utils import load_json_from_file, write_json_to_file, logger, get_possion_arrival_trace
 from bench_utils.bench_utils import init_env, tear_down_env, get_bench_id, get_pipe_name, get_backend_name
 from bench_utils.nvidia_smi import smi_getter, parse_smi_list, get_cuda_mem
 from bench_utils.mps import start_mps, shut_down_mps
@@ -52,6 +52,7 @@ class Benchmark:
         self.infer_load = infer_load
         self.priority = None
         self.replace_cublas = False
+        self.trace_file = None
 
         if (
             (not self.is_latency_critical()) or
@@ -98,7 +99,9 @@ class Benchmark:
         if self.infer_mode:
             launch_cmd += f"--infer-type {self.infer_mode} "
         
-            if self.infer_load:
+            if self.trace_file:
+                launch_cmd += f"--infer-trace {self.trace_file} "
+            elif self.infer_load:
                 launch_cmd += f"--infer-load {self.infer_load} "
         
         if pipe_name:
@@ -110,6 +113,25 @@ class Benchmark:
             launch_cmd = f"{tally_client_local_script} {launch_cmd}"
         
         return launch_cmd
+
+
+def get_infer_benchmark_trace(benchmark, result, trace_path):
+    if os.path.exists(trace_path):
+        trace = load_json_from_file(trace_path)
+        return trace
+
+    single_stream_bench = copy.deepcopy(benchmark)
+    single_stream_bench.infer_mode = "single-stream"
+    single_stream_bench_id = get_bench_id((single_stream_bench,))
+
+    # get benchmark per-request latency
+    single_stream_latencies = result["default"][single_stream_bench_id]["measurements"][0][f"{single_stream_bench_id}_0"]["latencies"]
+    avg_latency = sum(single_stream_latencies) / len(single_stream_latencies)
+    avg_latency /= 1000
+    trace = get_possion_arrival_trace(avg_latency, benchmark.infer_load, benchmark.runtime)
+
+    write_json_to_file(trace, trace_path)
+    return trace
 
 
 def get_train_benchmarks(training_workloads, warmup_iters, runtime):
@@ -166,11 +188,11 @@ def get_tally_configs(benchmark):
     return configs
 
 
-def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_tally=False, result=None,
-                     profile_only=False, tally_config=None):
+def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_mps_priority=False,
+                     use_tally=False, result=None, profile_only=False, tally_config=None):
 
     output_dict = {}
-    backend = get_backend_name(use_tally, use_mps, tally_config=tally_config)
+    backend = get_backend_name(use_tally, use_mps, use_mps_priority=use_mps_priority, tally_config=tally_config)
     bench_id = get_bench_id(benchmarks)
     
     if backend not in result:
@@ -204,9 +226,11 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_tally=False
     if tally_config:
         output_dict["tally_config"] = tally_config.to_dict()
 
+    use_mps = use_mps or use_mps_priority
     processes = []
     abort = False
     smi_p = None
+    should_exit = False
 
     try:
         if use_mps:
@@ -233,7 +257,8 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_tally=False
             process_env = os.environ.copy()
             if benchmark.priority:
                 process_env["PRIORITY"] = str(benchmark.priority)
-                process_env["CUDA_MPS_CLIENT_PRIORITY"] = str(benchmark.priority)
+                if use_mps_priority:
+                    process_env["CUDA_MPS_CLIENT_PRIORITY"] = str(benchmark.priority)
             if benchmark.replace_cublas:
                 process_env["REPLACE_CUBLAS"] = "TRUE"
             if use_mps:
@@ -358,6 +383,10 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_tally=False
         logger.info(f"bench_id: {bench_id}")
         logger.info(output_dict)
 
+    except ValueError as e:
+        logger.warning(f"Caught exception when running the benchmark: Error: {e}")
+        logger.warning("Exiting experiments ...")
+        should_exit = True
     except Exception as e:
         output_dict["error"] = str(e)
         logger.warning(f"Caught exception when running the benchmark: Error: {e}")
@@ -368,12 +397,15 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_tally=False
         for process in processes:
             process.kill()
         tear_down_env()
+        if should_exit:
+            exit(1)
 
     return True
 
 
 def run_benchmark_suite(
         use_mps=False,
+        use_mps_priority=False,
         use_tally_naive=False,
         use_tally_priority=False,
         run_pairwise=False,
@@ -382,8 +414,6 @@ def run_benchmark_suite(
         save_results=False,
         profile_only=False,
 ):
-    use_tally = use_tally_naive or use_tally_priority
-
     tally_bench_result_dir = "tally_bench_results"
     if not os.path.exists(tally_bench_result_dir):
         os.makedirs(tally_bench_result_dir)
@@ -407,6 +437,13 @@ def run_benchmark_suite(
     train_benchmarks = get_train_benchmarks(training_workloads, warmup_iters, runtime)
     infer_benchmarks = get_infer_benchmarks(inference_workloads, inference_load_factors, warmup_iters, runtime)
     
+    # reduce warmup iters for long-pipeline inference benchmarks
+    for bench in infer_benchmarks:
+        if bench.model_name in ["stable-diffusion", "gpt-neo-2.7B", "llama-2-7b"]:
+            bench.warmup_iters = 5
+
+    use_tally = use_tally_naive or use_tally_priority
+    use_mps = use_mps or use_mps_priority
     init_env(use_mps, use_tally, run_pairwise)
 
     single_job_benchmarks = train_benchmarks + infer_benchmarks
@@ -419,8 +456,13 @@ def run_benchmark_suite(
     # Run single-job benchmark
     for idx, benchmark in enumerate(single_job_benchmarks):
 
-        bench_id = get_bench_id((benchmark,))
+        bench_id = get_bench_id([benchmark])
         logger.info(f"Running {idx + 1} out of {len(single_job_benchmarks)} single-job benchmarks: {bench_id} ...")
+
+        if benchmark.infer_mode == "server":
+            trace_path = f"infer_trace/{bench_id}.json"
+            trace = get_infer_benchmark_trace(benchmark, result, trace_path)
+            benchmark.trace_file = trace_path
 
         updated = launch_benchmark([benchmark], result=result)
 
@@ -444,7 +486,8 @@ def run_benchmark_suite(
 
         for j in range(len(infer_benchmarks)):
             for i in range(len(train_benchmarks)):
-                pair_wise_benchmarks.append((copy.copy(train_benchmarks[i]), copy.copy(infer_benchmarks[j])))
+                pair = (copy.copy(train_benchmarks[i]), copy.copy(infer_benchmarks[j]))
+                pair_wise_benchmarks.append(pair)
 
         for idx, pair in enumerate(pair_wise_benchmarks):
 
@@ -473,9 +516,9 @@ def run_benchmark_suite(
                 tally_configs = get_tally_configs(bench_2)
 
                 for config in tally_configs:
-                    updated |= launch_benchmark(pair, use_mps=use_mps, use_tally=use_tally, result=result, tally_config=config)
+                    updated |= launch_benchmark(pair, use_mps=use_mps, use_mps_priority=use_mps_priority, use_tally=use_tally, result=result, tally_config=config)
             else:
-                updated = launch_benchmark(pair, use_mps=use_mps, use_tally=use_tally, result=result)
+                updated = launch_benchmark(pair, use_mps=use_mps, use_mps_priority=use_mps_priority, use_tally=use_tally, result=result)
             
             save_results_to_file(result, updated, save_results)
 

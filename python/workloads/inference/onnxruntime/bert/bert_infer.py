@@ -13,7 +13,7 @@ from transformers import squad_convert_examples_to_features
 from workloads.common.infer_monitor import get_infer_monitor
 
 def bert_infer(model_name, mode, batch_size, warmup_iters, total_time,
-                load=0.5, result_dict=None, signal=False, pipe=None):
+                load=0.5, trace_file=None, result_dict=None, signal=False, pipe=None):
     
     if mode in ["single-stream", "server"]:
         assert(batch_size == 1)
@@ -58,7 +58,7 @@ def bert_infer(model_name, mode, batch_size, warmup_iters, total_time,
     model_path = "./data/bert-base-cased-squad_opt_gpu_fp16.onnx"
     session = onnxruntime.InferenceSession(model_path, sess_options, providers=["CUDAExecutionProvider", "CPUExecutionProvider"])
 
-    monitor = get_infer_monitor(mode, warmup_iters, total_time, result_dict, signal, pipe, load)
+    monitor = get_infer_monitor(mode, warmup_iters, total_time, result_dict, signal, pipe, load, trace_file)
 
     while True:
 

@@ -16,22 +16,30 @@ tally_client_local_script = "./tally/scripts/start_client_local.sh"
 
 class TallyConfig:
 
-    def __init__(self, scheduler_policy, max_allowed_latency=0.1,
-                 use_original_configs=False, min_wait_time=0., use_space_share=False):
+    def __init__(self, scheduler_policy, max_allowed_latency=0.1, use_original_configs=False,
+                 min_wait_time=0., use_space_share=False, ptb_max_threads_per_sm=None,
+                 fallback_to_original_threshold=None, min_worker_threshold=None,
+                 latency_calculation_factor=None):
+        
         self.scheduler_policy = scheduler_policy
         self.max_allowed_latency = max_allowed_latency
         self.use_original_configs = use_original_configs
         self.min_wait_time = min_wait_time
         self.use_space_share = use_space_share
+        self.ptb_max_threads_per_sm = ptb_max_threads_per_sm
+        self.fallback_to_original_threshold = fallback_to_original_threshold
+        self.min_worker_threshold = min_worker_threshold
+        self.latency_calculation_factor = latency_calculation_factor
 
     def to_dict(self):
-        return {
+        config = {
             "SCHEDULER_POLICY": self.scheduler_policy.upper(),
             "PRIORITY_MAX_ALLOWED_PREEMPTION_LATENCY_MS": str(self.max_allowed_latency),
             "PRIORITY_USE_ORIGINAL_CONFIGS": str(self.use_original_configs).upper(),
             "PRIORITY_MIN_WAIT_TIME_MS": str(self.min_wait_time),
             "PRIORITY_USE_SPACE_SHARE": str(self.use_space_share).upper()
         }
+        return config
 
 def start_iox_roudi():
     logger.info("Starting Iox Roudi ...")
