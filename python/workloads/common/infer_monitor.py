@@ -22,11 +22,10 @@ class InferMonitor:
         self.finished = False
         self.time_elapsed = None
         self.pipe = pipe
+        self.should_stop = False
     
     def on_step_end(self):
 
-        should_stop = False
-        
         self.num_iters += 1
         if self.warm:
             self.warm_iters += 1
@@ -34,7 +33,7 @@ class InferMonitor:
             # break if time is up
             curr_time = timeit.default_timer()
             if curr_time - self.start_time >= self.total_time:
-                should_stop = True
+                self.should_stop = True
 
         if self.num_iters == self.warmup_iters:
             self.warm = True
@@ -45,12 +44,12 @@ class InferMonitor:
             self.start_time = timeit.default_timer()
             print("Measurement starts ...")
         
-        if should_stop:
+        if self.should_stop:
             torch.cuda.synchronize()
             end_time = timeit.default_timer()
             self.time_elapsed = end_time - self.start_time
         
-        return should_stop
+        return self.should_stop
 
 
 class SingleStreamInferMonitor(InferMonitor):
@@ -80,6 +79,8 @@ class SingleStreamInferMonitor(InferMonitor):
         # remove first 10 latency measurement
         if len(self.latencies) > 10:
             self.latencies = self.latencies[min(10, len(self.latencies) // 2):]
+        # keep at most 5000 measurements
+        self.latencies = self.latencies[-5000:]
 
         if self.result_dict is not None:
             self.result_dict["time_elapsed"] = self.time_elapsed
@@ -118,25 +119,20 @@ class ServerInferMonitor(InferMonitor):
 
         if self.warm:
             assert(self.trace)
-            elapsed_time_ms = elapsed_time_seconds * 1000
-            self.latencies.append(elapsed_time_ms)
-
+    
             # wait to simulate arrival rate of poisson distribution
             next_arrival_ts = self.trace[len(self.latencies)]
             elapsed_from_start = self.step_end_time - self.start_time
-            if elapsed_from_start < next_arrival_ts:
+
+            if next_arrival_ts >= self.total_time:
+                self.should_stop = True
+
+            elif elapsed_from_start < next_arrival_ts:
                 wait_time = next_arrival_ts - elapsed_from_start
-                # busy_sleep(wait_time)
-
-                # sleep for `wait_time` seconds or until timeup
-                start_wait_time = timeit.default_timer()
-                while True:
-
-                    curr_time = timeit.default_timer()
-                    if curr_time - self.start_time >= self.total_time:
-                        break
-                    if curr_time - start_wait_time >= wait_time:
-                        break
+                busy_sleep(wait_time)
+            
+            elapsed_time_ms = elapsed_time_seconds * 1000
+            self.latencies.append(elapsed_time_ms)
             
         return super().on_step_end()
     
@@ -145,6 +141,8 @@ class ServerInferMonitor(InferMonitor):
         # remove first 10 latency measurement
         if len(self.latencies) > 10:
             self.latencies = self.latencies[min(10, len(self.latencies) // 2):]
+        # keep at most 5000 measurements
+        self.latencies = self.latencies[-5000:]
             
         if self.result_dict is not None:
             self.result_dict["time_elapsed"] = self.time_elapsed

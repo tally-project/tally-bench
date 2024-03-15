@@ -440,7 +440,7 @@ def run_benchmark_suite(
     # reduce warmup iters for long-pipeline inference benchmarks
     for bench in infer_benchmarks:
         if bench.model_name in ["stable-diffusion", "gpt-neo-2.7B", "llama-2-7b"]:
-            bench.warmup_iters = 5
+            bench.warmup_iters = 10
 
     use_tally = use_tally_naive or use_tally_priority
     use_mps = use_mps or use_mps_priority
@@ -493,6 +493,12 @@ def run_benchmark_suite(
 
             bench_1, bench_2 = pair
             bench_id = get_bench_id(pair)
+
+            if bench_2.infer_mode == "server":
+                bench_2_id = get_bench_id([bench_2])
+                trace_path = f"infer_trace/{bench_2_id}.json"
+                trace = get_infer_benchmark_trace(bench_2, result, trace_path)
+                bench_2.trace_file = trace_path
 
             logger.info(f"Running {idx + 1} out of {len(pair_wise_benchmarks)} pairwise benchmarks: {bench_id} ...")
 

@@ -52,20 +52,6 @@ echo "======== Profiling kernel metrics for throughput-oriented jobs for priorit
         --profile-only \
         --save-results
 
-# Run priority-related co-located experiments with Tally priority scheduler
-if [[ $GPU_MODE == "Exclusive_Process" ]]; then
-echo "======== Collecting priority-related pair-wise performance with Tally priority scheduler ... ========"
-    time_cmd \
-    python3 -u scripts/run_bench.py \
-        --save-results \
-        --use-tally-priority \
-        --runtime $RUNTIME \
-        --warmup-iters $WARMUP_ITERS \
-        --run-pairwise
-else
-    echo "Skip collecting pair-wise performance with Tally priority scheduler because GPU_MODE is not Exclusive_Process"
-fi
-
 # Run priority-related co-located experiments with MPS
 if [[ $GPU_MODE == "Exclusive_Process" ]]; then
 echo "======== Collecting priority-related pair-wise performance with MPS ... ========"
@@ -106,4 +92,18 @@ SCHEDULER_POLICY=PRIORITY \
         --run-pairwise
 else
     echo "Skip collecting pair-wise performance with hardware multi-processing because GPU_MODE is not Default"
+fi
+
+# Run priority-related co-located experiments with Tally priority scheduler
+if [[ $GPU_MODE == "Exclusive_Process" ]]; then
+echo "======== Collecting priority-related pair-wise performance with Tally priority scheduler ... ========"
+    time_cmd \
+    python3 -u scripts/run_bench.py \
+        --save-results \
+        --use-tally-priority \
+        --runtime $RUNTIME \
+        --warmup-iters $WARMUP_ITERS \
+        --run-pairwise
+else
+    echo "Skip collecting pair-wise performance with Tally priority scheduler because GPU_MODE is not Exclusive_Process"
 fi

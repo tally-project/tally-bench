@@ -10,11 +10,14 @@ default_configs = [
     TallyConfig("priority", max_allowed_latency=0.01),
     TallyConfig("priority", max_allowed_latency=0.05),
     TallyConfig("priority", max_allowed_latency=0.1),
+    TallyConfig("priority", max_allowed_latency=0.1, min_wait_time=0.1),
     TallyConfig("priority", max_allowed_latency=0.5),
+    TallyConfig("priority", max_allowed_latency=0.5, min_wait_time=0.1),
     TallyConfig("priority", max_allowed_latency=1.0),
     TallyConfig("priority", max_allowed_latency=5.0),
     TallyConfig("priority", use_original_configs=True),
     TallyConfig("priority", use_original_configs=True, min_wait_time=1.0),
+    TallyConfig("priority", use_original_configs=True, min_wait_time=5.0),
     TallyConfig("priority", use_space_share=True),
 ]
 
@@ -22,7 +25,6 @@ inference_workloads = {
     "onnxruntime": {
         "bert": [],
         "llama-2-7b": [
-            TallyConfig("priority", use_original_configs=True, min_wait_time=5.0),
             TallyConfig("priority", use_original_configs=True, min_wait_time=10.0),
         ],
     },

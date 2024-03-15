@@ -7,7 +7,7 @@ from bench_utils.utils import load_json_from_file
 def compute_relative_tp(run_res, baseline_res):
     run_throughput = run_res["iters"] / run_res["time_elapsed"]
     baseline_throughput = baseline_res["iters"] / baseline_res["time_elapsed"]
-    return round(min(run_throughput / baseline_throughput, 1.0), 2)
+    return round(run_throughput / baseline_throughput, 2)
 
 
 def compute_avg_latency(run_res):
