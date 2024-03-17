@@ -38,10 +38,15 @@ def bench_azure_trace(
     training_bench = Benchmark("pytorch", "bert", warmup_iters=30, runtime=runtime, is_train=True,
                                batch_size=32, amp=False)
     training_bench.set_priority(1)
-    
-    benchmarks = [bert_infer_bench, training_bench]
 
-    tally_config = None
+    benchmarks = [bert_infer_bench, training_bench]
+    
+    updated = False
+
+    # Profile single-job performance
+    for benchmark in benchmarks:
+        updated |= launch_benchmark([benchmark], result=result, truncate_result=False, keep_trace=True)
+
     if use_tally_priority:
         tally_configs = [
             TallyConfig(scheduler_policy="priority", max_allowed_latency=0.1),
@@ -49,14 +54,12 @@ def bench_azure_trace(
         ]
 
         for tally_config in tally_configs:
-            updated = launch_benchmark(benchmarks, use_mps, use_mps_priority, use_tally=use_tally_priority,
+            updated |= launch_benchmark(benchmarks, use_mps, use_mps_priority, use_tally=use_tally_priority,
                                        result=result, tally_config=tally_config, truncate_result=False, keep_trace=True)
-            if updated:
-                write_json_to_file(result, result_file)
-
     else:
-        updated = launch_benchmark(benchmarks, use_mps, use_mps_priority, use_tally=use_tally_priority,
-                                result=result, tally_config=tally_config, truncate_result=False, keep_trace=True)
+        updated |= launch_benchmark(benchmarks, use_mps, use_mps_priority, use_tally=use_tally_priority,
+                                    result=result, truncate_result=False, keep_trace=True)
+    
     if updated:
         write_json_to_file(result, result_file)
 

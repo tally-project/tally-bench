@@ -26,7 +26,7 @@ from bench_utils.tally import (
 )
 
 from configs.train_config import training_workloads
-from configs.infer_config import inference_workloads, inference_load_factors
+from configs.infer_config import inference_workloads, inference_load_factors, get_tally_configs
 
 
 class Benchmark:
@@ -178,14 +178,6 @@ def get_smallest_max_allowed_latency():
             for config in configs:
                 smallest_max_allowed_latency = min(smallest_max_allowed_latency, config.max_allowed_latency)
     return smallest_max_allowed_latency
-
-
-def get_tally_configs(benchmark):
-    framework = benchmark.framework
-    model = benchmark.model_name
-
-    configs = inference_workloads[framework][model]
-    return configs
 
 
 def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_mps_priority=False,
@@ -537,7 +529,7 @@ def run_benchmark_suite(
 
             if use_tally_priority:
 
-                tally_configs = get_tally_configs(bench_2)
+                tally_configs = get_tally_configs(bench_2.framework, bench_2.model_name, bench_2.infer_mode)
 
                 for config in tally_configs:
                     updated |= launch_benchmark(pair, use_mps=use_mps, use_mps_priority=use_mps_priority, use_tally=use_tally,

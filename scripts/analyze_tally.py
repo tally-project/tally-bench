@@ -8,15 +8,19 @@ from bench_utils.utils import write_json_to_file
 tally_config_best_counts = []
 
 
-def mark_best_tally_config(tally_config):
+def mark_best_tally_config(tally_config, bench_id):
     found = False
-    for idx, (config, count) in enumerate(tally_config_best_counts):
+    for idx, (config, _, _) in enumerate(tally_config_best_counts):
         if tally_config == config:
             tally_config_best_counts[idx][1] += 1
+
+            if bench_id not in tally_config_best_counts[idx][2]:
+                tally_config_best_counts[idx][2].append(bench_id)
+
             found = True
             break
     if not found:
-        tally_config_best_counts.append([tally_config, 1])
+        tally_config_best_counts.append([tally_config, 1, [bench_id]])
 
 
 def analyze_tally_slo_performance(priority_df, high_priority_job, best_effort_jobs, metric="avg", tolerance_level=0.1):
@@ -67,7 +71,7 @@ def analyze_tally_slo_performance(priority_df, high_priority_job, best_effort_jo
             tally_throughput = best_measurement[f"best_effort_tally_throughput"]
             priority_tally_throughput = best_measurement[f"high_priority_tally_throughput"]
             tally_config = get_tally_config(best_measurement)
-            mark_best_tally_config(tally_config)
+            mark_best_tally_config(tally_config, bench_id)
 
             positive_res[bench_id] = {
                 "baseline_latency": baseline_latency,

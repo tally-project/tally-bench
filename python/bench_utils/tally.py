@@ -76,7 +76,7 @@ def start_tally(config: TallyConfig = None):
             start_tally_cmd = f"{key}={config_dict[key]} {start_tally_cmd}"
             
     execute_cmd(start_tally_cmd)
-    time.sleep(3)
+    time.sleep(2)
 
 def shut_down_tally():
     logger.info("Shutting down Tally server ...")
