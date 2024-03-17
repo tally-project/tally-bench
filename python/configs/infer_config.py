@@ -13,6 +13,7 @@ default_configs = [
     TallyConfig("priority", max_allowed_latency=0.1, min_wait_time=0.1),
     TallyConfig("priority", max_allowed_latency=0.5),
     TallyConfig("priority", max_allowed_latency=0.5, min_wait_time=0.1),
+    TallyConfig("priority", max_allowed_latency=0.5, min_wait_time=0.5),
     TallyConfig("priority", max_allowed_latency=1.0),
     TallyConfig("priority", max_allowed_latency=5.0),
     TallyConfig("priority", use_original_configs=True),

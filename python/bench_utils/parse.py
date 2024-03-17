@@ -1,28 +1,13 @@
 import pandas as pd
 import numpy as np
 
-from bench_utils.utils import load_json_from_file
+from bench_utils.utils import load_json_from_file, compute_avg, compute_percentile
 
 
 def compute_relative_tp(run_res, baseline_res):
     run_throughput = run_res["iters"] / run_res["time_elapsed"]
     baseline_throughput = baseline_res["iters"] / baseline_res["time_elapsed"]
     return round(run_throughput / baseline_throughput, 2)
-
-
-def compute_avg_latency(run_res):
-    
-    avg_latency = sum(run_res["latencies"]) / len(run_res["latencies"])
-    return round(avg_latency, 3)
-
-
-def compute_percentile_latency(run_res, percentile):
-    
-    latencies = run_res["latencies"]
-    if len(latencies) > 10:
-        latencies = latencies[min(10, len(latencies) // 2):]
-    percentile_latency = np.percentile(latencies, percentile)
-    return round(percentile_latency, 3)
 
 
 def get_workload_type(key):
@@ -47,7 +32,7 @@ def parse_result(file_name, single_job_result_out=None, priority_result_out=None
     res = load_json_from_file(file_name)
 
     # All possible results
-    default_res = res.get("default", {})
+    baseline_res = res.get("default", {})
     mps_res = res.get("mps", {})
     mps_priority_res = res.get("mps-priority", {})
     tally_naive_res = res.get("tally_naive", {})
@@ -57,13 +42,13 @@ def parse_result(file_name, single_job_result_out=None, priority_result_out=None
     # This is more about getting a sense of the overhead of Tally and kernel transformation
     # CPU-bounded models generally have severely impacted performance when running on Tally
 
-    single_job_default_perf = {}
+    single_job_baseline_perf = {}
     single_job_result = []
-    single_job_keys = [key for key in default_res.keys() if not ("infer" in key and "train" in key)]
+    single_job_keys = [key for key in baseline_res.keys() if not ("infer" in key and "train" in key)]
     
     for key in single_job_keys:
 
-        measurment = default_res[key]["measurements"][0]
+        measurment = baseline_res[key]["measurements"][0]
         metrics = measurment["metrics"]
         
         result_row = {
@@ -79,16 +64,16 @@ def parse_result(file_name, single_job_result_out=None, priority_result_out=None
 
         key_numbered = f"{key}_0"
 
-        original_run_res = default_res.get(key, {}).get("measurements", [{}])[0].get(key_numbered, {})
+        original_run_res = baseline_res.get(key, {}).get("measurements", [{}])[0].get(key_numbered, {})
         tally_naive_run_res = tally_naive_res.get(key, {}).get("measurements", [{}])[0].get(key_numbered, {})
 
-        single_job_default_perf[key] = original_run_res
+        single_job_baseline_perf[key] = original_run_res
 
         result_row["original_throughput"] = 1
         result_row["workload_type"] = get_workload_type(key)
         
         if any([type in result_row["workload_type"] for type in ["single-stream", "server"]]):
-            result_row["original_avg_latency"] = compute_avg_latency(original_run_res)
+            result_row["original_avg_latency"] = compute_avg(original_run_res["latencies"])
             
         if "server" not in result_row["workload_type"]:
             if tally_naive_run_res:
@@ -110,7 +95,7 @@ def parse_result(file_name, single_job_result_out=None, priority_result_out=None
 
         mps_run_res = mps_res.get(key, {})
         mps_priority_run_res = mps_priority_res.get(key, {})
-        hardware_mp_run_res = default_res.get(key, {})
+        hardware_mp_run_res = baseline_res.get(key, {})
         tally_priority_run_res = tally_priority_res.get(key, {})
     
         tally_measurments = tally_priority_run_res.get("measurements", [])
@@ -137,7 +122,7 @@ def parse_result(file_name, single_job_result_out=None, priority_result_out=None
         job_1_clean = job_1.rsplit("_", 1)[0]
         job_2_clean = job_2.rsplit("_", 1)[0]
 
-        assert(job_1_clean in default_res and job_2_clean in default_res)
+        assert(job_1_clean in baseline_res and job_2_clean in baseline_res)
 
         for tally_measurement in tally_measurments:
 
@@ -199,41 +184,46 @@ def parse_result(file_name, single_job_result_out=None, priority_result_out=None
                 "high_priority_hardware_mp_99th_latency": "",
             }
 
-            lc_result_row["best_effort_tally_throughput"] = compute_relative_tp(tally_measurement[best_effort_job], single_job_default_perf[best_effort_job_clean])
-            if mps_measurment:
-                lc_result_row["best_effort_mps_throughput"] = compute_relative_tp(mps_measurment[best_effort_job], single_job_default_perf[best_effort_job_clean])
-            if mps_priority_measurment:
-                lc_result_row["best_effort_mps_priority_throughput"] = compute_relative_tp(mps_priority_measurment[best_effort_job], single_job_default_perf[best_effort_job_clean])
-            if hardware_mp_measurment:
-                lc_result_row["best_effort_hardware_mp_throughput"] = compute_relative_tp(hardware_mp_measurment[best_effort_job], single_job_default_perf[best_effort_job_clean])
+            high_priority_baseline_key = f"{high_priority_job_clean.split('_infer_')[0]}_infer_single-stream_1"
+            high_priority_baseline_latency_perf = single_job_baseline_perf[high_priority_baseline_key]
+            high_priority_baseline_throughput_perf = single_job_baseline_perf[high_priority_job_clean]
+            best_effort_baseline_perf = single_job_baseline_perf[best_effort_job_clean]
 
-            lc_result_row["high_priority_tally_throughput"] = compute_relative_tp(tally_measurement[high_priority_job], single_job_default_perf[high_priority_job_clean])
+            lc_result_row["best_effort_tally_throughput"] = compute_relative_tp(tally_measurement[best_effort_job], best_effort_baseline_perf)
             if mps_measurment:
-                lc_result_row["high_priority_mps_throughput"] = compute_relative_tp(mps_measurment[high_priority_job], single_job_default_perf[high_priority_job_clean])
+                lc_result_row["best_effort_mps_throughput"] = compute_relative_tp(mps_measurment[best_effort_job], best_effort_baseline_perf)
             if mps_priority_measurment:
-                lc_result_row["high_priority_mps_priority_throughput"] = compute_relative_tp(mps_priority_measurment[high_priority_job], single_job_default_perf[high_priority_job_clean])
+                lc_result_row["best_effort_mps_priority_throughput"] = compute_relative_tp(mps_priority_measurment[best_effort_job], best_effort_baseline_perf)
             if hardware_mp_measurment:
-                lc_result_row["high_priority_hardware_mp_throughput"] = compute_relative_tp(hardware_mp_measurment[high_priority_job], single_job_default_perf[high_priority_job_clean])
+                lc_result_row["best_effort_hardware_mp_throughput"] = compute_relative_tp(hardware_mp_measurment[best_effort_job], best_effort_baseline_perf)
 
-            lc_result_row["high_priority_orig_avg_latency"] = compute_avg_latency(single_job_default_perf[high_priority_job_clean])
-            lc_result_row["high_priority_tally_avg_latency"] = compute_avg_latency(tally_measurement[high_priority_job])
+            lc_result_row["high_priority_tally_throughput"] = compute_relative_tp(tally_measurement[high_priority_job], high_priority_baseline_throughput_perf)
             if mps_measurment:
-                lc_result_row["high_priority_mps_avg_latency"] = compute_avg_latency(mps_measurment[high_priority_job])
+                lc_result_row["high_priority_mps_throughput"] = compute_relative_tp(mps_measurment[high_priority_job], high_priority_baseline_throughput_perf)
             if mps_priority_measurment:
-                lc_result_row["high_priority_mps_priority_avg_latency"] = compute_avg_latency(mps_priority_measurment[high_priority_job])
+                lc_result_row["high_priority_mps_priority_throughput"] = compute_relative_tp(mps_priority_measurment[high_priority_job], high_priority_baseline_throughput_perf)
             if hardware_mp_measurment:
-                lc_result_row["high_priority_hardware_mp_avg_latency"] = compute_avg_latency(hardware_mp_measurment[high_priority_job])
+                lc_result_row["high_priority_hardware_mp_throughput"] = compute_relative_tp(hardware_mp_measurment[high_priority_job], high_priority_baseline_throughput_perf)
+
+            lc_result_row["high_priority_orig_avg_latency"] = compute_avg(high_priority_baseline_latency_perf["latencies"])
+            lc_result_row["high_priority_tally_avg_latency"] = compute_avg(tally_measurement[high_priority_job]["latencies"])
+            if mps_measurment:
+                lc_result_row["high_priority_mps_avg_latency"] = compute_avg(mps_measurment[high_priority_job]["latencies"])
+            if mps_priority_measurment:
+                lc_result_row["high_priority_mps_priority_avg_latency"] = compute_avg(mps_priority_measurment[high_priority_job]["latencies"])
+            if hardware_mp_measurment:
+                lc_result_row["high_priority_hardware_mp_avg_latency"] = compute_avg(hardware_mp_measurment[high_priority_job]["latencies"])
 
             for percentile in [90, 95, 99]:
-                lc_result_row[f"high_priority_orig_{percentile}th_latency"] = compute_percentile_latency(single_job_default_perf[high_priority_job_clean], percentile)
-                lc_result_row[f"high_priority_tally_{percentile}th_latency"] = compute_percentile_latency(tally_measurement[high_priority_job], percentile)
+                lc_result_row[f"high_priority_orig_{percentile}th_latency"] = compute_percentile(high_priority_baseline_latency_perf["latencies"], percentile)
+                lc_result_row[f"high_priority_tally_{percentile}th_latency"] = compute_percentile(tally_measurement[high_priority_job]["latencies"], percentile)
 
                 if mps_measurment:
-                    lc_result_row[f"high_priority_mps_{percentile}th_latency"] = compute_percentile_latency(mps_measurment[high_priority_job], percentile)
+                    lc_result_row[f"high_priority_mps_{percentile}th_latency"] = compute_percentile(mps_measurment[high_priority_job]["latencies"], percentile)
                 if mps_priority_measurment:
-                    lc_result_row[f"high_priority_mps_priority_{percentile}th_latency"] = compute_percentile_latency(mps_priority_measurment[high_priority_job], percentile)
+                    lc_result_row[f"high_priority_mps_priority_{percentile}th_latency"] = compute_percentile(mps_priority_measurment[high_priority_job]["latencies"], percentile)
                 if hardware_mp_measurment:
-                    lc_result_row[f"high_priority_hardware_mp_{percentile}th_latency"] = compute_percentile_latency(hardware_mp_measurment[high_priority_job], percentile)
+                    lc_result_row[f"high_priority_hardware_mp_{percentile}th_latency"] = compute_percentile(hardware_mp_measurment[high_priority_job]["latencies"], percentile)
 
             latency_critical_result.append(lc_result_row)
 
@@ -244,5 +234,78 @@ def parse_result(file_name, single_job_result_out=None, priority_result_out=None
 
     return single_job_result, latency_critical_result
 
-if __name__ == "__main__":
-    parse_result("result.json")
+
+def get_slo_comparison_data(priority_df, high_priority_job, best_effort_jobs, metric="avg", tolerance_level=0.1):
+    high_priority_job_df = priority_df[priority_df["high_priority_job"] == high_priority_job]
+    baseline_latencies, time_sliced_latencies, mps_latencies, mps_priority_latencies, tally_latencies, = [], [], [], [], []
+    priority_time_sliced_throughputs, priority_mps_throughputs, priority_mps_priority_throughputs, priority_tally_throughputs = [], [], [], []
+    time_sliced_throughputs, mps_throughputs, mps_priority_throughputs, tally_throughputs = [], [], [], []
+    used_best_effort_jobs = []
+
+    for best_effort_job in best_effort_jobs:
+        best_effort_job_df = high_priority_job_df[high_priority_job_df["best_effort_job"] == best_effort_job]
+
+        if best_effort_job_df.empty:
+            continue
+
+        baseline_latency = best_effort_job_df[f"high_priority_orig_{metric}_latency"].values[0]
+        time_sliced_latency = best_effort_job_df[f"high_priority_hardware_mp_{metric}_latency"].values[0]
+        priority_time_sliced_throughput = best_effort_job_df[f"high_priority_hardware_mp_throughput"].values[0]
+        time_sliced_throughput = best_effort_job_df[f"best_effort_hardware_mp_throughput"].values[0]
+        mps_latency = best_effort_job_df[f"high_priority_mps_{metric}_latency"].values[0]
+        priority_mps_throughput = best_effort_job_df[f"high_priority_mps_throughput"].values[0]
+        mps_throughput = best_effort_job_df[f"best_effort_mps_throughput"].values[0]
+        mps_priority_latency = best_effort_job_df[f"high_priority_mps_priority_{metric}_latency"].values[0]
+        priority_mps_priority_throughput = best_effort_job_df[f"high_priority_mps_priority_throughput"].values[0]
+        mps_priority_throughput = best_effort_job_df[f"best_effort_mps_priority_throughput"].values[0]
+
+        acceptable_latency_bound = (1 + tolerance_level) * baseline_latency
+        tally_acceptable_df = best_effort_job_df[best_effort_job_df[f"high_priority_tally_{metric}_latency"] <= acceptable_latency_bound]
+
+        if tally_acceptable_df.empty:
+            tally_latency = 0.
+            tally_throughput = 0.
+            priority_tally_throughput = 0.
+        else:
+            best_achievable_throughput = tally_acceptable_df[f"best_effort_tally_throughput"].max()
+            best_measurement = tally_acceptable_df[tally_acceptable_df[f"best_effort_tally_throughput"] == best_achievable_throughput]
+            tally_latency = best_measurement[f"high_priority_tally_{metric}_latency"].values[0]
+            tally_throughput = best_measurement[f"best_effort_tally_throughput"].values[0]
+            priority_tally_throughput = best_measurement[f"high_priority_tally_throughput"].values[0]
+
+        baseline_latencies.append(baseline_latency)
+        time_sliced_latencies.append(time_sliced_latency)
+        mps_latencies.append(mps_latency)
+        mps_priority_latencies.append(mps_priority_latency)
+        tally_latencies.append(tally_latency)
+
+        priority_time_sliced_throughputs.append(priority_time_sliced_throughput)
+        priority_mps_throughputs.append(priority_mps_throughput)
+        priority_mps_priority_throughputs.append(priority_mps_priority_throughput)
+        priority_tally_throughputs.append(priority_tally_throughput)
+
+        time_sliced_throughputs.append(time_sliced_throughput)
+        mps_throughputs.append(mps_throughput)
+        mps_priority_throughputs.append(mps_priority_throughput)
+        tally_throughputs.append(tally_throughput)
+
+        used_best_effort_jobs.append(best_effort_job)
+    
+    data = {
+        "baseline_latencies": baseline_latencies,
+        "time_sliced_latencies": time_sliced_latencies,
+        "mps_latencies": mps_latencies,
+        "mps_priority_latencies": mps_priority_latencies,
+        "tally_latencies": tally_latencies,
+        "priority_time_sliced_throughputs": priority_time_sliced_throughputs,
+        "priority_mps_throughputs": priority_mps_throughputs,
+        "priority_mps_priority_throughputs": priority_mps_priority_throughputs,
+        "priority_tally_throughputs": priority_tally_throughputs,
+        "time_sliced_throughputs": time_sliced_throughputs,
+        "mps_throughputs": mps_throughputs,
+        "mps_priority_throughputs": mps_priority_throughputs,
+        "tally_throughputs": tally_throughputs,
+        "used_best_effort_jobs": used_best_effort_jobs
+    }
+
+    return data

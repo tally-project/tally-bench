@@ -19,7 +19,7 @@ class TallyConfig:
     def __init__(self, scheduler_policy, max_allowed_latency=0.1, use_original_configs=False,
                  min_wait_time=0., use_space_share=False, ptb_max_threads_per_sm=None,
                  fallback_to_original_threshold=None, min_worker_threshold=None,
-                 latency_calculation_factor=None):
+                 latency_calculation_factor=None, wait_time_to_use_original=None):
         
         self.scheduler_policy = scheduler_policy
         self.max_allowed_latency = max_allowed_latency
@@ -30,6 +30,7 @@ class TallyConfig:
         self.fallback_to_original_threshold = fallback_to_original_threshold
         self.min_worker_threshold = min_worker_threshold
         self.latency_calculation_factor = latency_calculation_factor
+        self.wait_time_to_use_original = wait_time_to_use_original
 
     def to_dict(self):
         config = {
@@ -39,6 +40,18 @@ class TallyConfig:
             "PRIORITY_MIN_WAIT_TIME_MS": str(self.min_wait_time),
             "PRIORITY_USE_SPACE_SHARE": str(self.use_space_share).upper()
         }
+
+        if self.ptb_max_threads_per_sm is not None:
+            config["PRIORITY_PTB_MAX_NUM_THREADS_PER_SM"] = str(self.ptb_max_threads_per_sm)
+        if self.fallback_to_original_threshold is not None:
+            config["PRIORITY_FALL_BACK_TO_ORIGINAL_THRESHOLD"] = str(self.fallback_to_original_threshold)
+        if self.min_worker_threshold is not None:
+            config["PRIORITY_MIN_WORKER_BLOCKS"] = str(self.min_worker_threshold)
+        if self.latency_calculation_factor is not None:
+            config["PRIORITY_PTB_PREEMPTION_LATENCY_CALCULATION_FACTOR"] = str(self.latency_calculation_factor)
+        if self.wait_time_to_use_original is not None:
+            config["PRIORITY_WAIT_TIME_MS_TO_USE_ORIGINAL_CONFIGS"] = str(self.wait_time_to_use_original)
+
         return config
 
 def start_iox_roudi():

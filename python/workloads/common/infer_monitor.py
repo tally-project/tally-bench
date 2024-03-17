@@ -60,6 +60,7 @@ class SingleStreamInferMonitor(InferMonitor):
         self.step_begin_time = None
         self.step_end_time = None
         self.latencies = []
+        self.end_timestamps = []
 
     def on_step_begin(self):
         self.step_begin_time = timeit.default_timer()
@@ -71,21 +72,19 @@ class SingleStreamInferMonitor(InferMonitor):
         if self.warm:
             elapsed_time_ms = (self.step_end_time - self.step_begin_time) * 1000
             self.latencies.append(elapsed_time_ms)
+
+            elapsed_from_start = self.step_end_time - self.start_time
+            self.end_timestamps.append(elapsed_from_start)
         
         return super().on_step_end()
 
     def write_to_result(self):
 
-        # remove first 10 latency measurement
-        if len(self.latencies) > 10:
-            self.latencies = self.latencies[min(10, len(self.latencies) // 2):]
-        # keep at most 5000 measurements
-        self.latencies = self.latencies[-5000:]
-
         if self.result_dict is not None:
             self.result_dict["time_elapsed"] = self.time_elapsed
-            self.result_dict["latencies"] = self.latencies
             self.result_dict["iters"] = self.warm_iters
+            self.result_dict["latencies"] = self.latencies
+            self.result_dict["end_timestamps"] = self.end_timestamps
 
 
 class ServerInferMonitor(InferMonitor):
@@ -96,6 +95,7 @@ class ServerInferMonitor(InferMonitor):
         self.step_begin_time = None
         self.step_end_time = None
         self.latencies = []
+        self.end_timestamps = []
         self.load = load
         if trace_file:
             self.trace = load_json_from_file(trace_file)
@@ -133,21 +133,18 @@ class ServerInferMonitor(InferMonitor):
             
             elapsed_time_ms = elapsed_time_seconds * 1000
             self.latencies.append(elapsed_time_ms)
+
+            self.end_timestamps.append(elapsed_from_start)
             
         return super().on_step_end()
     
     def write_to_result(self):
-
-        # remove first 10 latency measurement
-        if len(self.latencies) > 10:
-            self.latencies = self.latencies[min(10, len(self.latencies) // 2):]
-        # keep at most 5000 measurements
-        self.latencies = self.latencies[-5000:]
             
         if self.result_dict is not None:
             self.result_dict["time_elapsed"] = self.time_elapsed
-            self.result_dict["latencies"] = self.latencies
             self.result_dict["iters"] = self.warm_iters
+            self.result_dict["latencies"] = self.latencies
+            self.result_dict["end_timestamps"] = self.end_timestamps
 
 
 def get_infer_monitor(mode, warmup_iters, total_time, result_dict, signal, pipe, load=None, trace_file=None):

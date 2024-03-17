@@ -73,7 +73,7 @@ class Benchmark:
             _str += "_train"
         else:
             _str += f"_infer_{self.infer_mode}"
-            if self.infer_mode == "server":
+            if self.infer_mode == "server" and self.infer_load:
                 _str += f"_load_{self.infer_load}"
 
         _str += f"_{self.batch_size}"
@@ -189,7 +189,8 @@ def get_tally_configs(benchmark):
 
 
 def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_mps_priority=False,
-                     use_tally=False, result=None, profile_only=False, tally_config=None):
+                     use_tally=False, result=None, profile_only=False, tally_config=None,
+                     truncate_result=False, keep_trace=False):
 
     output_dict = {}
     backend = get_backend_name(use_tally, use_mps, use_mps_priority=use_mps_priority, tally_config=tally_config)
@@ -373,6 +374,23 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_mps_priorit
                 result_dict["priority"] = bench.priority
 
             if not profile_only:
+                if truncate_result:
+
+                    def truncate_list(lst):
+                        if len(lst) > 20:
+                            lst = lst[len(lst) // 2:]
+                        # keep at most 5000 measurements
+                        lst = lst[-5000:]
+
+                        return lst
+
+                    if "latencies" in result_dict:
+                        result_dict["latencies"] = truncate_list(result_dict["latencies"])
+                        result_dict["end_timestamps"] = truncate_list(result_dict["end_timestamps"])
+
+                if not keep_trace:
+                    del result_dict["end_timestamps"]
+
                 output_dict[f"{bench}_{i}"] = result_dict
 
         if not profile_only:
@@ -464,7 +482,7 @@ def run_benchmark_suite(
             trace = get_infer_benchmark_trace(benchmark, result, trace_path)
             benchmark.trace_file = trace_path
 
-        updated = launch_benchmark([benchmark], result=result)
+        updated = launch_benchmark([benchmark], result=result, truncate_result=True)
 
         if use_tally:
             if use_tally_naive:
@@ -472,8 +490,8 @@ def run_benchmark_suite(
             elif use_tally_priority:
                 scheduler_policy = "priority"
             tally_config = TallyConfig(scheduler_policy, max_allowed_latency=get_smallest_max_allowed_latency())
-            updated |= launch_benchmark((benchmark,), result=result, use_tally=use_tally,
-                                        profile_only=profile_only, tally_config=tally_config)
+            updated |= launch_benchmark([benchmark], result=result, use_tally=use_tally, profile_only=profile_only,
+                                        tally_config=tally_config, truncate_result=True)
         save_results_to_file(result, updated, save_results)
 
     # Run pairwise training benchmark
@@ -522,9 +540,11 @@ def run_benchmark_suite(
                 tally_configs = get_tally_configs(bench_2)
 
                 for config in tally_configs:
-                    updated |= launch_benchmark(pair, use_mps=use_mps, use_mps_priority=use_mps_priority, use_tally=use_tally, result=result, tally_config=config)
+                    updated |= launch_benchmark(pair, use_mps=use_mps, use_mps_priority=use_mps_priority, use_tally=use_tally,
+                                                result=result, tally_config=config, truncate_result=True)
             else:
-                updated = launch_benchmark(pair, use_mps=use_mps, use_mps_priority=use_mps_priority, use_tally=use_tally, result=result)
+                updated = launch_benchmark(pair, use_mps=use_mps, use_mps_priority=use_mps_priority, use_tally=use_tally,
+                                           result=result, truncate_result=True)
             
             save_results_to_file(result, updated, save_results)
 

@@ -4,10 +4,6 @@ training_workloads = {
             "batch-sizes": [128],
             "amp": [True, False]
         },
-        # "yolov6l": {
-        #     "batch-sizes": [32, 64],
-        #     "amp": [True]
-        # },
         "pointnet": {
             "batch-sizes": [128],
             "amp": [True, False]

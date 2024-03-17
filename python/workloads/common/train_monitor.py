@@ -20,6 +20,7 @@ class TrainMonitor:
         self.finished = False
         self.time_elapsed = None
         self.pipe = pipe
+        self.end_timestamps = []
 
     # optionally pass a loss value to be printed at warm and at end
     # to verify the training process is ok
@@ -39,7 +40,10 @@ class TrainMonitor:
                 
             # Or break if time is up
             curr_time = timeit.default_timer()
-            if curr_time - self.start_time >= self.total_time:
+            time_elapsed = curr_time - self.start_time
+            self.end_timestamps.append(time_elapsed)
+
+            if time_elapsed >= self.total_time:
                 should_training_stop = True
 
         if self.num_iters == self.warmup_iters:
@@ -70,3 +74,4 @@ class TrainMonitor:
         if self.result_dict is not None:
             self.result_dict["time_elapsed"] = self.time_elapsed
             self.result_dict["iters"] = self.warm_iters
+            self.result_dict["end_timestamps"] = self.end_timestamps
