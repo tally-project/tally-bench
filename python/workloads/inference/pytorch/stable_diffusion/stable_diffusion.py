@@ -2,7 +2,7 @@ import torch
 import time
 from diffusers import DiffusionPipeline
 
-from workloads.common.util import get_torch_compile_options
+from workloads.common.utils import get_torch_compile_options
 from workloads.common.infer_monitor import get_infer_monitor
 
 def stable_diffusion_infer(model_name, mode, batch_size, warmup_iters, total_time,

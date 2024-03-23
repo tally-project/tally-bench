@@ -10,7 +10,14 @@ import selectors
 import copy
 from multiprocessing import Process, Manager
 
-from bench_utils.utils import load_json_from_file, write_json_to_file, logger, get_possion_arrival_trace
+from bench_utils.utils import (
+    load_json_from_file,
+    write_json_to_file,
+    logger,
+    get_possion_arrival_trace,
+    compute_avg,
+    compute_percentile
+)
 from bench_utils.bench_utils import init_env, tear_down_env, get_bench_id, get_pipe_name, get_backend_name
 from bench_utils.nvidia_smi import smi_getter, parse_smi_list, get_cuda_mem
 from bench_utils.mps import start_mps, shut_down_mps
@@ -56,7 +63,7 @@ class Benchmark:
 
         if (
             (not self.is_latency_critical()) or
-            any([m in self.model_name for m in ["bert", "yolo", "gpt-neo", "stable", "stable-diffusion"]])
+            any([m in self.model_name for m in ["bert", "yolo", "gpt-neo", "stable", "stable-diffusion", "vit"]])
         ):
             self.replace_cublas = True
     
@@ -161,10 +168,10 @@ def get_infer_benchmarks(inference_workloads, inference_load_factors, warmup_ite
             single_stream_bench = Benchmark(framework, model, warmup_iters, runtime, is_train=False,
                                             batch_size=1, infer_mode="single-stream")
             infer_benchmarks.append(single_stream_bench)
-        
+
             for load in inference_load_factors:
                 server_bench = Benchmark(framework, model, warmup_iters, runtime, is_train=False, 
-                                        batch_size=1, infer_mode="server", infer_load=load)
+                                         batch_size=1, infer_mode="server", infer_load=load)
                 infer_benchmarks.append(server_bench)
 
     return infer_benchmarks
@@ -380,6 +387,11 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_mps_priorit
                         result_dict["latencies"] = truncate_list(result_dict["latencies"])
                         result_dict["end_timestamps"] = truncate_list(result_dict["end_timestamps"])
 
+                        print(f"Avg latency: {compute_avg(result_dict['latencies'])}")
+                        print(f"90th-percentile latency: {compute_percentile(result_dict['latencies'], 90)}")
+                        print(f"95th-percentile latency: {compute_percentile(result_dict['latencies'], 95)}")
+                        print(f"99th-percentile latency: {compute_percentile(result_dict['latencies'], 99)}")
+
                 if not keep_trace:
                     del result_dict["end_timestamps"]
 
@@ -408,6 +420,7 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_mps_priorit
             process.kill()
         tear_down_env()
         if should_exit:
+            logger.warning(f"Exiting ...")
             exit(1)
 
     return True
@@ -496,6 +509,13 @@ def run_benchmark_suite(
 
         for j in range(len(infer_benchmarks)):
             for i in range(len(train_benchmarks)):
+
+                # let's skip single-stream pairwise benchmarks because single-stream inference
+                # can usually saturate the gpu quite well already
+                # only keep bert, just to get a sense about its performance
+                if infer_benchmarks[j].infer_mode == "single-stream" and "bert" not in infer_benchmarks[j].model_name:
+                    continue
+
                 pair = (copy.copy(train_benchmarks[i]), copy.copy(infer_benchmarks[j]))
                 pair_wise_benchmarks.append(pair)
 

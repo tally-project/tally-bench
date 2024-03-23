@@ -18,15 +18,18 @@ def main():
 
     priority_df = pd.read_csv("tally_bench_results/priority-aware-perf.csv")
     high_priority_jobs = priority_df["high_priority_job"].unique()
+    high_priority_jobs = [high_priority_job for high_priority_job in high_priority_jobs if "server" in high_priority_job]
     best_effort_jobs = priority_df["best_effort_job"].unique()
 
     metrics = ["avg", "90th", "95th", "99th"]
-    tolerance_levels = [0.1]
+    tolerance_levels = [0.1, 0.2]
 
     # plot Baseline, MPS, Time-sliced latency comparison
     for high_priority_job in high_priority_jobs:
         for metric in metrics:
             plot_motivation_latency_comparison(priority_df, high_priority_job, best_effort_jobs, metric=metric)
+            plot_motivation_latency_comparison(priority_df, high_priority_job, best_effort_jobs, metric=metric,
+                                               out_filename=f"{high_priority_job}_no_amp", remove_amp=True)
 
     # plot Tally Achievable Throughput under a certain SLO
     for metric in metrics:

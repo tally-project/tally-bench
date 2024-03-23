@@ -3,7 +3,7 @@ from transformers import (BertConfig, BertForQuestionAnswering, BertTokenizer)
 from transformers.data.processors.squad import SquadV1Processor
 from transformers import squad_convert_examples_to_features
 
-from workloads.common.util import get_torch_compile_options
+from workloads.common.utils import get_torch_compile_options
 from workloads.common.infer_monitor import get_infer_monitor
 
 def bert_infer(model_name, mode, batch_size, warmup_iters, total_time,

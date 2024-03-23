@@ -10,7 +10,7 @@ def load_json_from_file(f_name):
 
 result = load_json_from_file("tally_bench_results/result.json")
 
-small_batch_jobs =  [
+remove_keys =  [
     'pytorch_resnet50_train_64',
     'pytorch_resnet50_train_64_amp',
     'pytorch_whisper-large-v3_train_8',
@@ -21,6 +21,12 @@ small_batch_jobs =  [
     'pytorch_pegasus-x-base_train_4_amp',
     'pytorch_bert_train_16',
     'pytorch_bert_train_16_amp',
+    'pytorch_whisper-large-v3_train_32',
+    'pytorch_whisper-large-v3_train_32_amp',
+    'pytorch_pointnet_train_256',
+    'pytorch_pointnet_train_256_amp',
+    'pytorch_resnet50_train_256',
+    'pytorch_resnet50_train_256_amp',
 ]
 
 def fix_result(result):
@@ -30,7 +36,7 @@ def fix_result(result):
         for key in keys:
 
             found = False
-            for small_batch_job in small_batch_jobs:
+            for small_batch_job in remove_keys:
                 if small_batch_job in key:
                     del result[key]
                     found = True
@@ -50,5 +56,5 @@ def write_json_to_file(_dict, f_name):
     with open(f_name, 'w') as f:
         json.dump(_dict, f, indent=4, sort_keys=True)
 
-write_json_to_file(result, "tally_bench_results/result_test.json")
+write_json_to_file(result, "tally_bench_results/result.json")
 

@@ -5,7 +5,7 @@ import pathlib
 
 import torch
 
-from workloads.common.util import get_torch_compile_options
+from workloads.common.utils import get_torch_compile_options
 from workloads.common.infer_monitor import get_infer_monitor
 
 curr_dir = pathlib.Path(__file__).parent.resolve()

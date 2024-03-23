@@ -6,7 +6,7 @@ import logging
 
 sys.path.append('python')
 
-from workloads.common.util import get_benchmark_func
+from workloads.common.utils import get_benchmark_func
 from bench_utils.bench_utils import set_deterministic, set_all_logging_level
 from bench_utils.utils import logger
 

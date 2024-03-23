@@ -28,18 +28,18 @@ def bench_azure_trace(
     trace_path = f"infer_trace/azure_trace_for_bert.json"
     azure_trace = load_json_from_file(trace_path)
     last_ts = azure_trace[-1]
-    runtime = math.ceil(last_ts)
+    runtime = int(last_ts)
 
-    bert_infer_bench = Benchmark("onnxruntime", "bert", warmup_iters=30, runtime=runtime, is_train=False,
+    bert_infer_bench = Benchmark("onnxruntime", "bert", warmup_iters=100, runtime=runtime, is_train=False,
                                  batch_size=1, infer_mode="server", infer_load=None)
     bert_infer_bench.trace_file = trace_path
     bert_infer_bench.set_priority(2)
 
-    training_bench = Benchmark("pytorch", "bert", warmup_iters=30, runtime=runtime, is_train=True,
+    training_bench = Benchmark("pytorch", "bert", warmup_iters=100, runtime=runtime, is_train=True,
                                batch_size=32, amp=False)
     training_bench.set_priority(1)
 
-    benchmarks = [bert_infer_bench, training_bench]
+    benchmarks = [training_bench, bert_infer_bench]
     
     updated = False
 
@@ -49,18 +49,24 @@ def bench_azure_trace(
 
     if use_tally_priority:
         tally_configs = [
-            TallyConfig(scheduler_policy="priority", max_allowed_latency=0.1),
-            TallyConfig(scheduler_policy="priority", max_allowed_latency=0.1, wait_time_to_use_original=100)
+            TallyConfig(scheduler_policy="priority", max_allowed_latency=0.1, wait_time_to_use_original=10),
+            TallyConfig(scheduler_policy="priority", max_allowed_latency=0.1, wait_time_to_use_original=100),
+            TallyConfig(scheduler_policy="priority", use_space_share=True),
+            TallyConfig(scheduler_policy="priority", use_space_share=True, space_share_max_sm_perc=0.1, wait_time_to_use_original=100),
+            TallyConfig(scheduler_policy="priority", use_space_share=True, space_share_max_sm_perc=0.5, wait_time_to_use_original=100),
+            TallyConfig(scheduler_policy="priority", use_space_share=True, space_share_max_sm_perc=1, wait_time_to_use_original=100),
         ]
 
         for tally_config in tally_configs:
             updated |= launch_benchmark(benchmarks, use_mps, use_mps_priority, use_tally=use_tally_priority,
                                        result=result, tally_config=tally_config, truncate_result=False, keep_trace=True)
+            if updated:
+                write_json_to_file(result, result_file)
     else:
         updated |= launch_benchmark(benchmarks, use_mps, use_mps_priority, use_tally=use_tally_priority,
                                     result=result, truncate_result=False, keep_trace=True)
     
-    if updated:
-        write_json_to_file(result, result_file)
+        if updated:
+            write_json_to_file(result, result_file)
 
     tear_down_env()

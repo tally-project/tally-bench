@@ -1,3 +1,5 @@
+import os
+
 def get_torch_compile_options():
     compile_options = {
         "epilogue_fusion": True,
@@ -33,6 +35,14 @@ def get_benchmark_func(framework, model_name, run_training=True):
 
             if model_name in torchvision_models:
                 from workloads.inference.hidet.vision.infer import vision_infer
+                bench_func = vision_infer
+
+    if framework == "tvm":
+
+        if inference:
+
+            if model_name in torchvision_models:
+                from workloads.inference.tvm.vision.infer import vision_infer
                 bench_func = vision_infer
 
     if framework == "tensorrt":
@@ -74,6 +84,10 @@ def get_benchmark_func(framework, model_name, run_training=True):
             if model_name == "stable-diffusion":
                 from workloads.inference.pytorch.stable_diffusion.stable_diffusion import stable_diffusion_infer
                 bench_func = stable_diffusion_infer
+
+            if model_name == "vit":
+                from workloads.inference.pytorch.vit.vit_infer import vit_infer
+                bench_func = vit_infer
 
         if training:
 
@@ -129,3 +143,40 @@ def get_benchmark_func(framework, model_name, run_training=True):
         raise Exception("Cannot find benchmark function")
 
     return bench_func
+
+
+def export_torchvision_model_as_onnx(model_name: str, output_path: str, skip_existed: bool = True):
+    if skip_existed and os.path.exists(output_path):
+        return
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    import torchvision
+    import torch
+    if model_name == 'resnet50':
+        model = torchvision.models.resnet50(pretrained=True).cuda()
+        input_shape = [1, 3, 224, 224]
+    elif model_name == 'inception_v3':
+        model = torchvision.models.inception_v3(pretrained=True, transform_input=False, aux_logits=True).cuda()
+        input_shape = [1, 3, 299, 299]
+    elif model_name == 'mobilenet_v2':
+        model = torchvision.models.mobilenet_v2(pretrained=True).cuda()
+        input_shape = [1, 3, 224, 224]
+    else:
+        raise NotImplementedError(model_name)
+
+    model.eval()
+    dummy_input = torch.randn(*input_shape, device='cuda')
+    input_names = ['data']
+    output_names = ['output']
+    torch.onnx.export(
+        model=model,
+        args=dummy_input,
+        f=output_path,
+        training=torch.onnx.TrainingMode.PRESERVE,
+        input_names=input_names,
+        output_names=output_names,
+        do_constant_folding=False,
+        dynamic_axes={
+            'data': {0: 'batch_size'},
+            'output': {0: 'batch_size'}
+        }
+    )

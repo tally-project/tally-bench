@@ -2,7 +2,7 @@ import torch
 import torch.utils.data.distributed
 import torchvision
 
-from workloads.common.util import get_torch_compile_options
+from workloads.common.utils import get_torch_compile_options
 from workloads.common.infer_monitor import get_infer_monitor
 
 def vision_infer(model_name, mode, batch_size, warmup_iters, total_time,

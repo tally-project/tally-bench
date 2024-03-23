@@ -31,7 +31,14 @@ def analyze_tally_slo_performance(priority_df, high_priority_job, best_effort_jo
 
     def get_tally_config(measurement):
         config = {}
-        for parameter in ["preemption_latency_limit", "min_wait_time", "use_original_configs", "use_space_share"]:
+        for parameter in [
+            "preemption_latency_limit",
+            "min_wait_time",
+            "use_original_configs",
+            "use_space_share",
+            "wait_time_to_use_original",
+            "min_worker_threshold",
+        ]:
             config[parameter] = measurement[parameter]
         return config
 
@@ -90,7 +97,7 @@ if __name__ == "__main__":
     best_effort_jobs = priority_df["best_effort_job"].unique()
 
     metrics = ["avg", "90th", "95th", "99th"]
-    tolerance_levels = [0.1]
+    tolerance_levels = [0.2]
 
     positive_res = {}
     negative_res = {}

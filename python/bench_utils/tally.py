@@ -19,7 +19,8 @@ class TallyConfig:
     def __init__(self, scheduler_policy, max_allowed_latency=0.1, use_original_configs=False,
                  min_wait_time=0., use_space_share=False, ptb_max_threads_per_sm=None,
                  fallback_to_original_threshold=None, min_worker_threshold=None,
-                 latency_calculation_factor=None, wait_time_to_use_original=None):
+                 latency_calculation_factor=None, wait_time_to_use_original=None,
+                 use_original_kernel_latency_threshold=None, space_share_max_sm_perc=None):
         
         self.scheduler_policy = scheduler_policy
         self.max_allowed_latency = max_allowed_latency
@@ -31,6 +32,8 @@ class TallyConfig:
         self.min_worker_threshold = min_worker_threshold
         self.latency_calculation_factor = latency_calculation_factor
         self.wait_time_to_use_original = wait_time_to_use_original
+        self.use_original_kernel_latency_threshold = use_original_kernel_latency_threshold
+        self.space_share_max_sm_perc = space_share_max_sm_perc
 
     def to_dict(self):
         config = {
@@ -51,6 +54,10 @@ class TallyConfig:
             config["PRIORITY_PTB_PREEMPTION_LATENCY_CALCULATION_FACTOR"] = str(self.latency_calculation_factor)
         if self.wait_time_to_use_original is not None:
             config["PRIORITY_WAIT_TIME_MS_TO_USE_ORIGINAL_CONFIGS"] = str(self.wait_time_to_use_original)
+        if self.use_original_kernel_latency_threshold is not None:
+            config["PRIORITY_USE_ORIGINAL_KERNEL_LATENCY_MS_THRESHOLD"] = str(self.use_original_kernel_latency_threshold)
+        if self.space_share_max_sm_perc is not None:
+            config["PRIORITY_SPACE_SHARE_MAX_SM_PERCENTAGE"] = str(self.space_share_max_sm_perc)
 
         return config
 
@@ -58,7 +65,7 @@ def start_iox_roudi():
     logger.info("Starting Iox Roudi ...")
     start_iox_cmd = f"bash {iox_roudi_start_script} &"
     execute_cmd(start_iox_cmd)
-    time.sleep(10)
+    time.sleep(15)
 
 def shut_down_iox_roudi():
     logger.info("Shutting down Iox Roudi ...")

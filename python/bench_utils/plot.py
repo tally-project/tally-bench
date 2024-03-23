@@ -110,14 +110,21 @@ def plot_tally_slo_achievable_throughput(priority_df, high_priority_jobs, best_e
     plt.savefig(f"{savefig_dir}/tolerance_level_{tolerance_level}.png")
 
 
-def plot_motivation_latency_comparison(priority_df, high_priority_job, best_effort_jobs, metric="avg", out_directory="tally_bench_results/plots"):
+def plot_motivation_latency_comparison(priority_df, high_priority_job, best_effort_jobs, metric="avg",
+                                       out_directory="tally_bench_results/plots", out_filename=None, remove_amp=False):
     
+    if not out_filename:
+        out_filename = high_priority_job
+
     savefig_dir = f"{out_directory}/latency_comparison/{metric}"
     mkdir_if_not_exists(savefig_dir)
     
     high_priority_job_df = priority_df[priority_df["high_priority_job"] == high_priority_job]
     baseline_latencies, time_sliced_latencies, mps_latencies, mps_priority_latencies = [], [], [], []
     used_best_effort_jobs = []
+
+    if remove_amp:
+        best_effort_jobs = [best_effort_job for best_effort_job in best_effort_jobs if "amp" not in best_effort_job]
 
     for best_effort_job in best_effort_jobs:
         best_effort_job_df = high_priority_job_df[high_priority_job_df["best_effort_job"] == best_effort_job]
@@ -158,7 +165,7 @@ def plot_motivation_latency_comparison(priority_df, high_priority_job, best_effo
     ax.set_ylabel(f"Latency (ms)")
     
     ax.legend()
-    plt.savefig(f"{savefig_dir}/{high_priority_job}.png")
+    plt.savefig(f"{savefig_dir}/{out_filename}.png")
 
 
 def plot_slo_comparison_seperate_throughput(priority_df, high_priority_job, best_effort_jobs, metric="avg", tolerance_level=0.1, out_directory="tally_bench_results/plots"):

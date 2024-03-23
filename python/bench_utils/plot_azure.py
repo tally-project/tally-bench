@@ -8,9 +8,9 @@ from bench_utils.plot import get_metric_str
 infer_bench_id = "onnxruntime_bert_infer_server_1"
 train_bench_id = "pytorch_bert_train_32"
 
-pair_bench_id = "onnxruntime_bert_infer_server_1_pytorch_bert_train_32"
-high_priority_key = "onnxruntime_bert_infer_server_1_0"
-best_effort_key = "pytorch_bert_train_32_1"
+pair_bench_id = "pytorch_bert_train_32_onnxruntime_bert_infer_server_1"
+best_effort_key = "pytorch_bert_train_32_0"
+high_priority_key = "onnxruntime_bert_infer_server_1_1"
 
 colors = ['tab:blue', 'tab:orange', 'tab:red', 'tab:green', 'xkcd:light purple', 'tab:olive', 'tab:brown', 'tab:pink', 'tab:gray', 'tab:purple', 'tab:cyan', 'xkcd:sky blue', 'xkcd:light green', 'xkcd:light red', 'xkcd:light purple', 'xkcd:light brown', 'xkcd:light pink', 'xkcd:light gray', 'xkcd:light olive', 'xkcd:light cyan']
 
@@ -19,8 +19,8 @@ def plot_azure_trace_simulation(
     trace_timestamps,
     result,
     trace_interval=1,
-    latency_interval=0.5,
-    throughput_interval=5,
+    latency_interval=2,
+    throughput_interval=10,
     server_throughput=None,
     metric="95th",
     out_directory="."
@@ -163,9 +163,9 @@ def plot_azure_trace_simulation(
     ax2.legend()
 
     ax3.plot(throughput_interval_timestamps, baseline_interval_throughputs, linestyle='-', color=colors[0], label="Baseline")
-    ax3.plot(throughput_interval_timestamps, time_sliced_interval_throughputs, linestyle='-', color=colors[1], label="Time-sliced")
-    ax3.plot(throughput_interval_timestamps, mps_interval_throughputs, linestyle='-', color=colors[2], label="MPS")
-    ax3.plot(throughput_interval_timestamps, mps_priority_interval_throughputs, linestyle='-', color=colors[3], label="MPS-Priority")
+    # ax3.plot(throughput_interval_timestamps, time_sliced_interval_throughputs, linestyle='-', color=colors[1], label="Time-sliced")
+    # ax3.plot(throughput_interval_timestamps, mps_interval_throughputs, linestyle='-', color=colors[2], label="MPS")
+    # ax3.plot(throughput_interval_timestamps, mps_priority_interval_throughputs, linestyle='-', color=colors[3], label="MPS-Priority")
     for idx, tally_interval_throughputs in enumerate(tally_interval_throughputs_list):
         ax3.plot(throughput_interval_timestamps, tally_interval_throughputs, linestyle='-', color=colors[4 + idx], label=f"Tally-Config-{idx}")
     
@@ -175,4 +175,4 @@ def plot_azure_trace_simulation(
 
     ax3.set_xlabel("Timestamp (s)")
 
-    fig.savefig(f"{out_directory}/azure_simulation.png")
+    fig.savefig(f"{out_directory}/azure_simulation_{metric}.png")

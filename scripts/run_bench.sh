@@ -48,7 +48,7 @@ echo "======== Profiling kernel metrics for throughput-oriented jobs for priorit
     python3 -u scripts/run_bench.py \
         --use-tally-priority \
         --runtime 60 \
-        --warmup-iters 1000 \
+        --warmup-iters 500 \
         --profile-only \
         --save-results
 
