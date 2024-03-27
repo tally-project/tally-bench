@@ -53,12 +53,6 @@ inference_workloads = {
         "inception_v3": [
             TallyConfig("priority", max_allowed_latency=0.01, min_wait_time=0.1),
         ],
-    },
-    "tvm": {
-        "resnet50": [
-            # TallyConfig("priority", max_allowed_latency=0.05, min_wait_time=0.1),
-            TallyConfig("priority", max_allowed_latency=0.01, min_wait_time=0.1),
-        ]
     }
 }
 

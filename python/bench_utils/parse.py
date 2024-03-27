@@ -49,6 +49,7 @@ def parse_result(file_name, single_job_result_out=None, priority_result_out=None
     for key in single_job_keys:
 
         measurment = baseline_res[key]["measurements"][0]
+        print(measurment)
         metrics = measurment["metrics"]
         
         result_row = {
