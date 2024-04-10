@@ -4,6 +4,7 @@ from transformers import LlamaConfig, LlamaTokenizer
 import numpy as np
 import onnxruntime as ort
 
+from bench_utils.nvidia_smi import get_gpu_model
 from workloads.common.infer_monitor import get_infer_monitor
 
 pt_to_np = {
@@ -125,6 +126,10 @@ def llama2_infer(model_name, mode, batch_size, warmup_iters, total_time,
     onnx_model_path = "./data/llama2-7b-fp16-gqa/rank_0_llama-2-7b-hf_decoder_merged_model_fp16.onnx"
     use_fp16 = True  # True when KV cache inputs/outputs are in float16
     use_buffer_share = True  # True when --use_gqa was passed during export
+
+    if "H100" in get_gpu_model():
+        onnx_model_path = "./data/llama2-7b-fp16/rank_0_llama-2-7b-hf_decoder_merged_model_fp16.onnx"
+        use_buffer_share = False
 
     prompt = ["""I liked "Breaking Bad" and "Band of Brothers". Do you have any recommendations of other shows I might like?\n"""]
     max_length = 128  # max(prompt length + generation length)

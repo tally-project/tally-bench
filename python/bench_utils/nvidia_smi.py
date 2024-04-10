@@ -113,3 +113,9 @@ def get_cuda_mem():
     out, _, _ = execute_cmd(f"nvidia-smi -i {cuda_device_id} --query-gpu=memory.total --format=csv,noheader,nounits", True)
     mem_cap = int(out.strip().split("\n")[0])
     return mem_cap
+
+
+def get_gpu_model():
+    cuda_device_id = get_cuda_device_id()
+    out, _, _ = execute_cmd(f"nvidia-smi -i {cuda_device_id} --query-gpu=name --format=csv,noheader", True)
+    return out

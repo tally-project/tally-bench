@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export TALLY_HOME=/home/zhaowe58/tally-bench/tally
+export TALLY_HOME=$PWD/tally
 
 TALLY_PRELOAD_LOCAL="./tally/scripts/start_client_local.sh"
 TALLY_PRELOAD="./tally/scripts/start_client.sh"
@@ -11,17 +11,11 @@ RUN_TALLY=TRUE
 
 train_pytorch_models=(
     "resnet50"
-    "EfficientNetB0"
     "bert"
-    "dcgan"
-    "LSTM"
     "pointnet"
-    "yolov6n"
-    "yolov6m"
     "pegasus-x-base"
-    "pegasus-large"
-    "whisper-small"
-    "gpt2-xl"
+    "whisper-large-v3"
+    "gpt2-large"
 )
 
 infer_hidet_models=(
@@ -38,6 +32,7 @@ infer_pytorch_models=(
     "yolov6m"
     "gpt-neo-2.7B"
     "stable-diffusion"
+    # "llama-2-7b"
 )
 
 # Will not include TensorRT as a benchmark for the
@@ -77,7 +72,7 @@ launch_bench() {
         fi
     done
 
-    launch_cmd="python3 ./scripts/launch.py --framework $1 --benchmark $2 --warmup-iters 10 --runtime 5 ${@:3}"
+    launch_cmd="python3 -u ./scripts/launch.py --framework $1 --benchmark $2 --warmup-iters 10 --runtime 5 ${@:3}"
 
     if [ "$RUN_ORIGINAL" = "TRUE" ]; then
         echo $launch_cmd
@@ -140,7 +135,7 @@ for model in "${infer_onnxruntime_models[@]}"; do
 done
 
 for model in "${train_pytorch_models[@]}"; do
-    if [ "$model" = "EfficientNetB0" ] || [ "$model" = "pointnet" ]; then
+    if [ "$model" = "pointnet" ]; then
         batch_size=2
     else
         batch_size=1

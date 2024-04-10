@@ -88,3 +88,6 @@ if enable_overwrite or not os.path.exists(export_model_path):
                                         'start' : symbolic_names,
                                         'end' : symbolic_names})
         print("Model exported at ", export_model_path)
+
+# optimize with
+# python3 -m onnxruntime.transformers.optimizer --input "./onnx_models/bert-base-cased-squad_opset11.onnx" --output "./data/bert-base-cased-squad_opt_gpu_fp16.onnx" --float16 --use_gpu
