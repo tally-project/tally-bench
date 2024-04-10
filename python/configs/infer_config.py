@@ -4,7 +4,7 @@
 
 from bench_utils.tally import TallyConfig
 
-inference_load_factors = [0.5]
+inference_load_factors = [0.25, 0.5, 0.75]
 
 default_configs = [
     TallyConfig("priority", max_allowed_latency=0.1),
@@ -21,16 +21,7 @@ default_configs = [
 
 inference_workloads = {
     "onnxruntime": {
-        "bert": [
-            TallyConfig("priority", max_allowed_latency=0.5, use_original_kernel_latency_threshold=0.5),
-            TallyConfig("priority", max_allowed_latency=0.5, use_original_kernel_latency_threshold=0.5),
-            TallyConfig("priority", max_allowed_latency=0.5, use_original_kernel_latency_threshold=3),
-            TallyConfig("priority", max_allowed_latency=0.5, use_original_kernel_latency_threshold=10),
-            TallyConfig("priority", use_space_share=True, space_share_max_sm_perc=0.2),
-            TallyConfig("priority", use_space_share=True, space_share_max_sm_perc=0.5),
-            TallyConfig("priority", use_space_share=True, space_share_max_sm_perc=0.8),
-            TallyConfig("priority", use_space_share=True, space_share_max_sm_perc=1),
-        ],
+        "bert": [],
         "llama-2-7b": [
             TallyConfig("priority", use_original_configs=True, min_wait_time=5.0),
             TallyConfig("priority", use_original_configs=True, min_wait_time=10.0),
@@ -53,12 +44,6 @@ inference_workloads = {
         "inception_v3": [
             TallyConfig("priority", max_allowed_latency=0.01, min_wait_time=0.1),
         ],
-    },
-    "tvm": {
-        "resnet50": [
-            # TallyConfig("priority", max_allowed_latency=0.05, min_wait_time=0.1),
-            TallyConfig("priority", max_allowed_latency=0.01, min_wait_time=0.1),
-        ]
     }
 }
 
@@ -73,5 +58,16 @@ def get_tally_configs(framework, model_name, mode):
 
     if "single-stream" in mode:
         configs = [config for config in configs if config.wait_time_to_use_original is None]
+
+        # if model_name == "bert":
+        #     configs.extend([
+        #         TallyConfig("priority", max_allowed_latency=0.5, use_original_kernel_latency_threshold=0.5),
+        #         TallyConfig("priority", max_allowed_latency=0.5, use_original_kernel_latency_threshold=3),
+        #         TallyConfig("priority", max_allowed_latency=0.5, use_original_kernel_latency_threshold=10),
+        #         TallyConfig("priority", use_space_share=True, space_share_max_sm_perc=0.2),
+        #         TallyConfig("priority", use_space_share=True, space_share_max_sm_perc=0.5),
+        #         TallyConfig("priority", use_space_share=True, space_share_max_sm_perc=0.8),
+        #         TallyConfig("priority", use_space_share=True, space_share_max_sm_perc=1),
+        #     ])
 
     return configs

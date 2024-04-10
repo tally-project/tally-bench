@@ -67,7 +67,8 @@ def mkdir_if_not_exists(directory):
 
 
 def compute_avg(lst):
-    return sum(lst) / len(lst)
+    avg = sum(lst) / len(lst)
+    return round(avg, 3)
 
 
 def compute_percentile(lst, percentile):

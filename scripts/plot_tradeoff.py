@@ -50,7 +50,6 @@ def plot_latency_throughput_tradeoff(priority_df, exp_key, metric="avg", out_dir
 
     best_effort_throughputs, high_priority_throughputs = keep_frontier_only(best_effort_throughputs, high_priority_throughputs)
 
-
     zipped_list = zip(best_effort_throughputs, high_priority_throughputs)
     zipped_list = sorted(zipped_list)
     best_effort_throughputs, high_priority_throughputs = zip(*zipped_list)

@@ -22,7 +22,7 @@ def main():
     best_effort_jobs = priority_df["best_effort_job"].unique()
 
     metrics = ["avg", "90th", "95th", "99th"]
-    tolerance_levels = [0.1, 0.2]
+    tolerance_levels = [0.10]
 
     # plot Baseline, MPS, Time-sliced latency comparison
     for high_priority_job in high_priority_jobs:

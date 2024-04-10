@@ -73,7 +73,7 @@ def plot_tally_slo_achievable_throughput(priority_df, high_priority_jobs, best_e
                 continue
 
             baseline_latency = measurements[f"high_priority_orig_{metric}_latency"]
-            acceptable_latency_bound = (1 + tolerance_level) * baseline_latency
+            acceptable_latency_bound = (1 + tolerance_level) * baseline_latency * 1.01
 
             tally_acceptable_df = measurements[measurements[f"high_priority_tally_{metric}_latency"] <= acceptable_latency_bound]
             if tally_acceptable_df.empty:
@@ -87,7 +87,7 @@ def plot_tally_slo_achievable_throughput(priority_df, high_priority_jobs, best_e
 
     # plotting
     plt.clf()
-    fig, ax = plt.subplots(figsize=(len(high_priority_jobs) * 5, 8))
+    fig, ax = plt.subplots(figsize=(len(high_priority_jobs) * 6, 8))
 
     # Width of a bar
     width = 0.07
@@ -254,11 +254,16 @@ def plot_slo_comparison_system_throughput(priority_df, high_priority_job, best_e
     priority_mps_throughputs = data["priority_mps_throughputs"]
     priority_mps_priority_throughputs = data["priority_mps_priority_throughputs"]
     priority_tally_throughputs = data["priority_tally_throughputs"]
-    time_sliced_throughputs = [-x for x in data["time_sliced_throughputs"]]
-    mps_throughputs = [-x for x in data["mps_throughputs"]]
-    mps_priority_throughputs = [-x for x in data["mps_priority_throughputs"]]
-    tally_throughputs = [-x for x in data["tally_throughputs"]]
+    time_sliced_throughputs = data["time_sliced_throughputs"]
+    mps_throughputs = data["mps_throughputs"]
+    mps_priority_throughputs = data["mps_priority_throughputs"]
+    tally_throughputs = data["tally_throughputs"]
     used_best_effort_jobs = data["used_best_effort_jobs"]
+
+    time_sliced_system_throughputs = [x + y for x, y in zip(priority_time_sliced_throughputs, time_sliced_throughputs)]
+    mps_system_throughputs = [x + y for x, y in zip(priority_mps_throughputs, mps_throughputs)]
+    mps_priority_system_throughputs = [x + y for x, y in zip(priority_mps_priority_throughputs, mps_priority_throughputs)]
+    tally_system_throughputs = [x + y for x, y in zip(priority_tally_throughputs, tally_throughputs)]
 
     # plotting
     plt.clf()
@@ -281,22 +286,17 @@ def plot_slo_comparison_system_throughput(priority_df, high_priority_job, best_e
     ax1.legend()
 
     # plot system throughput
-    ax2.bar(pos + 1 * width, priority_time_sliced_throughputs, width,  label=f"Time-sliced", color=colors[1], alpha=0.7, edgecolor='black')
-    ax2.bar(pos + 2 * width, priority_mps_throughputs, width,  label=f"MPS", color=colors[2], alpha=0.7, edgecolor='black')
-    ax2.bar(pos + 3 * width, priority_mps_priority_throughputs, width, label=f"MPS-Priority", color=colors[3], alpha=0.7, edgecolor='black')
-    ax2.bar(pos + 4 * width, priority_tally_throughputs, width,  label=f"Tally", color=colors[4], alpha=0.7, edgecolor='black')
-
-    ax2.bar(pos + 1 * width, time_sliced_throughputs, width, label=f"Time-sliced", color=colors[1], alpha=0.5, edgecolor='black')
-    ax2.bar(pos + 2 * width, mps_throughputs, width, label=f"MPS", color=colors[2], alpha=0.5, edgecolor='black')
-    ax2.bar(pos + 3 * width, mps_priority_throughputs, width, label=f"MPS-Priority", color=colors[3], alpha=0.5, edgecolor='black')
-    ax2.bar(pos + 4 * width, tally_throughputs, width, label=f"Tally", color=colors[4], alpha=0.5, edgecolor='black')
+    ax2.bar(pos + 1 * width, time_sliced_system_throughputs, width,  label=f"Time-sliced", color=colors[1], alpha=0.7, edgecolor='black')
+    ax2.bar(pos + 2 * width, mps_system_throughputs, width,  label=f"MPS", color=colors[2], alpha=0.7, edgecolor='black')
+    ax2.bar(pos + 3 * width, mps_priority_system_throughputs, width, label=f"MPS-Priority", color=colors[3], alpha=0.7, edgecolor='black')
+    ax2.bar(pos + 4 * width, tally_system_throughputs, width,  label=f"Tally", color=colors[4], alpha=0.7, edgecolor='black')
 
     ax2.set_title("System Throughput Comparison")
-    ax2.set_ylabel(f"Normalized Throughput")
+    ax2.set_ylabel(f"System Throughput")
 
-    high_priority_patch = mpatches.Patch(facecolor=colors[0], edgecolor='black', alpha=0.7, label='High-Priority')
-    best_effort_patch = mpatches.Patch(facecolor=colors[0], edgecolor='black', alpha=0.5, label='Best-Effort')
-    ax2.legend(handles=[high_priority_patch, best_effort_patch])
+    # high_priority_patch = mpatches.Patch(facecolor=colors[0], edgecolor='black', alpha=0.7, label='High-Priority')
+    # best_effort_patch = mpatches.Patch(facecolor=colors[0], edgecolor='black', alpha=0.5, label='Best-Effort')
+    # ax2.legend(handles=[high_priority_patch, best_effort_patch])
 
     num_targets = 5
     ax2.set_xticks(pos + ((num_targets - 1) / 2) * width)

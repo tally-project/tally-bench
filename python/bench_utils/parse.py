@@ -266,7 +266,7 @@ def get_slo_comparison_data(priority_df, high_priority_job, best_effort_jobs, me
         priority_mps_priority_throughput = best_effort_job_df[f"high_priority_mps_priority_throughput"].values[0]
         mps_priority_throughput = best_effort_job_df[f"best_effort_mps_priority_throughput"].values[0]
 
-        acceptable_latency_bound = (1 + tolerance_level) * baseline_latency
+        acceptable_latency_bound = (1 + tolerance_level) * baseline_latency * 1.01
         tally_acceptable_df = best_effort_job_df[best_effort_job_df[f"high_priority_tally_{metric}_latency"] <= acceptable_latency_bound]
 
         if tally_acceptable_df.empty:

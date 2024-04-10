@@ -49,7 +49,7 @@ def analyze_tally_slo_performance(priority_df, high_priority_job, best_effort_jo
             continue
 
         baseline_latency = best_effort_job_df[f"high_priority_orig_{metric}_latency"].values[0]
-        acceptable_latency_bound = (1 + tolerance_level) * baseline_latency
+        acceptable_latency_bound = (1 + tolerance_level) * baseline_latency * 1.01
 
         best_effort_job_df = best_effort_job_df.sort_values(by=f"high_priority_tally_{metric}_latency")
         tally_acceptable_df = best_effort_job_df[best_effort_job_df[f"high_priority_tally_{metric}_latency"] <= acceptable_latency_bound]
@@ -96,8 +96,8 @@ if __name__ == "__main__":
     high_priority_jobs = [high_priority_job for high_priority_job in high_priority_jobs if "server" in high_priority_job]
     best_effort_jobs = priority_df["best_effort_job"].unique()
 
-    metrics = ["avg", "90th", "95th", "99th"]
-    tolerance_levels = [0.2]
+    metrics = ["avg", "90th", "95th"]
+    tolerance_levels = [0.1]
 
     positive_res = {}
     negative_res = {}

@@ -12,8 +12,13 @@ if [[ $GPU_MODE == "Exclusive_Process" ]]; then
     python3 ./scripts/run_azure_bench.py --use-mps
     python3 ./scripts/run_azure_bench.py --use-mps-priority
     python3 ./scripts/run_azure_bench.py --use-tally-priority
+
+    python3 ./scripts/run_azure_bench.py --use-mps --use-full-trace
+    python3 ./scripts/run_azure_bench.py --use-mps-priority --use-full-trace
+    python3 ./scripts/run_azure_bench.py --use-tally-priority --use-full-trace
 fi
 
 if [[ $GPU_MODE == "Default" ]]; then
     python3 ./scripts/run_azure_bench.py
+    python3 ./scripts/run_azure_bench.py --use-full-trace
 fi

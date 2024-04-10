@@ -35,14 +35,9 @@ def fix_result(result):
         keys = list(result.keys())
         for key in keys:
 
-            found = False
-            for small_batch_job in remove_keys:
-                if small_batch_job in key:
-                    del result[key]
-                    found = True
-                    break
-            
-            if not found:
+            if "tvm" in key:
+                del result[key]
+            else:
                 val = result[key]
                 fix_result(val)
     elif isinstance(result, list):

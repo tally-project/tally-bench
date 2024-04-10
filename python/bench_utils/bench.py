@@ -512,8 +512,7 @@ def run_benchmark_suite(
 
                 # let's skip single-stream pairwise benchmarks because single-stream inference
                 # can usually saturate the gpu quite well already
-                # only keep bert, just to get a sense about its performance
-                if infer_benchmarks[j].infer_mode == "single-stream" and "bert" not in infer_benchmarks[j].model_name:
+                if infer_benchmarks[j].infer_mode == "single-stream":
                     continue
 
                 pair = (copy.copy(train_benchmarks[i]), copy.copy(infer_benchmarks[j]))
