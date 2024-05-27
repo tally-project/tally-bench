@@ -17,47 +17,33 @@ tally_client_local_script = "./tally/scripts/start_client_local.sh"
 class TallyConfig:
 
     def __init__(self, scheduler_policy, max_allowed_latency=0.1, use_original_configs=False,
-                 min_wait_time=0., use_space_share=False, ptb_max_threads_per_sm=None,
-                 fallback_to_original_threshold=None, min_worker_threshold=None,
-                 latency_calculation_factor=None, wait_time_to_use_original=None,
-                 use_original_kernel_latency_threshold=None, space_share_max_sm_perc=None):
+                use_space_share=False, min_wait_time=None, wait_time_to_use_original=None,
+                disable_transformation=None):
         
         self.scheduler_policy = scheduler_policy
         self.max_allowed_latency = max_allowed_latency
         self.use_original_configs = use_original_configs
         self.min_wait_time = min_wait_time
         self.use_space_share = use_space_share
-        self.ptb_max_threads_per_sm = ptb_max_threads_per_sm
-        self.fallback_to_original_threshold = fallback_to_original_threshold
-        self.min_worker_threshold = min_worker_threshold
-        self.latency_calculation_factor = latency_calculation_factor
         self.wait_time_to_use_original = wait_time_to_use_original
-        self.use_original_kernel_latency_threshold = use_original_kernel_latency_threshold
-        self.space_share_max_sm_perc = space_share_max_sm_perc
+        self.disable_transformation = disable_transformation
 
     def to_dict(self):
         config = {
             "SCHEDULER_POLICY": self.scheduler_policy.upper(),
             "PRIORITY_MAX_ALLOWED_PREEMPTION_LATENCY_MS": str(self.max_allowed_latency),
             "PRIORITY_USE_ORIGINAL_CONFIGS": str(self.use_original_configs).upper(),
-            "PRIORITY_MIN_WAIT_TIME_MS": str(self.min_wait_time),
             "PRIORITY_USE_SPACE_SHARE": str(self.use_space_share).upper()
         }
 
-        if self.ptb_max_threads_per_sm is not None:
-            config["PRIORITY_PTB_MAX_NUM_THREADS_PER_SM"] = str(self.ptb_max_threads_per_sm)
-        if self.fallback_to_original_threshold is not None:
-            config["PRIORITY_FALL_BACK_TO_ORIGINAL_THRESHOLD"] = str(self.fallback_to_original_threshold)
-        if self.min_worker_threshold is not None:
-            config["PRIORITY_MIN_WORKER_BLOCKS"] = str(self.min_worker_threshold)
-        if self.latency_calculation_factor is not None:
-            config["PRIORITY_PTB_PREEMPTION_LATENCY_CALCULATION_FACTOR"] = str(self.latency_calculation_factor)
+        if self.disable_transformation is not None:
+            config["PRIORITY_DISABLE_TRANSFORMATION"] = str(self.disable_transformation).upper()
+
+        if self.min_wait_time is not None:
+            config["PRIORITY_MIN_WAIT_TIME_MS"] = str(self.min_wait_time)
+
         if self.wait_time_to_use_original is not None:
             config["PRIORITY_WAIT_TIME_MS_TO_USE_ORIGINAL_CONFIGS"] = str(self.wait_time_to_use_original)
-        if self.use_original_kernel_latency_threshold is not None:
-            config["PRIORITY_USE_ORIGINAL_KERNEL_LATENCY_MS_THRESHOLD"] = str(self.use_original_kernel_latency_threshold)
-        if self.space_share_max_sm_perc is not None:
-            config["PRIORITY_SPACE_SHARE_MAX_SM_PERCENTAGE"] = str(self.space_share_max_sm_perc)
 
         return config
 

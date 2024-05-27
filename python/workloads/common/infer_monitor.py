@@ -119,17 +119,20 @@ class ServerInferMonitor(InferMonitor):
 
         if self.warm:
             assert(self.trace)
-    
-            # wait to simulate arrival rate of poisson distribution
-            next_arrival_ts = self.trace[len(self.latencies)]
+
             elapsed_from_start = self.step_end_time - self.start_time
-
-            if next_arrival_ts >= self.total_time:
+    
+            if len(self.latencies) >= len(self.trace):
                 self.should_stop = True
+            else:
+                next_arrival_ts = self.trace[len(self.latencies)]
 
-            elif elapsed_from_start < next_arrival_ts:
-                wait_time = next_arrival_ts - elapsed_from_start
-                busy_sleep(wait_time)
+                if next_arrival_ts >= self.total_time:
+                    self.should_stop = True
+
+                elif elapsed_from_start < next_arrival_ts:
+                    wait_time = next_arrival_ts - elapsed_from_start
+                    busy_sleep(wait_time)
             
             elapsed_time_ms = elapsed_time_seconds * 1000
             self.latencies.append(elapsed_time_ms)

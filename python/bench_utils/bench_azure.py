@@ -4,7 +4,7 @@ import math
 from bench_utils.utils import write_json_to_file, load_json_from_file
 from bench_utils.bench_utils import init_env, tear_down_env
 from bench_utils.bench import Benchmark, launch_benchmark, get_train_benchmarks
-from bench_utils.tally import TallyConfig
+from bench_utils.tally_config import default_tally_config
 from configs.train_config import training_workloads
 
 def bench_azure_trace(
@@ -42,7 +42,7 @@ def bench_azure_trace(
     for train_benchmark in train_benchmarks:
 
         if "two_week" in trace_path:
-            if train_benchmark.model_name != "bert" or train_benchmark.amp:
+            if train_benchmark.model_name != "bert":
                 continue
 
         train_benchmark.set_priority(1)
@@ -56,20 +56,12 @@ def bench_azure_trace(
             updated |= launch_benchmark([benchmark], result=result, truncate_result=False, keep_trace=True)
 
         if use_tally_priority:
-            tally_configs = [
-                TallyConfig(scheduler_policy="priority", max_allowed_latency=0.1, wait_time_to_use_original=10),
-            ]
-
-            for tally_config in tally_configs:
-                updated |= launch_benchmark(benchmarks, use_mps, use_mps_priority, use_tally=use_tally_priority,
-                                        result=result, tally_config=tally_config, truncate_result=False, keep_trace=True)
-                if updated:
-                    write_json_to_file(result, result_file)
+            updated |= launch_benchmark(benchmarks, use_mps, use_mps_priority, use_tally=use_tally_priority,
+                                    result=result, tally_config=default_tally_config, truncate_result=False, keep_trace=True)
         else:
             updated |= launch_benchmark(benchmarks, use_mps, use_mps_priority, use_tally=use_tally_priority,
                                         result=result, truncate_result=False, keep_trace=True)
-        
-            if updated:
-                write_json_to_file(result, result_file)
+        if updated:
+            write_json_to_file(result, result_file)
 
     tear_down_env()

@@ -8,13 +8,13 @@ import pandas as pd
 import threading
 import selectors
 import copy
+import math
 from multiprocessing import Process, Manager
 
 from bench_utils.utils import (
     load_json_from_file,
     write_json_to_file,
     logger,
-    get_possion_arrival_trace,
     compute_avg,
     compute_percentile
 )
@@ -31,9 +31,11 @@ from bench_utils.tally import (
     query_tally,
     TallyConfig
 )
+from bench_utils.tally_config import default_tally_config, sensitivity_analysis_configs
+from bench_utils.trace import generate_azure_trace_with_load
 
 from configs.train_config import training_workloads
-from configs.infer_config import inference_workloads, inference_load_factors, get_tally_configs
+from configs.infer_config import inference_workloads, inference_load_factors
 
 
 class Benchmark:
@@ -135,9 +137,13 @@ def get_infer_benchmark_trace(benchmark, result, trace_path):
     single_stream_latencies = result["default"][single_stream_bench_id]["measurements"][0][f"{single_stream_bench_id}_0"]["latencies"]
     avg_latency = sum(single_stream_latencies) / len(single_stream_latencies)
     avg_latency /= 1000
-    trace = get_possion_arrival_trace(avg_latency, benchmark.infer_load, benchmark.runtime)
 
+    max_trace_span = 600
+    
+    azure_trace_path = "infer_trace/AzureFunctionsInvocationTraceForTwoWeeksJan2021.txt"
+    trace = generate_azure_trace_with_load(azure_trace_path, avg_latency, max_trace_span, start_day=3, end_day=4, target_load=benchmark.infer_load)
     write_json_to_file(trace, trace_path)
+
     return trace
 
 
@@ -179,11 +185,8 @@ def get_infer_benchmarks(inference_workloads, inference_load_factors, warmup_ite
 
 def get_smallest_max_allowed_latency():
     smallest_max_allowed_latency = 1
-    for framework in inference_workloads:
-        for model in inference_workloads[framework]:
-            configs = inference_workloads[framework][model]
-            for config in configs:
-                smallest_max_allowed_latency = min(smallest_max_allowed_latency, config.max_allowed_latency)
+    for config in sensitivity_analysis_configs:
+        smallest_max_allowed_latency = min(smallest_max_allowed_latency, config.max_allowed_latency)
     return smallest_max_allowed_latency
 
 
@@ -487,6 +490,9 @@ def run_benchmark_suite(
             trace = get_infer_benchmark_trace(benchmark, result, trace_path)
             benchmark.trace_file = trace_path
 
+            trace_last_ts = trace[-1]
+            benchmark.runtime = math.ceil(trace_last_ts)
+
         updated = launch_benchmark([benchmark], result=result, truncate_result=True)
 
         if use_tally:
@@ -529,13 +535,17 @@ def run_benchmark_suite(
                 trace = get_infer_benchmark_trace(bench_2, result, trace_path)
                 bench_2.trace_file = trace_path
 
+                trace_last_ts = trace[-1]
+                bench_1.runtime = math.ceil(trace_last_ts)
+                bench_2.runtime = math.ceil(trace_last_ts)
+
             logger.info(f"Running {idx + 1} out of {len(pair_wise_benchmarks)} pairwise benchmarks: {bench_id} ...")
 
             bench_1_mem = result["tally_naive"][str(bench_1)]["measurements"][0]["metrics"]["gmem"]
             bench_2_mem = result["tally_naive"][str(bench_2)]["measurements"][0]["metrics"]["gmem"]
             sum_mem = bench_1_mem + bench_2_mem
 
-            if sum_mem > 0.98 * cuda_mem_cap:
+            if sum_mem > 0.99 * cuda_mem_cap:
                 logger.info(f"Skipping {bench_id} as required memory of {sum_mem} MB exceeds system limit of {cuda_mem_cap} MB")
                 continue
 
@@ -547,12 +557,8 @@ def run_benchmark_suite(
             updated = False
 
             if use_tally_priority:
-
-                tally_configs = get_tally_configs(bench_2.framework, bench_2.model_name, bench_2.infer_mode)
-
-                for config in tally_configs:
-                    updated |= launch_benchmark(pair, use_mps=use_mps, use_mps_priority=use_mps_priority, use_tally=use_tally,
-                                                result=result, tally_config=config, truncate_result=True)
+                updated |= launch_benchmark(pair, use_mps=use_mps, use_mps_priority=use_mps_priority, use_tally=use_tally,
+                                            result=result, tally_config=default_tally_config, truncate_result=True)
             else:
                 updated = launch_benchmark(pair, use_mps=use_mps, use_mps_priority=use_mps_priority, use_tally=use_tally,
                                            result=result, truncate_result=True)

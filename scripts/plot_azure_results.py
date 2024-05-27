@@ -25,49 +25,18 @@ def main():
     metrics = ["90th", "95th", "99th", "avg"]
 
     infer_bench_id = "onnxruntime_bert_infer_server_1"
-    train_bench_ids = {
-        "pytorch_resnet50_train_128_amp": {},
-        "pytorch_resnet50_train_128": {},
-        "pytorch_pointnet_train_128_amp": {},
-        "pytorch_pointnet_train_128": {},
-        "pytorch_bert_train_32_amp": {},
-        "pytorch_bert_train_32": {
-            "latency_interval": 0.5,
-            "throughput_interval": 12
-        },
-        "pytorch_pegasus-x-base_train_8_amp": {},
-        "pytorch_pegasus-x-base_train_8": {},
-        "pytorch_whisper-large-v3_train_16_amp": {},
-        "pytorch_whisper-large-v3_train_16": {},
-        "pytorch_gpt2-large_train_1_amp": {},
-        "pytorch_gpt2-large_train_1": {},
-    }
-
-    trace_interval = 1
-    latency_interval = 2
-    throughput_interval = 5
+    train_bench_ids = [
+        "pytorch_resnet50_train_128",
+        "pytorch_pointnet_train_128",
+        "pytorch_bert_train_32",
+        "pytorch_pegasus-x-base_train_8",
+        "pytorch_whisper-large-v3_train_16",
+        "pytorch_gpt2-large_train_1",
+    ]
 
     server_throughput=250
 
     for metric in metrics:
-        for train_bench_id in train_bench_ids:
-
-            bench_latency_interval = train_bench_ids[train_bench_id].get("latency_interval", latency_interval) 
-            bench_throughput_interval = train_bench_ids[train_bench_id].get("throughput_interval", throughput_interval)
-
-            plot_azure_trace_simulation(
-                azure_trace_one_day,
-                result_one_day,
-                train_bench_id,
-                infer_bench_id,
-                server_throughput=server_throughput,
-                out_directory=plot_directory,
-                metric=metric,
-                trace_interval=trace_interval,
-                latency_interval=bench_latency_interval,
-                throughput_interval=bench_throughput_interval,
-                out_filename=f"{train_bench_id}_one_day"
-            )
 
         plot_azure_trace_simulation(
             azure_trace_two_week,
@@ -78,7 +47,7 @@ def main():
             out_directory=plot_directory,
             metric=metric,
             trace_interval=3,
-            latency_interval=5,
+            latency_interval=10,
             throughput_interval=30,
             out_filename=f"pytorch_bert_train_32_two_week"
         )

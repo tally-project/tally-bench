@@ -49,7 +49,6 @@ def parse_result(file_name, single_job_result_out=None, priority_result_out=None
     for key in single_job_keys:
 
         measurment = baseline_res[key]["measurements"][0]
-        print(measurment)
         metrics = measurment["metrics"]
         
         result_row = {
@@ -92,6 +91,9 @@ def parse_result(file_name, single_job_result_out=None, priority_result_out=None
     for key in tally_priority_res.keys():
 
         if key in single_job_keys:
+            continue
+
+        if "amp" in key:
             continue
 
         mps_run_res = mps_res.get(key, {})
@@ -142,13 +144,11 @@ def parse_result(file_name, single_job_result_out=None, priority_result_out=None
 
             tally_config = tally_measurement["tally_config"]
             max_allowed_latency = tally_config.get("PRIORITY_MAX_ALLOWED_PREEMPTION_LATENCY_MS")
-            min_wait_time = tally_config.get("PRIORITY_MIN_WAIT_TIME_MS")
             use_original_configs = tally_config.get("PRIORITY_USE_ORIGINAL_CONFIGS")
             use_space_share = tally_config.get("PRIORITY_USE_SPACE_SHARE")
-            wait_time_to_use_original = tally_config.get("PRIORITY_WAIT_TIME_MS_TO_USE_ORIGINAL_CONFIGS", 0.)
-            min_worker_threshold = tally_config.get("PRIORITY_MIN_WORKER_BLOCKS", 0)
-            use_original_latency_threshold = tally_config.get("PRIORITY_USE_ORIGINAL_KERNEL_LATENCY_MS_THRESHOLD", 0)
-            space_share_max_sm_perc = tally_config.get("PRIORITY_SPACE_SHARE_MAX_SM_PERCENTAGE", 0)
+            min_wait_time = tally_config.get("PRIORITY_MIN_WAIT_TIME_MS", "Default")
+            disable_transformation = tally_config.get("PRIORITY_DISABLE_TRANSFORMATION", False)
+            wait_time_to_use_original = tally_config.get("PRIORITY_WAIT_TIME_MS_TO_USE_ORIGINAL_CONFIGS", "Default")
 
             lc_result_row = {
                 "exp_key": key,
@@ -156,10 +156,8 @@ def parse_result(file_name, single_job_result_out=None, priority_result_out=None
                 "min_wait_time": min_wait_time,
                 "use_original_configs" : use_original_configs,
                 "use_space_share" : use_space_share,
+                "disable_transformation": disable_transformation,
                 "wait_time_to_use_original": wait_time_to_use_original,
-                "min_worker_threshold": min_worker_threshold,
-                "use_original_latency_threshold": use_original_latency_threshold,
-                "space_share_max_sm_perc": space_share_max_sm_perc,
                 "high_priority_job": high_priority_job_clean,
                 "high_priority_job_workload_type": get_workload_type(high_priority_job_clean),
                 "best_effort_job": best_effort_job_clean,
@@ -243,11 +241,15 @@ def parse_result(file_name, single_job_result_out=None, priority_result_out=None
     return single_job_result, latency_critical_result
 
 
-def get_slo_comparison_data(priority_df, high_priority_job, best_effort_jobs, metric="avg", tolerance_level=0.1):
+def get_slo_comparison_data(priority_df, high_priority_job, best_effort_jobs, tally_config, metric="avg"):
+
     high_priority_job_df = priority_df[priority_df["high_priority_job"] == high_priority_job]
-    baseline_latencies, time_sliced_latencies, mps_latencies, mps_priority_latencies, tally_latencies, = [], [], [], [], []
-    priority_time_sliced_throughputs, priority_mps_throughputs, priority_mps_priority_throughputs, priority_tally_throughputs = [], [], [], []
-    time_sliced_throughputs, mps_throughputs, mps_priority_throughputs, tally_throughputs = [], [], [], []
+    baseline_latencies, time_sliced_latencies, mps_latencies, mps_priority_latencies = [], [], [], []
+    tally_latencies, tally_space_share_latencies, tally_no_transform_latencies = [], [], []
+    priority_time_sliced_throughputs, priority_mps_throughputs, priority_mps_priority_throughputs = [], [], []
+    priority_tally_throughputs, priority_tally_space_share_throughputs, priority_tally_no_transform_throughputs = [], [], []
+    time_sliced_throughputs, mps_throughputs, mps_priority_throughputs = [], [], []
+    tally_throughputs, tally_space_share_throughputs, tally_no_transform_throughputs = [], [], []
     used_best_effort_jobs = []
 
     for best_effort_job in best_effort_jobs:
@@ -267,35 +269,52 @@ def get_slo_comparison_data(priority_df, high_priority_job, best_effort_jobs, me
         priority_mps_priority_throughput = best_effort_job_df[f"high_priority_mps_priority_throughput"].values[0]
         mps_priority_throughput = best_effort_job_df[f"best_effort_mps_priority_throughput"].values[0]
 
-        acceptable_latency_bound = (1 + tolerance_level) * baseline_latency * 1.01
-        tally_acceptable_df = best_effort_job_df[best_effort_job_df[f"high_priority_tally_{metric}_latency"] <= acceptable_latency_bound]
-
-        if tally_acceptable_df.empty:
-            tally_latency = 0.
-            tally_throughput = 0.
-            priority_tally_throughput = 0.
+        tally_space_share_df = best_effort_job_df[best_effort_job_df[f"use_space_share"] == True]
+        if not tally_space_share_df.empty:
+            tally_space_share_latency = tally_space_share_df[f"high_priority_tally_{metric}_latency"].values[0]
+            priority_tally_space_share_throughput = tally_space_share_df[f"best_effort_tally_throughput"].values[0]
+            tally_space_share_throughput = tally_space_share_df[f"high_priority_tally_throughput"].values[0]
         else:
-            best_achievable_throughput = tally_acceptable_df[f"best_effort_tally_throughput"].max()
-            best_measurement = tally_acceptable_df[tally_acceptable_df[f"best_effort_tally_throughput"] == best_achievable_throughput]
-            tally_latency = best_measurement[f"high_priority_tally_{metric}_latency"].values[0]
-            tally_throughput = best_measurement[f"best_effort_tally_throughput"].values[0]
-            priority_tally_throughput = best_measurement[f"high_priority_tally_throughput"].values[0]
+            tally_space_share_latency, priority_tally_space_share_throughput, tally_space_share_throughput = 0, 0, 0
+
+        tally_no_transform_df = best_effort_job_df[best_effort_job_df[f"disable_transformation"] == True]
+        if not tally_no_transform_df.empty:
+            tally_no_transform_latency = tally_no_transform_df[f"high_priority_tally_{metric}_latency"].values[0]
+            priority_tally_no_transform_throughput = tally_no_transform_df[f"best_effort_tally_throughput"].values[0]
+            tally_no_transform_throughput = tally_no_transform_df[f"high_priority_tally_throughput"].values[0]
+        else:
+            tally_no_transform_latency, priority_tally_no_transform_throughput, tally_no_transform_throughput = 0, 0, 0
+
+        tally_df = best_effort_job_df
+        for param in tally_config:
+            val = tally_config[param]
+            tally_df = tally_df[tally_df[param] == val]
+
+        tally_latency = tally_df[f"high_priority_tally_{metric}_latency"].values[0]
+        tally_throughput = tally_df[f"best_effort_tally_throughput"].values[0]
+        priority_tally_throughput = tally_df[f"high_priority_tally_throughput"].values[0]
 
         baseline_latencies.append(baseline_latency)
         time_sliced_latencies.append(time_sliced_latency)
         mps_latencies.append(mps_latency)
         mps_priority_latencies.append(mps_priority_latency)
         tally_latencies.append(tally_latency)
+        tally_space_share_latencies.append(tally_space_share_latency)
+        tally_no_transform_latencies.append(tally_no_transform_latency)
 
         priority_time_sliced_throughputs.append(priority_time_sliced_throughput)
         priority_mps_throughputs.append(priority_mps_throughput)
         priority_mps_priority_throughputs.append(priority_mps_priority_throughput)
         priority_tally_throughputs.append(priority_tally_throughput)
+        priority_tally_space_share_throughputs.append(priority_tally_space_share_throughput)
+        priority_tally_no_transform_throughputs.append(priority_tally_no_transform_throughput)
 
         time_sliced_throughputs.append(time_sliced_throughput)
         mps_throughputs.append(mps_throughput)
         mps_priority_throughputs.append(mps_priority_throughput)
         tally_throughputs.append(tally_throughput)
+        tally_space_share_throughputs.append(tally_space_share_throughput)
+        tally_no_transform_throughputs.append(tally_no_transform_throughput)
 
         used_best_effort_jobs.append(best_effort_job)
     
@@ -305,14 +324,20 @@ def get_slo_comparison_data(priority_df, high_priority_job, best_effort_jobs, me
         "mps_latencies": mps_latencies,
         "mps_priority_latencies": mps_priority_latencies,
         "tally_latencies": tally_latencies,
+        "tally_space_share_latencies": tally_space_share_latencies,
+        "tally_no_transform_latencies": tally_no_transform_latencies,
         "priority_time_sliced_throughputs": priority_time_sliced_throughputs,
         "priority_mps_throughputs": priority_mps_throughputs,
         "priority_mps_priority_throughputs": priority_mps_priority_throughputs,
         "priority_tally_throughputs": priority_tally_throughputs,
+        "priority_tally_space_share_throughputs": priority_tally_space_share_throughputs,
+        "priority_tally_no_transform_throughputs": priority_tally_no_transform_throughputs,
         "time_sliced_throughputs": time_sliced_throughputs,
         "mps_throughputs": mps_throughputs,
         "mps_priority_throughputs": mps_priority_throughputs,
         "tally_throughputs": tally_throughputs,
+        "tally_space_share_throughputs": tally_space_share_throughputs,
+        "tally_no_transform_throughputs": tally_no_transform_throughputs,
         "used_best_effort_jobs": used_best_effort_jobs
     }
 

@@ -52,47 +52,47 @@ echo "======== Profiling kernel metrics for throughput-oriented jobs for priorit
         --profile-only \
         --save-results
 
-# # Run priority-related co-located experiments with MPS
-# if [[ $GPU_MODE == "Exclusive_Process" ]]; then
-# echo "======== Collecting priority-related pair-wise performance with MPS ... ========"
-# time_cmd \
-#     python3 -u scripts/run_bench.py \
-#         --save-results \
-#         --use-mps \
-#         --runtime $RUNTIME \
-#         --warmup-iters $WARMUP_ITERS \
-#         --run-pairwise
-# else
-#     echo "Skip collecting pair-wise performance with MPS because GPU_MODE is not EXCLUSIVE"
-# fi
+# Run priority-related co-located experiments with MPS
+if [[ $GPU_MODE == "Exclusive_Process" ]]; then
+echo "======== Collecting priority-related pair-wise performance with MPS ... ========"
+time_cmd \
+    python3 -u scripts/run_bench.py \
+        --save-results \
+        --use-mps \
+        --runtime $RUNTIME \
+        --warmup-iters $WARMUP_ITERS \
+        --run-pairwise
+else
+    echo "Skip collecting pair-wise performance with MPS because GPU_MODE is not EXCLUSIVE"
+fi
 
-# # Run priority-related co-located experiments with MPS
-# if [[ $GPU_MODE == "Exclusive_Process" ]]; then
-# echo "======== Collecting priority-related pair-wise performance with MPS Priority ... ========"
-# time_cmd \
-#     python3 -u scripts/run_bench.py \
-#         --save-results \
-#         --use-mps-priority \
-#         --runtime $RUNTIME \
-#         --warmup-iters $WARMUP_ITERS \
-#         --run-pairwise
-# else
-#     echo "Skip collecting pair-wise performance with MPS Priority because GPU_MODE is not EXCLUSIVE"
-# fi
+# Run priority-related co-located experiments with MPS
+if [[ $GPU_MODE == "Exclusive_Process" ]]; then
+echo "======== Collecting priority-related pair-wise performance with MPS Priority ... ========"
+time_cmd \
+    python3 -u scripts/run_bench.py \
+        --save-results \
+        --use-mps-priority \
+        --runtime $RUNTIME \
+        --warmup-iters $WARMUP_ITERS \
+        --run-pairwise
+else
+    echo "Skip collecting pair-wise performance with MPS Priority because GPU_MODE is not EXCLUSIVE"
+fi
 
-# # Run priority-related co-located experiments with hardware multi-processing
-# if [[ $GPU_MODE == "Default" ]]; then
-# echo "======== Collecting priority-related pair-wise performance with hardware multi-processing ... ========"
-# SCHEDULER_POLICY=PRIORITY \
-#     time_cmd \
-#     python3 -u scripts/run_bench.py \
-#         --save-results \
-#         --runtime $RUNTIME \
-#         --warmup-iters $WARMUP_ITERS \
-#         --run-pairwise
-# else
-#     echo "Skip collecting pair-wise performance with hardware multi-processing because GPU_MODE is not Default"
-# fi
+# Run priority-related co-located experiments with hardware multi-processing
+if [[ $GPU_MODE == "Default" ]]; then
+echo "======== Collecting priority-related pair-wise performance with hardware multi-processing ... ========"
+SCHEDULER_POLICY=PRIORITY \
+    time_cmd \
+    python3 -u scripts/run_bench.py \
+        --save-results \
+        --runtime $RUNTIME \
+        --warmup-iters $WARMUP_ITERS \
+        --run-pairwise
+else
+    echo "Skip collecting pair-wise performance with hardware multi-processing because GPU_MODE is not Default"
+fi
 
 # Run priority-related co-located experiments with Tally priority scheduler
 if [[ $GPU_MODE == "Exclusive_Process" ]]; then

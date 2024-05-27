@@ -2,27 +2,27 @@ training_workloads = {
     "pytorch": {
         "resnet50": {
             "batch-sizes": [128],
-            "amp": [True, False]
+            "amp": [False]
         },
         "pointnet": {
             "batch-sizes": [128],
-            "amp": [True, False]
+            "amp": [False]
         },
         "bert": {
             "batch-sizes": [32],
-            "amp": [True, False]
+            "amp": [False]
         },
         "pegasus-x-base": {
-            "batch-sizes": [8],
-            "amp": [True, False]
+            "batch-sizes": [4],
+            "amp": [False]
         },
         "whisper-large-v3": {
             "batch-sizes": [16],
-            "amp": [True, False]
+            "amp": [False]
         },
         "gpt2-large": {
             "batch-sizes": [1],
-            "amp": [True, False]
+            "amp": [False]
         }
     }
 }

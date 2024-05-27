@@ -1,6 +1,13 @@
 import json
 import os
 
+def count_jobs(key):
+    count = 0
+    count += key.count("hidet")
+    count += key.count("pytorch")
+    count += key.count("onnxruntime")
+    return count
+
 def load_json_from_file(f_name):
     result = {}
     if os.path.isfile(f_name):
@@ -10,36 +17,17 @@ def load_json_from_file(f_name):
 
 result = load_json_from_file("tally_bench_results/result.json")
 
-remove_keys =  [
-    'pytorch_resnet50_train_64',
-    'pytorch_resnet50_train_64_amp',
-    'pytorch_whisper-large-v3_train_8',
-    'pytorch_whisper-large-v3_train_8_amp',
-    'pytorch_pointnet_train_64',
-    'pytorch_pointnet_train_64_amp',
-    'pytorch_pegasus-x-base_train_4',
-    'pytorch_pegasus-x-base_train_4_amp',
-    'pytorch_bert_train_16',
-    'pytorch_bert_train_16_amp',
-    'pytorch_whisper-large-v3_train_32',
-    'pytorch_whisper-large-v3_train_32_amp',
-    'pytorch_pointnet_train_256',
-    'pytorch_pointnet_train_256_amp',
-    'pytorch_resnet50_train_256',
-    'pytorch_resnet50_train_256_amp',
-]
-
 def fix_result(result):
     if isinstance(result, dict):
-
         keys = list(result.keys())
         for key in keys:
 
-            if "tvm" in key:
+            if "llama" in key and "load" in key:
                 del result[key]
             else:
                 val = result[key]
                 fix_result(val)
+
     elif isinstance(result, list):
         for item in result:
             fix_result(item)
