@@ -8,6 +8,7 @@ from bench_utils.bench import run_benchmark_suite
 parser = argparse.ArgumentParser(prog="benchmark suite launcher", description="Launch benchmark suite")
 
 parser.add_argument("--save-results", action="store_true", default=False)
+parser.add_argument("--use-tgs", action="store_true", default=False)
 parser.add_argument("--use-mps", action="store_true", default=False)
 parser.add_argument("--use-mps-priority", action="store_true", default=False)
 parser.add_argument("--use-tally-naive", action="store_true", default=False)
@@ -28,6 +29,7 @@ if __name__ == "__main__":
         use_mps_priority=args.use_mps_priority,
         use_tally_naive=args.use_tally_naive,
         use_tally_priority=args.use_tally_priority,
+        use_tgs=args.use_tgs,
         run_pairwise=args.run_pairwise,
         runtime=args.runtime,
         warmup_iters=args.warmup_iters,

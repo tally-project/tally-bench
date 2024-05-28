@@ -60,14 +60,8 @@ class Benchmark:
         self.infer_mode = infer_mode
         self.infer_load = infer_load
         self.priority = None
-        self.replace_cublas = False
         self.trace_file = None
-
-        if (
-            (not self.is_latency_critical()) or
-            any([m in self.model_name for m in ["bert", "yolo", "gpt-neo", "stable", "stable-diffusion", "vit"]])
-        ):
-            self.replace_cublas = True
+        self.replace_cublas = True
     
     def is_latency_critical(self):
         return not self.is_train
@@ -92,7 +86,7 @@ class Benchmark:
 
         return _str
 
-    def get_launch_cmd(self, use_tally, pipe_name=None):
+    def get_launch_cmd(self, use_tally, use_tgs, pipe_name=None):
         launch_cmd = (f"python3 -u scripts/launch.py "
                             f"--framework {self.framework} "
                             f"--benchmark {self.model_name} "
@@ -116,7 +110,7 @@ class Benchmark:
         if pipe_name:
             launch_cmd += f"--signal --pipe {pipe_name} "
         
-        if use_tally:
+        if use_tally or use_tgs:
             launch_cmd = f"{tally_client_script} {launch_cmd}"
         else:
             launch_cmd = f"{tally_client_local_script} {launch_cmd}"
@@ -191,13 +185,13 @@ def get_smallest_max_allowed_latency():
 
 
 def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_mps_priority=False,
-                     use_tally=False, result=None, profile_only=False, tally_config=None,
+                     use_tgs=False, use_tally=False, result=None, profile_only=False, tally_config=None,
                      truncate_result=False, keep_trace=False):
 
     output_dict = {}
-    backend = get_backend_name(use_tally, use_mps, use_mps_priority=use_mps_priority, tally_config=tally_config)
+    backend = get_backend_name(use_tally, use_mps, use_mps_priority=use_mps_priority, use_tgs=use_tgs, tally_config=tally_config)
     bench_id = get_bench_id(benchmarks)
-    
+
     if backend not in result:
         result[backend] = {}
     backend_res = result[backend]
@@ -240,13 +234,13 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_mps_priorit
             shut_down_mps()
             start_mps()
 
-        elif use_tally:
+        elif use_tally or use_tgs:
             shut_down_tally()
             shut_down_iox_roudi
             start_iox_roudi()
-            start_tally(tally_config)
+            start_tally(tally_config, use_tgs=use_tgs)
 
-        for idx, benchmark in enumerate(benchmarks):
+        for idx, benchmark in enumerate(reversed(benchmarks)):
 
             pipe_name = get_pipe_name(idx)
 
@@ -254,7 +248,7 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_mps_priorit
                 os.remove(pipe_name)
             os.mkfifo(pipe_name)
 
-            launch_cmd = benchmark.get_launch_cmd(pipe_name=pipe_name, use_tally=use_tally)
+            launch_cmd = benchmark.get_launch_cmd(pipe_name=pipe_name, use_tally=use_tally, use_tgs=use_tgs)
             logger.info(f"bench {idx} launch_cmd: {launch_cmd}")
 
             process_env = os.environ.copy()
@@ -307,7 +301,7 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_mps_priorit
         
             while True:
                 poll = process.poll()
-                if poll is not None or (use_tally and query_tally() == 1):
+                if poll is not None or ((use_tally or use_tgs) and query_tally() == 1):
                     abort = True
                     wait_t.join()
                     output_dict["error"] = "Encountered error."
@@ -434,6 +428,7 @@ def run_benchmark_suite(
         use_mps_priority=False,
         use_tally_naive=False,
         use_tally_priority=False,
+        use_tgs=False,
         run_pairwise=False,
         runtime=10,
         warmup_iters=10,
@@ -536,8 +531,11 @@ def run_benchmark_suite(
                 bench_2.trace_file = trace_path
 
                 trace_last_ts = trace[-1]
-                bench_1.runtime = math.ceil(trace_last_ts)
-                bench_2.runtime = math.ceil(trace_last_ts)
+                # bench_1.runtime = math.ceil(trace_last_ts)
+                # bench_2.runtime = math.ceil(trace_last_ts)
+
+                bench_1.runtime = 30
+                bench_2.runtime = 30
 
             logger.info(f"Running {idx + 1} out of {len(pair_wise_benchmarks)} pairwise benchmarks: {bench_id} ...")
 
@@ -555,13 +553,13 @@ def run_benchmark_suite(
             bench_2.set_priority(2)
 
             updated = False
-
+            tally_config = None
             if use_tally_priority:
-                updated |= launch_benchmark(pair, use_mps=use_mps, use_mps_priority=use_mps_priority, use_tally=use_tally,
-                                            result=result, tally_config=default_tally_config, truncate_result=True)
-            else:
-                updated = launch_benchmark(pair, use_mps=use_mps, use_mps_priority=use_mps_priority, use_tally=use_tally,
-                                           result=result, truncate_result=True)
+                tally_config = default_tally_config
+
+            updated = launch_benchmark(pair, use_mps=use_mps, use_mps_priority=use_mps_priority, use_tgs=use_tgs,
+                                        use_tally=use_tally, result=result, tally_config=tally_config,
+                                        truncate_result=True)
             
             save_results_to_file(result, updated, save_results)
 

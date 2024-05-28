@@ -3,6 +3,8 @@ import random
 import numpy as np
 import select
 import logging
+import errno
+from datetime import datetime
 
 import torch
 
@@ -52,7 +54,7 @@ def get_cuda_device_id():
     return cuda_devices[0]
 
   
-def init_env(use_mps=False, use_tally=False, run_pairwise=True):
+def init_env(use_mps=False, use_tally=False, use_tgs=False, run_pairwise=True):
     tear_down_env()
 
     # does not matter if not running pairwise
@@ -68,7 +70,7 @@ def init_env(use_mps=False, use_tally=False, run_pairwise=True):
 
     if use_mps:
         required_mode = "Exclusive_Process"
-    elif use_tally:
+    elif use_tally or use_tgs:
         required_mode = "Exclusive_Process"
     else:
         required_mode = "Default"
@@ -83,25 +85,46 @@ def tear_down_env():
     shut_down_iox_roudi()
 
 
-def wait_for_signal(pipe_name):
+def wait_for_signal(pipe_name, break_if_not_ready=False):
 
-    with open(pipe_name, 'w') as pipe:
-        pipe.write("benchmark is warm\n")
+    if break_if_not_ready:
+        try:
+            pipe_fd = os.open(pipe_name, os.O_WRONLY | os.O_NONBLOCK)
+            with os.fdopen(pipe_fd, 'w') as pipe:
+                pipe.write("benchmark is warm\n")
 
-    with open(pipe_name, 'r') as pipe:
-        while True:
-            readable, _, _ = select.select([pipe], [], [], 1)
-            if readable and "start" in pipe.readline():
-                break
+            pipe_fd = os.open(pipe_name, os.O_RDONLY | os.O_NONBLOCK)
+            with os.fdopen(pipe_fd, 'r') as pipe:
+                while True:
+                    readable, _, _ = select.select([pipe], [], [], 0.0000001)
+
+                    if readable and "start" in pipe.readline():
+                        return True
+                
+                    if break_if_not_ready:
+                        return False
+        except Exception as e:
+            return False
+    else:
+        with open(pipe_name, 'w') as pipe:
+            pipe.write("benchmark is warm\n")
+
+        with open(pipe_name, 'r') as pipe:
+            while True:
+                readable, _, _ = select.select([pipe], [], [], 1)
+                if readable and "start" in pipe.readline():
+                    return True
 
 
-def get_backend_name(use_tally=False, use_mps=False, use_mps_priority=False, tally_config=None):
+def get_backend_name(use_tally=False, use_mps=False, use_mps_priority=False, use_tgs=False, tally_config=None):
     backend = "default"
 
     if use_mps_priority:
         backend = "mps-priority"
     elif use_mps:
         backend = "mps"
+    elif use_tgs:
+        backend = "tgs"
     elif use_tally:
         backend = f"tally_{tally_config.scheduler_policy}".lower()
 

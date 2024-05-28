@@ -58,7 +58,7 @@ def shut_down_iox_roudi():
     stop_iox_cmd = f"bash {iox_roudi_kill_script}"
     execute_cmd(stop_iox_cmd)
 
-def start_tally(config: TallyConfig = None):
+def start_tally(config: TallyConfig = None, use_tgs=False):
     logger.info("Starting Tally server ...")
     start_tally_cmd = f"bash {tally_start_script} &"
 
@@ -68,6 +68,9 @@ def start_tally(config: TallyConfig = None):
         for key in config_dict:
             start_tally_cmd = f"{key}={config_dict[key]} {start_tally_cmd}"
             
+    if use_tgs:
+        start_tally_cmd = f"SCHEDULER_POLICY=TGS {start_tally_cmd}"
+
     execute_cmd(start_tally_cmd)
     time.sleep(2)
 

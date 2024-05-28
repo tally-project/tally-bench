@@ -35,11 +35,19 @@ class InferMonitor:
             if curr_time - self.start_time >= self.total_time:
                 self.should_stop = True
 
-        if self.num_iters == self.warmup_iters:
-            self.warm = True
+        if not self.warm and self.num_iters >= self.warmup_iters:
 
             if self.signal:
-                wait_for_signal(self.pipe)
+                if wait_for_signal(self.pipe, break_if_not_ready=True):
+                    with open("high-priority.txt", "a") as f:
+                        f.write("returned true\n")
+                    pass
+                else:
+                    with open("high-priority.txt", "a") as f:
+                        f.write("returned false\n")
+                    return self.should_stop
+            
+            self.warm = True
 
             self.start_time = timeit.default_timer()
             print("Measurement starts ...")
