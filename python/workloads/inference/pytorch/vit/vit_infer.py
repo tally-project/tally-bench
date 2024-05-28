@@ -5,12 +5,14 @@ from datasets import load_dataset
 from workloads.common.infer_monitor import get_infer_monitor
 
 def vit_infer(model_name, mode, batch_size, warmup_iters, total_time,
-                 load=0.5, trace_file=None, result_dict=None, signal=False, pipe=None):
+                 load=0.5, trace_file=None, result_dict=None, signal=False,
+                 pipe=None, no_waiting=False):
     
     if mode in ["single-stream", "server"]:
         assert(batch_size == 1)
 
-    monitor = get_infer_monitor(mode, warmup_iters, total_time, result_dict, signal, pipe, load, trace_file)
+    monitor = get_infer_monitor(mode, warmup_iters, total_time, result_dict,
+                                signal, pipe, load, trace_file, no_waiting)
     
     dataset = load_dataset("huggingface/cats-image")
     image = dataset["test"]["image"][0]

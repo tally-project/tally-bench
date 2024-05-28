@@ -6,7 +6,8 @@ from workloads.common.utils import get_torch_compile_options
 from workloads.common.infer_monitor import get_infer_monitor
 
 def vision_infer(model_name, mode, batch_size, warmup_iters, total_time,
-                 load=0.5, trace_file=None, result_dict=None, signal=False, pipe=None):
+                 load=0.5, trace_file=None, result_dict=None, signal=False,
+                 pipe=None, no_waiting=False):
     
     model = getattr(torchvision.models, model_name)()
     model = model.cuda().eval()
@@ -19,7 +20,8 @@ def vision_infer(model_name, mode, batch_size, warmup_iters, total_time,
     if mode in ["single-stream", "server"]:
         assert(batch_size == 1)
 
-    monitor = get_infer_monitor(mode, warmup_iters, total_time, result_dict, signal, pipe, load, trace_file)
+    monitor = get_infer_monitor(mode, warmup_iters, total_time, result_dict,
+                                signal, pipe, load, trace_file, no_waiting)
     data = torch.randn(batch_size, 3, 224, 224).cuda()
 
     while True:

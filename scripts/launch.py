@@ -28,6 +28,7 @@ parser.add_argument("--total-iters", type=int, default=0)
 parser.add_argument("--runtime", type=int, default=10)
 parser.add_argument("--signal", action="store_true", default=False)
 parser.add_argument("--pipe", type=str, default="")
+parser.add_argument("--no-waiting", action="store_true", default=False)
 
 args = parser.parse_args()
 
@@ -60,7 +61,8 @@ if __name__ == "__main__":
                        args.runtime, total_iters, result_dict, args.signal, args.pipe)
     else:
         benchmark_func(args.benchmark, args.infer_type, args.batch_size, args.warmup_iters,
-                       args.runtime, args.infer_load, args.infer_trace, result_dict, args.signal, args.pipe)
+                       args.runtime, args.infer_load, args.infer_trace, result_dict, args.signal,
+                       args.pipe, args.no_waiting)
     
     # Print json format result
     print(json.dumps(dict(result_dict)))

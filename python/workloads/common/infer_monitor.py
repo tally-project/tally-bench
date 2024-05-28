@@ -10,7 +10,8 @@ from bench_utils.utils import busy_sleep, get_possion_arrival_trace, load_json_f
 
 class InferMonitor:
 
-    def __init__(self, warmup_iters, total_time, result_dict, signal, pipe):
+    def __init__(self, warmup_iters, total_time, result_dict, signal=None, pipe=None,
+                 no_waiting=False):
         self.start_time = None
         self.num_iters = 0
         self.warm_iters = 0
@@ -23,6 +24,7 @@ class InferMonitor:
         self.time_elapsed = None
         self.pipe = pipe
         self.should_stop = False
+        self.no_waiting = no_waiting
     
     def on_step_end(self):
 
@@ -38,13 +40,9 @@ class InferMonitor:
         if not self.warm and self.num_iters >= self.warmup_iters:
 
             if self.signal:
-                if wait_for_signal(self.pipe, break_if_not_ready=True):
-                    with open("high-priority.txt", "a") as f:
-                        f.write("returned true\n")
+                if wait_for_signal(self.pipe, break_if_not_ready=self.no_waiting):
                     pass
                 else:
-                    with open("high-priority.txt", "a") as f:
-                        f.write("returned false\n")
                     return self.should_stop
             
             self.warm = True
@@ -62,8 +60,8 @@ class InferMonitor:
 
 class SingleStreamInferMonitor(InferMonitor):
 
-    def __init__(self, warmup_iters, total_time, result_dict, signal, pipe):
-        super().__init__(warmup_iters, total_time, result_dict, signal, pipe)
+    def __init__(self, warmup_iters, total_time, result_dict, signal, pipe, no_waiting=False):
+        super().__init__(warmup_iters, total_time, result_dict, signal, pipe, no_waiting)
 
         self.step_begin_time = None
         self.step_end_time = None
@@ -97,8 +95,9 @@ class SingleStreamInferMonitor(InferMonitor):
 
 class ServerInferMonitor(InferMonitor):
 
-    def __init__(self, warmup_iters, total_time, result_dict, signal, pipe, load=None, trace_file=None):
-        super().__init__(warmup_iters, total_time, result_dict, signal, pipe)
+    def __init__(self, warmup_iters, total_time, result_dict, signal, pipe,
+                 load=None, trace_file=None, no_waiting=False):
+        super().__init__(warmup_iters, total_time, result_dict, signal, pipe, no_waiting)
 
         self.step_begin_time = None
         self.step_end_time = None
@@ -158,12 +157,13 @@ class ServerInferMonitor(InferMonitor):
             self.result_dict["end_timestamps"] = self.end_timestamps
 
 
-def get_infer_monitor(mode, warmup_iters, total_time, result_dict, signal, pipe, load=None, trace_file=None):
+def get_infer_monitor(mode, warmup_iters, total_time, result_dict, signal, pipe,
+                      load=None, trace_file=None, no_waiting=False):
 
     if mode == "single-stream":
-        return SingleStreamInferMonitor(warmup_iters, total_time, result_dict, signal, pipe)
+        return SingleStreamInferMonitor(warmup_iters, total_time, result_dict, signal, pipe, no_waiting)
     elif mode == "server":
         assert(load)
-        return ServerInferMonitor(warmup_iters, total_time, result_dict, signal, pipe, load, trace_file)
+        return ServerInferMonitor(warmup_iters, total_time, result_dict, signal, pipe, load, trace_file, no_waiting)
     else:
         raise Exception("unknown mode")

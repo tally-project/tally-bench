@@ -6,12 +6,14 @@ from workloads.common.utils import export_torchvision_model_as_onnx
 from workloads.common.tvm_utils import tvm_graph_module_from_onnx
 
 def vision_infer(model_name, mode, batch_size, warmup_iters, total_time,
-                 load=0.5, trace_file=None, result_dict=None, signal=False, pipe=None):
+                 load=0.5, trace_file=None, result_dict=None, signal=False, pipe=None,
+                 no_waiting=False):
 
     if mode in ["single-stream", "server"]:
         assert(batch_size == 1)
         
-    monitor = get_infer_monitor(mode, warmup_iters, total_time, result_dict, signal, pipe, load, trace_file)
+    monitor = get_infer_monitor(mode, warmup_iters, total_time, result_dict,
+                                signal, pipe, load, trace_file, no_waiting)
 
     model_path = f"./data/{model_name}.onnx"
     export_torchvision_model_as_onnx(model_name, model_path)

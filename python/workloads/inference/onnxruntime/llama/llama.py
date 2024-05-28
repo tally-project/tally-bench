@@ -114,7 +114,8 @@ def apply_io_binding(model, inputs, outputs, use_fp16, use_buffer_share):
     return io_binding
 
 def llama2_infer(model_name, mode, batch_size, warmup_iters, total_time,
-                 load=0.5, trace_file=None, result_dict=None, signal=False, pipe=None):
+                 load=0.5, trace_file=None, result_dict=None, signal=False,
+                 pipe=None, no_waiting=False):
 
     if mode in ["single-stream", "server"]:
         assert(batch_size == 1)
@@ -145,7 +146,8 @@ def llama2_infer(model_name, mode, batch_size, warmup_iters, total_time,
     ep = ("CUDAExecutionProvider", {"device_id": device_id})  # change to ep = "CPUExecutionProvider" for CPU
     model = ort.InferenceSession(onnx_model_path, sess_options=sess_options, providers=[ep])
 
-    monitor = get_infer_monitor(mode, warmup_iters, total_time, result_dict, signal, pipe, load, trace_file)
+    monitor = get_infer_monitor(mode, warmup_iters, total_time, result_dict, signal, pipe,
+                                load, trace_file, no_waiting)
 
     while True:
 

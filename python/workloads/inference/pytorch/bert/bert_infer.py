@@ -7,7 +7,8 @@ from workloads.common.utils import get_torch_compile_options
 from workloads.common.infer_monitor import get_infer_monitor
 
 def bert_infer(model_name, mode, batch_size, warmup_iters, total_time,
-                 load=0.5, trace_file=None, result_dict=None, signal=False, pipe=None):
+                 load=0.5, trace_file=None, result_dict=None, signal=False,
+                 pipe=None, no_waiting=False):
 
     if mode in ["single-stream", "server"]:
         assert(batch_size == 1)
@@ -53,7 +54,8 @@ def bert_infer(model_name, mode, batch_size, warmup_iters, total_time,
     compile_options = get_torch_compile_options()
     model = torch.compile(model, backend="inductor", options=compile_options)
 
-    monitor = get_infer_monitor(mode, warmup_iters, total_time, result_dict, signal, pipe, load, trace_file)
+    monitor = get_infer_monitor(mode, warmup_iters, total_time, result_dict,
+                                signal, pipe, load, trace_file, no_waiting)
 
     while True:
 

@@ -110,11 +110,14 @@ class Benchmark:
         if pipe_name:
             launch_cmd += f"--signal --pipe {pipe_name} "
         
+        if use_tgs:
+            launch_cmd += f"--no-waiting "
+        
         if use_tally or use_tgs:
             launch_cmd = f"{tally_client_script} {launch_cmd}"
         else:
             launch_cmd = f"{tally_client_local_script} {launch_cmd}"
-        
+
         return launch_cmd
 
 

@@ -5,7 +5,8 @@ import torch
 from workloads.common.infer_monitor import get_infer_monitor
 
 def gpt_neo_infer(model_name, mode, batch_size, warmup_iters, total_time,
-                 load=0.5, trace_file=None, result_dict=None, signal=False, pipe=None):
+                 load=0.5, trace_file=None, result_dict=None, signal=False,
+                 pipe=None, no_waiting=False):
     
     if mode in ["single-stream", "server"]:
         assert(batch_size == 1)
@@ -19,7 +20,8 @@ def gpt_neo_infer(model_name, mode, batch_size, warmup_iters, total_time,
 
     prompt = "EleutherAI has"
 
-    monitor = get_infer_monitor(mode, warmup_iters, total_time, result_dict, signal, pipe, load, trace_file)
+    monitor = get_infer_monitor(mode, warmup_iters, total_time, result_dict,
+                                signal, pipe, load, trace_file, no_waiting)
 
     while True:
 
