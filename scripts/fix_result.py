@@ -22,7 +22,7 @@ def fix_result(result):
         keys = list(result.keys())
         for key in keys:
 
-            if "llama" in key:
+            if "tgs" in key:
                 del result[key]
             else:
                 val = result[key]

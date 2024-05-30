@@ -347,6 +347,9 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_mps_priorit
         
         abort_timeout = benchmarks[0].runtime * 2
 
+        # as we reverse before
+        processes.reverse()
+
         for i in range(len(processes)):
             process = processes[i]
             stdout, stderr = process.communicate(timeout=abort_timeout)
@@ -534,11 +537,12 @@ def run_benchmark_suite(
                 bench_2.trace_file = trace_path
 
                 trace_last_ts = trace[-1]
-                # bench_1.runtime = math.ceil(trace_last_ts)
-                # bench_2.runtime = math.ceil(trace_last_ts)
+                bench_1.runtime = math.ceil(trace_last_ts)
+                bench_2.runtime = math.ceil(trace_last_ts)
 
-                bench_1.runtime = 30
-                bench_2.runtime = 30
+                # when testing, set small runtime
+                # bench_1.runtime = 30
+                # bench_2.runtime = 30
 
             logger.info(f"Running {idx + 1} out of {len(pair_wise_benchmarks)} pairwise benchmarks: {bench_id} ...")
 

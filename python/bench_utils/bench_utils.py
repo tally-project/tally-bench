@@ -54,7 +54,7 @@ def get_cuda_device_id():
     return cuda_devices[0]
 
   
-def init_env(use_mps=False, use_tally=False, use_tgs=False, run_pairwise=True):
+def init_env(use_mps=False, use_tally=False, use_tgs=False, run_pairwise=False):
     tear_down_env()
 
     # does not matter if not running pairwise

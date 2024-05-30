@@ -7,7 +7,7 @@ import matplotlib.ticker as ticker
 from bench_utils.utils import mkdir_if_not_exists
 from bench_utils.parse import get_slo_comparison_data
 
-colors = ['tab:blue', 'tab:orange', 'tab:red', 'tab:green', 'xkcd:light purple', 'tab:olive', 'tab:brown', 'tab:pink', 'tab:gray', 'tab:purple', 'tab:cyan', 'xkcd:sky blue', 'xkcd:light green', 'xkcd:light red', 'xkcd:light purple', 'xkcd:light brown', 'xkcd:light pink', 'xkcd:light gray', 'xkcd:light olive', 'xkcd:light cyan']
+colors = ['tab:blue', 'tab:orange', 'tab:red', 'tab:green', 'tab:olive', 'xkcd:light purple', 'tab:brown', 'tab:pink', 'tab:gray', 'tab:purple', 'tab:cyan', 'xkcd:sky blue', 'xkcd:light green', 'xkcd:light red', 'xkcd:light purple', 'xkcd:light brown', 'xkcd:light pink', 'xkcd:light gray', 'xkcd:light olive', 'xkcd:light cyan']
 markers = ['o', '^', 's', 'p', '*', '+', 'x', 'd', 'v', '<', '>', 'h', 'H', 'D', 'P', 'X']
 
 tally_default_config = {
@@ -18,19 +18,6 @@ tally_default_config = {
     "disable_transformation": False,
     "wait_time_to_use_original": "Default",
 }
-
-small_batch_jobs =  [
-    'pytorch_resnet50_train_64',
-    'pytorch_resnet50_train_64_amp',
-    'pytorch_whisper-large-v3_train_8',
-    'pytorch_whisper-large-v3_train_8_amp',
-    'pytorch_pointnet_train_64',
-    'pytorch_pointnet_train_64_amp',
-    'pytorch_pegasus-x-base_train_4',
-    'pytorch_pegasus-x-base_train_4_amp',
-    'pytorch_bert_train_16',
-    'pytorch_bert_train_16_amp',
-]
 
 
 def get_best_effort_job_label(best_effort_job, break_lines=False):
@@ -133,9 +120,6 @@ def plot_motivation_latency_comparison(priority_df, high_priority_job, best_effo
     baseline_latencies, time_sliced_latencies, mps_latencies, mps_priority_latencies = [], [], [], []
     used_best_effort_jobs = []
 
-    if remove_amp:
-        best_effort_jobs = [best_effort_job for best_effort_job in best_effort_jobs if "amp" not in best_effort_job]
-
     for best_effort_job in best_effort_jobs:
         best_effort_job_df = high_priority_job_df[high_priority_job_df["best_effort_job"] == best_effort_job]
 
@@ -145,7 +129,7 @@ def plot_motivation_latency_comparison(priority_df, high_priority_job, best_effo
         used_best_effort_jobs.append(best_effort_job)
         
         baseline_latency = best_effort_job_df[f"high_priority_orig_{metric}_latency"].values[0]
-        time_sliced_latency = best_effort_job_df[f"high_priority_hardware_mp_{metric}_latency"].values[0]
+        time_sliced_latency = best_effort_job_df[f"high_priority_time_slicing_{metric}_latency"].values[0]
         mps_latency = best_effort_job_df[f"high_priority_mps_{metric}_latency"].values[0]
         mps_priority_latency = best_effort_job_df[f"high_priority_mps_priority_{metric}_latency"].values[0]
 
@@ -190,14 +174,17 @@ def plot_slo_comparison_seperate_throughput(priority_df, high_priority_job, best
     mps_latencies = data["mps_latencies"]
     mps_priority_latencies = data["mps_priority_latencies"]
     tally_latencies = data["tally_latencies"]
+    tgs_latencies = data["tgs_latencies"]
     priority_time_sliced_throughputs = data["priority_time_sliced_throughputs"]
     priority_mps_throughputs = data["priority_mps_throughputs"]
     priority_mps_priority_throughputs = data["priority_mps_priority_throughputs"]
     priority_tally_throughputs = data["priority_tally_throughputs"]
+    priority_tgs_throughputs = data["priority_tgs_throughputs"]
     time_sliced_throughputs = data["time_sliced_throughputs"]
     mps_throughputs = data["mps_throughputs"]
     mps_priority_throughputs = data["mps_priority_throughputs"]
     tally_throughputs = data["tally_throughputs"]
+    tgs_throughputs = data["tgs_throughputs"]
     used_best_effort_jobs = data["used_best_effort_jobs"]
 
     # plotting
@@ -214,7 +201,8 @@ def plot_slo_comparison_seperate_throughput(priority_df, high_priority_job, best
     ax1.bar(pos + 1 * width, time_sliced_latencies, width, label=f"Time-Sliced", color=colors[1], alpha=0.7, edgecolor='black')
     ax1.bar(pos + 2 * width, mps_latencies, width, label=f"MPS", color=colors[2], alpha=0.7, edgecolor='black')
     ax1.bar(pos + 3 * width, mps_priority_latencies, width, label=f"MPS-Priority", color=colors[3], alpha=0.7, edgecolor='black')
-    ax1.bar(pos + 4 * width, tally_latencies, width, label=f"Tally", color=colors[4], alpha=0.7, edgecolor='black')
+    ax1.bar(pos + 4 * width, tgs_latencies, width, label=f"TGS", color=colors[4], alpha=0.7, edgecolor='black')
+    ax1.bar(pos + 5 * width, tally_latencies, width, label=f"Tally", color=colors[5], alpha=0.7, edgecolor='black')
 
     ax1.set_title(f"High-Priority {get_metric_str(metric)} Latency Comparison")
     ax1.set_ylabel(f"Latency (ms)")
@@ -224,7 +212,8 @@ def plot_slo_comparison_seperate_throughput(priority_df, high_priority_job, best
     ax2.bar(pos + 1 * width, priority_time_sliced_throughputs, width, label=f"Time-sliced", color=colors[1], alpha=0.7, edgecolor='black')
     ax2.bar(pos + 2 * width, priority_mps_throughputs, width, label=f"MPS", color=colors[2], alpha=0.7, edgecolor='black')
     ax2.bar(pos + 3 * width, priority_mps_priority_throughputs, width, label=f"MPS-Priority", color=colors[3], alpha=0.7, edgecolor='black')
-    ax2.bar(pos + 4 * width, priority_tally_throughputs, width, label=f"Tally", color=colors[4], alpha=0.7, edgecolor='black')
+    ax2.bar(pos + 4 * width, priority_tgs_throughputs, width, label=f"TGS", color=colors[4], alpha=0.7, edgecolor='black')
+    ax2.bar(pos + 5 * width, priority_tally_throughputs, width, label=f"Tally", color=colors[5], alpha=0.7, edgecolor='black')
 
     ax2.set_title("High-Priority Throughput Comparison")
     ax2.set_ylabel(f"Normalized Throughput")
@@ -234,7 +223,9 @@ def plot_slo_comparison_seperate_throughput(priority_df, high_priority_job, best
     ax3.bar(pos + 1 * width, time_sliced_throughputs, width, label=f"Time-sliced", color=colors[1], alpha=0.7, edgecolor='black')
     ax3.bar(pos + 2 * width, mps_throughputs, width, label=f"MPS", color=colors[2], alpha=0.7, edgecolor='black')
     ax3.bar(pos + 3 * width, mps_priority_throughputs, width, label=f"MPS-Priority", color=colors[3], alpha=0.7, edgecolor='black')
-    ax3.bar(pos + 4 * width, tally_throughputs, width, label=f"Tally", color=colors[4], alpha=0.7, edgecolor='black')
+    ax3.bar(pos + 4 * width, tgs_throughputs, width, label=f"TGS", color=colors[4], alpha=0.7, edgecolor='black')
+    ax3.bar(pos + 5 * width, tally_throughputs, width, label=f"Tally", color=colors[5], alpha=0.7, edgecolor='black')
+
 
     ax3.set_title("Best-effort Throughput Comparison")
     ax3.set_ylabel(f"Normalized Throughput")

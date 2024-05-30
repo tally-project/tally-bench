@@ -37,6 +37,7 @@ def parse_result(file_name, single_job_result_out=None, priority_result_out=None
     mps_priority_res = res.get("mps-priority", {})
     tally_naive_res = res.get("tally_naive", {})
     tally_priority_res = res.get("tally_priority", {})
+    tgs_res = res.get("tgs", {})
 
     # First Analysis: Compare single-job performance
     # This is more about getting a sense of the overhead of Tally and kernel transformation
@@ -98,20 +99,23 @@ def parse_result(file_name, single_job_result_out=None, priority_result_out=None
 
         mps_run_res = mps_res.get(key, {})
         mps_priority_run_res = mps_priority_res.get(key, {})
-        hardware_mp_run_res = baseline_res.get(key, {})
+        time_slicing_run_res = baseline_res.get(key, {})
         tally_priority_run_res = tally_priority_res.get(key, {})
+        tgs_run_res = tgs_res.get(key, {})
     
         tally_measurments = tally_priority_run_res.get("measurements", [])
         mps_measurments = mps_run_res.get("measurements", [{}])
         mps_priority_measurments = mps_priority_run_res.get("measurements", [{}])
-        hardware_mp_measurments = hardware_mp_run_res.get("measurements", [{}])
+        time_slicing_measurments = time_slicing_run_res.get("measurements", [{}])
+        tgs_measurments = tgs_run_res.get("measurements", [{}])
         if not tally_measurments:
             continue
 
         tally_measurement = tally_measurments[0]
         mps_measurment = mps_measurments[0]
         mps_priority_measurment = mps_priority_measurments[0]
-        hardware_mp_measurment = hardware_mp_measurments[0]
+        time_slicing_measurment = time_slicing_measurments[0]
+        tgs_measurment = tgs_measurments[0]
         measurment_keys = list(tally_measurement.keys())
         
         if "error" in measurment_keys:
@@ -165,31 +169,37 @@ def parse_result(file_name, single_job_result_out=None, priority_result_out=None
                 "best_effort_tally_throughput": "",
                 "best_effort_mps_throughput": "",
                 "best_effort_mps_priority_throughput": "",
-                "best_effort_hardware_mp_throughput": "",
+                "best_effort_time_slicing_throughput": "",
+                "best_effort_tgs_throughput": "",
                 "high_priority_tally_throughput": "",
                 "high_priority_mps_throughput": "",
                 "high_priority_mps_priority_throughput": "",
-                "high_priority_hardware_mp_throughput": "",
+                "high_priority_time_slicing_throughput": "",
+                "high_priority_tgs_throughput": "",
                 "high_priority_orig_avg_latency": "",
                 "high_priority_tally_avg_latency": "",
                 "high_priority_mps_avg_latency": "",
                 "high_priority_mps_priority_avg_latency": "",
-                "high_priority_hardware_mp_avg_latency": "",
+                "high_priority_time_slicing_avg_latency": "",
+                "high_priority_tgs_avg_latency": "",
                 "high_priority_orig_90th_latency": "",
                 "high_priority_tally_90th_latency": "",
                 "high_priority_mps_90th_latency": "",
                 "high_priority_mps_priority_90th_latency": "",
-                "high_priority_hardware_mp_90th_latency": "",
+                "high_priority_time_slicing_90th_latency": "",
+                "high_priority_tgs_90th_latency": "",
                 "high_priority_orig_95th_latency": "",
                 "high_priority_tally_95th_latency": "",
                 "high_priority_mps_95th_latency": "",
                 "high_priority_mps_priority_95th_latency": "",
-                "high_priority_hardware_mp_95th_latency": "",
+                "high_priority_time_slicing_95th_latency": "",
+                "high_priority_tgs_priority_95th_latency": "",
                 "high_priority_orig_99th_latency": "",
                 "high_priority_tally_99th_latency": "",
                 "high_priority_mps_99th_latency": "",
                 "high_priority_mps_priority_99th_latency": "",
-                "high_priority_hardware_mp_99th_latency": "",
+                "high_priority_time_slicing_99th_latency": "",
+                "high_priority_tgs_99th_latency": "",
             }
 
             high_priority_baseline_perf = single_job_baseline_perf[high_priority_job_clean]
@@ -200,16 +210,20 @@ def parse_result(file_name, single_job_result_out=None, priority_result_out=None
                 lc_result_row["best_effort_mps_throughput"] = compute_relative_tp(mps_measurment[best_effort_job], best_effort_baseline_perf)
             if mps_priority_measurment:
                 lc_result_row["best_effort_mps_priority_throughput"] = compute_relative_tp(mps_priority_measurment[best_effort_job], best_effort_baseline_perf)
-            if hardware_mp_measurment:
-                lc_result_row["best_effort_hardware_mp_throughput"] = compute_relative_tp(hardware_mp_measurment[best_effort_job], best_effort_baseline_perf)
+            if time_slicing_measurment:
+                lc_result_row["best_effort_time_slicing_throughput"] = compute_relative_tp(time_slicing_measurment[best_effort_job], best_effort_baseline_perf)
+            if tgs_measurment:
+                lc_result_row["best_effort_tgs_throughput"] = compute_relative_tp(tgs_measurment[best_effort_job], best_effort_baseline_perf)
 
             lc_result_row["high_priority_tally_throughput"] = compute_relative_tp(tally_measurement[high_priority_job], high_priority_baseline_perf)
             if mps_measurment:
                 lc_result_row["high_priority_mps_throughput"] = compute_relative_tp(mps_measurment[high_priority_job], high_priority_baseline_perf)
             if mps_priority_measurment:
                 lc_result_row["high_priority_mps_priority_throughput"] = compute_relative_tp(mps_priority_measurment[high_priority_job], high_priority_baseline_perf)
-            if hardware_mp_measurment:
-                lc_result_row["high_priority_hardware_mp_throughput"] = compute_relative_tp(hardware_mp_measurment[high_priority_job], high_priority_baseline_perf)
+            if time_slicing_measurment:
+                lc_result_row["high_priority_time_slicing_throughput"] = compute_relative_tp(time_slicing_measurment[high_priority_job], high_priority_baseline_perf)
+            if tgs_measurment:
+                lc_result_row["high_priority_tgs_throughput"] = compute_relative_tp(tgs_measurment[high_priority_job], high_priority_baseline_perf)
 
             lc_result_row["high_priority_orig_avg_latency"] = compute_avg(high_priority_baseline_perf["latencies"])
             lc_result_row["high_priority_tally_avg_latency"] = compute_avg(tally_measurement[high_priority_job]["latencies"])
@@ -217,8 +231,12 @@ def parse_result(file_name, single_job_result_out=None, priority_result_out=None
                 lc_result_row["high_priority_mps_avg_latency"] = compute_avg(mps_measurment[high_priority_job]["latencies"])
             if mps_priority_measurment:
                 lc_result_row["high_priority_mps_priority_avg_latency"] = compute_avg(mps_priority_measurment[high_priority_job]["latencies"])
-            if hardware_mp_measurment:
-                lc_result_row["high_priority_hardware_mp_avg_latency"] = compute_avg(hardware_mp_measurment[high_priority_job]["latencies"])
+            if time_slicing_measurment:
+                lc_result_row["high_priority_time_slicing_avg_latency"] = compute_avg(time_slicing_measurment[high_priority_job]["latencies"])
+            if tgs_measurment:
+                # print(key)
+                # print(tgs_measurment[high_priority_job].keys())
+                lc_result_row["high_priority_tgs_avg_latency"] = compute_avg(tgs_measurment[high_priority_job]["latencies"])
 
             for percentile in [90, 95, 99]:
                 lc_result_row[f"high_priority_orig_{percentile}th_latency"] = compute_percentile(high_priority_baseline_perf["latencies"], percentile)
@@ -228,8 +246,10 @@ def parse_result(file_name, single_job_result_out=None, priority_result_out=None
                     lc_result_row[f"high_priority_mps_{percentile}th_latency"] = compute_percentile(mps_measurment[high_priority_job]["latencies"], percentile)
                 if mps_priority_measurment:
                     lc_result_row[f"high_priority_mps_priority_{percentile}th_latency"] = compute_percentile(mps_priority_measurment[high_priority_job]["latencies"], percentile)
-                if hardware_mp_measurment:
-                    lc_result_row[f"high_priority_hardware_mp_{percentile}th_latency"] = compute_percentile(hardware_mp_measurment[high_priority_job]["latencies"], percentile)
+                if time_slicing_measurment:
+                    lc_result_row[f"high_priority_time_slicing_{percentile}th_latency"] = compute_percentile(time_slicing_measurment[high_priority_job]["latencies"], percentile)
+                if tgs_measurment:
+                    lc_result_row[f"high_priority_tgs_{percentile}th_latency"] = compute_percentile(tgs_measurment[high_priority_job]["latencies"], percentile)
 
             latency_critical_result.append(lc_result_row)
 
@@ -244,11 +264,11 @@ def parse_result(file_name, single_job_result_out=None, priority_result_out=None
 def get_slo_comparison_data(priority_df, high_priority_job, best_effort_jobs, tally_config, metric="avg"):
 
     high_priority_job_df = priority_df[priority_df["high_priority_job"] == high_priority_job]
-    baseline_latencies, time_sliced_latencies, mps_latencies, mps_priority_latencies = [], [], [], []
+    baseline_latencies, time_sliced_latencies, mps_latencies, mps_priority_latencies, tgs_latencies = [], [], [], [], []
     tally_latencies, tally_space_share_latencies, tally_no_transform_latencies = [], [], []
-    priority_time_sliced_throughputs, priority_mps_throughputs, priority_mps_priority_throughputs = [], [], []
+    priority_time_sliced_throughputs, priority_mps_throughputs, priority_mps_priority_throughputs, priority_tgs_throughputs = [], [], [], []
     priority_tally_throughputs, priority_tally_space_share_throughputs, priority_tally_no_transform_throughputs = [], [], []
-    time_sliced_throughputs, mps_throughputs, mps_priority_throughputs = [], [], []
+    time_sliced_throughputs, mps_throughputs, mps_priority_throughputs, tgs_throughputs = [], [], [], []
     tally_throughputs, tally_space_share_throughputs, tally_no_transform_throughputs = [], [], []
     used_best_effort_jobs = []
 
@@ -259,15 +279,18 @@ def get_slo_comparison_data(priority_df, high_priority_job, best_effort_jobs, ta
             continue
 
         baseline_latency = best_effort_job_df[f"high_priority_orig_{metric}_latency"].values[0]
-        time_sliced_latency = best_effort_job_df[f"high_priority_hardware_mp_{metric}_latency"].values[0]
-        priority_time_sliced_throughput = best_effort_job_df[f"high_priority_hardware_mp_throughput"].values[0]
-        time_sliced_throughput = best_effort_job_df[f"best_effort_hardware_mp_throughput"].values[0]
+        time_sliced_latency = best_effort_job_df[f"high_priority_time_slicing_{metric}_latency"].values[0]
+        priority_time_sliced_throughput = best_effort_job_df[f"high_priority_time_slicing_throughput"].values[0]
+        time_sliced_throughput = best_effort_job_df[f"best_effort_time_slicing_throughput"].values[0]
         mps_latency = best_effort_job_df[f"high_priority_mps_{metric}_latency"].values[0]
         priority_mps_throughput = best_effort_job_df[f"high_priority_mps_throughput"].values[0]
         mps_throughput = best_effort_job_df[f"best_effort_mps_throughput"].values[0]
         mps_priority_latency = best_effort_job_df[f"high_priority_mps_priority_{metric}_latency"].values[0]
         priority_mps_priority_throughput = best_effort_job_df[f"high_priority_mps_priority_throughput"].values[0]
         mps_priority_throughput = best_effort_job_df[f"best_effort_mps_priority_throughput"].values[0]
+        tgs_latency = best_effort_job_df[f"high_priority_tgs_{metric}_latency"].values[0]
+        priority_tgs_throughput = best_effort_job_df[f"high_priority_tgs_throughput"].values[0]
+        tgs_throughput = best_effort_job_df[f"best_effort_tgs_throughput"].values[0]
 
         tally_space_share_df = best_effort_job_df[best_effort_job_df[f"use_space_share"] == True]
         if not tally_space_share_df.empty:
@@ -298,6 +321,7 @@ def get_slo_comparison_data(priority_df, high_priority_job, best_effort_jobs, ta
         time_sliced_latencies.append(time_sliced_latency)
         mps_latencies.append(mps_latency)
         mps_priority_latencies.append(mps_priority_latency)
+        tgs_latencies.append(tgs_latency)
         tally_latencies.append(tally_latency)
         tally_space_share_latencies.append(tally_space_share_latency)
         tally_no_transform_latencies.append(tally_no_transform_latency)
@@ -305,6 +329,7 @@ def get_slo_comparison_data(priority_df, high_priority_job, best_effort_jobs, ta
         priority_time_sliced_throughputs.append(priority_time_sliced_throughput)
         priority_mps_throughputs.append(priority_mps_throughput)
         priority_mps_priority_throughputs.append(priority_mps_priority_throughput)
+        priority_tgs_throughputs.append(priority_tgs_throughput)
         priority_tally_throughputs.append(priority_tally_throughput)
         priority_tally_space_share_throughputs.append(priority_tally_space_share_throughput)
         priority_tally_no_transform_throughputs.append(priority_tally_no_transform_throughput)
@@ -312,6 +337,7 @@ def get_slo_comparison_data(priority_df, high_priority_job, best_effort_jobs, ta
         time_sliced_throughputs.append(time_sliced_throughput)
         mps_throughputs.append(mps_throughput)
         mps_priority_throughputs.append(mps_priority_throughput)
+        tgs_throughputs.append(tgs_throughput)
         tally_throughputs.append(tally_throughput)
         tally_space_share_throughputs.append(tally_space_share_throughput)
         tally_no_transform_throughputs.append(tally_no_transform_throughput)
@@ -323,18 +349,21 @@ def get_slo_comparison_data(priority_df, high_priority_job, best_effort_jobs, ta
         "time_sliced_latencies": time_sliced_latencies,
         "mps_latencies": mps_latencies,
         "mps_priority_latencies": mps_priority_latencies,
+        "tgs_latencies": tgs_latencies,
         "tally_latencies": tally_latencies,
         "tally_space_share_latencies": tally_space_share_latencies,
         "tally_no_transform_latencies": tally_no_transform_latencies,
         "priority_time_sliced_throughputs": priority_time_sliced_throughputs,
         "priority_mps_throughputs": priority_mps_throughputs,
         "priority_mps_priority_throughputs": priority_mps_priority_throughputs,
+        "priority_tgs_throughputs": priority_tgs_throughputs,
         "priority_tally_throughputs": priority_tally_throughputs,
         "priority_tally_space_share_throughputs": priority_tally_space_share_throughputs,
         "priority_tally_no_transform_throughputs": priority_tally_no_transform_throughputs,
         "time_sliced_throughputs": time_sliced_throughputs,
         "mps_throughputs": mps_throughputs,
         "mps_priority_throughputs": mps_priority_throughputs,
+        "tgs_throughputs": tgs_throughputs,
         "tally_throughputs": tally_throughputs,
         "tally_space_share_throughputs": tally_space_share_throughputs,
         "tally_no_transform_throughputs": tally_no_transform_throughputs,
