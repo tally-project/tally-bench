@@ -71,6 +71,8 @@ def scale_azure_trace(trace_file_name, start_day=3, end_day=4, scaled_dur_secs=6
     target_fn_arrival_ts = target_fn_arrival_ts.to_numpy()
     target_fn_arrival_ts.sort()
 
+    print(len(target_fn_arrival_ts))
+
     # filter timestamps based on days
     start_ts = start_day * 3600 * 24
     end_ts = end_day * 3600 * 24

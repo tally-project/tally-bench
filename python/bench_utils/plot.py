@@ -251,20 +251,24 @@ def plot_slo_comparison_system_throughput(priority_df, high_priority_job, best_e
     mps_latencies = data["mps_latencies"]
     mps_priority_latencies = data["mps_priority_latencies"]
     tally_latencies = data["tally_latencies"]
+    tgs_latencies = data["tgs_latencies"]
     priority_time_sliced_throughputs = data["priority_time_sliced_throughputs"]
     priority_mps_throughputs = data["priority_mps_throughputs"]
     priority_mps_priority_throughputs = data["priority_mps_priority_throughputs"]
     priority_tally_throughputs = data["priority_tally_throughputs"]
+    priority_tgs_throughputs = data["priority_tgs_throughputs"]
     time_sliced_throughputs = data["time_sliced_throughputs"]
     mps_throughputs = data["mps_throughputs"]
     mps_priority_throughputs = data["mps_priority_throughputs"]
     tally_throughputs = data["tally_throughputs"]
+    tgs_throughputs = data["tgs_throughputs"]
     used_best_effort_jobs = data["used_best_effort_jobs"]
 
     time_sliced_system_throughputs = [x + y for x, y in zip(priority_time_sliced_throughputs, time_sliced_throughputs)]
     mps_system_throughputs = [x + y for x, y in zip(priority_mps_throughputs, mps_throughputs)]
     mps_priority_system_throughputs = [x + y for x, y in zip(priority_mps_priority_throughputs, mps_priority_throughputs)]
     tally_system_throughputs = [x + y for x, y in zip(priority_tally_throughputs, tally_throughputs)]
+    tgs_system_throughputs = [x + y for x, y in zip(priority_tgs_throughputs, tgs_throughputs)]
 
     # plotting
     plt.clf()
@@ -280,7 +284,8 @@ def plot_slo_comparison_system_throughput(priority_df, high_priority_job, best_e
     ax1.bar(pos + 1 * width, time_sliced_latencies, width, label=f"Time-Sliced", color=colors[1], alpha=0.7, edgecolor='black')
     ax1.bar(pos + 2 * width, mps_latencies, width, label=f"MPS", color=colors[2], alpha=0.7, edgecolor='black')
     ax1.bar(pos + 3 * width, mps_priority_latencies, width, label=f"MPS-Priority", color=colors[3], alpha=0.7, edgecolor='black')
-    ax1.bar(pos + 4 * width, tally_latencies, width, label=f"Tally", color=colors[4], alpha=0.7, edgecolor='black')
+    ax1.bar(pos + 4 * width, tgs_latencies, width, label=f"TGS", color=colors[4], alpha=0.7, edgecolor='black')
+    ax1.bar(pos + 5 * width, tally_latencies, width, label=f"Tally", color=colors[5], alpha=0.7, edgecolor='black')
 
     ax1.set_title(f"High-Priority {get_metric_str(metric)} Latency Comparison")
     ax1.set_ylabel(f"Latency (ms)")
@@ -290,7 +295,8 @@ def plot_slo_comparison_system_throughput(priority_df, high_priority_job, best_e
     ax2.bar(pos + 1 * width, time_sliced_system_throughputs, width,  label=f"Time-sliced", color=colors[1], alpha=0.7, edgecolor='black')
     ax2.bar(pos + 2 * width, mps_system_throughputs, width,  label=f"MPS", color=colors[2], alpha=0.7, edgecolor='black')
     ax2.bar(pos + 3 * width, mps_priority_system_throughputs, width, label=f"MPS-Priority", color=colors[3], alpha=0.7, edgecolor='black')
-    ax2.bar(pos + 4 * width, tally_system_throughputs, width,  label=f"Tally", color=colors[4], alpha=0.7, edgecolor='black')
+    ax2.bar(pos + 4 * width, tgs_system_throughputs, width,  label=f"TGS", color=colors[4], alpha=0.7, edgecolor='black')
+    ax2.bar(pos + 5 * width, tally_system_throughputs, width,  label=f"Tally", color=colors[5], alpha=0.7, edgecolor='black')
 
     ax2.set_title("System Throughput Comparison")
     ax2.set_ylabel(f"System Throughput")
@@ -308,62 +314,78 @@ def plot_slo_comparison_system_throughput_all(priority_df, high_priority_jobs, b
     savefig_dir = f"{out_directory}/slo_comparison_system_throughput_all"
     mkdir_if_not_exists(savefig_dir)
 
-    all_jobs_throughputs = []
-    all_jobs_latencies = []
+    load_levels = ["0.75", "0.5", "0.25"]
 
-    for best_effort_job in best_effort_jobs:
+    unique_high_priority_jobs = []
+    for high_priority_job in high_priority_jobs:
+        job_name = high_priority_job.split("_infer_server")[0]
+        if job_name not in unique_high_priority_jobs:
+            unique_high_priority_jobs.append(job_name)
 
-        high_priority_job_latencies = []
-        best_effort_job_throughputs = []
+    all_jobs_throughputs = {}
+    for load_level in load_levels:
+        all_jobs_throughputs[load_level] = [[0. for _ in range(len(unique_high_priority_jobs))] for _ in range(len(best_effort_jobs))]
+    all_jobs_latencies = [[0. for _ in range(len(unique_high_priority_jobs))] for _ in range(len(best_effort_jobs))]
 
-        for high_priority_job in high_priority_jobs:
-            
-            measurements = priority_df[
-                (priority_df["high_priority_job"] == high_priority_job) &
-                (priority_df["best_effort_job"] == best_effort_job)
-            ]
+    for i, best_effort_job in enumerate(best_effort_jobs):
 
-            measurements = measurements
-            for param in tally_default_config:
-                val = tally_default_config[param]
-                measurements = measurements[measurements[param] == val]
+        for j, unique_high_priority_job in enumerate(unique_high_priority_jobs):
+            for load_level in load_levels:
 
-            if measurements.empty:
-                high_priority_job_latencies.append(0.)
-                best_effort_job_throughputs.append(0.)
-                continue
+                high_priority_job = f"{unique_high_priority_job}_infer_server_load_{load_level}_1"
 
-            baseline_latency = measurements[f"high_priority_orig_{metric}_latency"].values[0]
+                measurements = priority_df[
+                    (priority_df["high_priority_job"] == high_priority_job) &
+                    (priority_df["best_effort_job"] == best_effort_job)
+                ]
 
-            best_effort_job_throughput = measurements[f"best_effort_tally_throughput"].values[0]
-            high_priority_job_latency = measurements[f"high_priority_tally_{metric}_latency"].values[0]
-            
-            best_effort_job_throughputs.append(best_effort_job_throughput)
-            high_priority_job_latencies.append(high_priority_job_latency / baseline_latency)
+                for param in tally_default_config:
+                    val = tally_default_config[param]
+                    measurements = measurements[measurements[param] == val]
+
+                if measurements.empty:
+                    continue
+
+                baseline_latency = measurements[f"high_priority_orig_{metric}_latency"].values[0]
+
+                best_effort_job_throughput = measurements[f"best_effort_tally_throughput"].values[0]
+                high_priority_job_latency = measurements[f"high_priority_tally_{metric}_latency"].values[0]
+                high_priority_job_latency_slowdown = high_priority_job_latency / baseline_latency
+
+                all_jobs_throughputs[load_level][i][j] = best_effort_job_throughput
+                all_jobs_latencies[i][j] += (high_priority_job_latency_slowdown)
     
-        all_jobs_throughputs.append(best_effort_job_throughputs)
-        all_jobs_latencies.append(high_priority_job_latencies)
+    # avg
+    all_jobs_latencies = np.array(all_jobs_latencies) / len(load_levels)
 
     # plotting
     plt.clf()
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(len(high_priority_jobs) * 3, 8), sharex=True)
+    fig, axes = plt.subplots(1 + len(load_levels), 1, figsize=(len(unique_high_priority_jobs) * 3, 8), sharex=True)
 
     # Width of a bar
     width = 0.1
     
-    pos = np.arange(len(high_priority_jobs))
+    pos = np.arange(len(unique_high_priority_jobs))
 
     for idx, best_effort_job in enumerate(best_effort_jobs):
-        ax1.bar(pos + idx * width, all_jobs_throughputs[idx], width, label=f"{get_best_effort_job_label(best_effort_job)}", color=colors[idx], alpha=0.7, edgecolor='black')
-        ax2.bar(pos + idx * width, all_jobs_latencies[idx], width, label=f"{get_best_effort_job_label(best_effort_job)}", color=colors[idx], alpha=0.7, edgecolor='black')
 
-    ax1.set_yticks(np.linspace(0, 1, 11))
-    ax1.set_xticks(pos + ((len(best_effort_jobs) - 1) / 2) * width)
-    ax1.set_xticklabels([get_high_priority_job_label(high_priority_job) for high_priority_job in high_priority_jobs], fontsize=12)
-    ax1.set_xlabel("Inference Jobs")
-    ax1.set_ylabel("Best-Effort Job Throughput")
+        ax1 = axes[0]
+        ax1.bar(pos + idx * width, all_jobs_latencies[idx], width, label=f"{get_best_effort_job_label(best_effort_job)}", color=colors[idx], alpha=0.7, edgecolor='black')
+        ax1.set_yticks(np.linspace(0, 1, 5))
+        ax1.set_title(f"High Priority {get_metric_str(metric)} Slowdown")
 
-    ax1.legend(loc='upper left', bbox_to_anchor=(1,1), fontsize=20)
+        for j, load_level in enumerate(load_levels):
+            ax = axes[j + 1]
+            ax.bar(pos + idx * width, all_jobs_throughputs[load_level][idx], width, label=f"{get_best_effort_job_label(best_effort_job)}", color=colors[idx], alpha=0.7, edgecolor='black')
+            ax.set_yticks(np.linspace(0, 1, 5))
+            ax.set_title(f"Best-effort Normalized Throughput w/ Load={load_level}")
+
+    last_ax = axes[-1]
+    last_ax.set_xticks(pos + ((len(best_effort_jobs) - 1) / 2) * width)
+    last_ax.set_xticklabels([get_high_priority_job_label(high_priority_job) for high_priority_job in unique_high_priority_jobs], fontsize=12)
+    last_ax.set_xlabel("Inference Jobs")
+
+    axes[0].legend(loc='upper left', bbox_to_anchor=(1,1), fontsize=20)
     plt.subplots_adjust(right=0.80)
     plt.savefig(f"{savefig_dir}/{metric}.png")
 
@@ -405,5 +427,52 @@ def plot_slo_comparison_tally_sensitivity(priority_df, high_priority_job, best_e
     ax1.set_xticks(pos + ((num_targets - 1) / 2) * width)
     ax1.set_xticklabels([get_best_effort_job_label(best_effort_job, break_lines=True) for best_effort_job in used_best_effort_jobs])
     ax1.set_xlabel("Best-Effort Jobs")
+
+    plt.savefig(f"{savefig_dir}/{high_priority_job}.png")
+
+
+def plot_throughput_vs_load(priority_df, high_priority_job, best_effort_jobs, load_levels, out_directory="tally_bench_results/plots"):
+
+    savefig_dir = f"{out_directory}/throughput_vs_load"
+    mkdir_if_not_exists(savefig_dir)
+    all_throughputs = {}
+
+    for best_effort_job in best_effort_jobs:
+
+        all_throughputs[best_effort_job] = []
+
+        for load_level in load_levels:
+
+            high_priority_job_key = f"{high_priority_job}_infer_server_load_{load_level}_1"
+
+            measurements = priority_df[
+                (priority_df["high_priority_job"] == high_priority_job_key) &
+                (priority_df["best_effort_job"] == best_effort_job)
+            ]
+
+            for param in tally_default_config:
+                val = tally_default_config[param]
+                measurements = measurements[measurements[param] == val]
+
+            if measurements.empty:
+                continue
+
+            best_effort_job_throughput = measurements[f"best_effort_tally_throughput"].values[0]
+            all_throughputs[best_effort_job].append(best_effort_job_throughput)
+    
+    # plotting
+    plt.clf()
+    plt.figure(figsize=(10, 6))
+
+    idle_percentage = [1 - x for x in load_levels]
+
+    for best_effort_job in best_effort_jobs:
+        plt.plot(idle_percentage, all_throughputs[best_effort_job], label=get_best_effort_job_label(best_effort_job), marker='o')
+
+    plt.xlabel('Idle Percentage (%)')
+    plt.ylabel('Normalized Throughput')
+
+    plt.legend()
+    plt.grid(True)
 
     plt.savefig(f"{savefig_dir}/{high_priority_job}.png")

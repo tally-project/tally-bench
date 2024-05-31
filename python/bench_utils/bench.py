@@ -121,7 +121,7 @@ class Benchmark:
         return launch_cmd
 
 
-def get_infer_benchmark_trace(benchmark, result, trace_path):
+def get_infer_benchmark_trace(benchmark, result, trace_path, trace_start_day=3, trace_end_day=4, max_trace_span=600):
     if os.path.exists(trace_path):
         trace = load_json_from_file(trace_path)
         return trace
@@ -134,11 +134,9 @@ def get_infer_benchmark_trace(benchmark, result, trace_path):
     single_stream_latencies = result["default"][single_stream_bench_id]["measurements"][0][f"{single_stream_bench_id}_0"]["latencies"]
     avg_latency = sum(single_stream_latencies) / len(single_stream_latencies)
     avg_latency /= 1000
-
-    max_trace_span = 600
     
     azure_trace_path = "infer_trace/AzureFunctionsInvocationTraceForTwoWeeksJan2021.txt"
-    trace = generate_azure_trace_with_load(azure_trace_path, avg_latency, max_trace_span, start_day=3, end_day=4, target_load=benchmark.infer_load)
+    trace = generate_azure_trace_with_load(azure_trace_path, avg_latency, max_trace_span, start_day=trace_start_day, end_day=trace_end_day, target_load=benchmark.infer_load)
     write_json_to_file(trace, trace_path)
 
     return trace
