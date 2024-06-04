@@ -431,6 +431,63 @@ def plot_slo_comparison_tally_sensitivity(priority_df, high_priority_job, best_e
     plt.savefig(f"{savefig_dir}/{high_priority_job}.png")
 
 
+def plot_latency_vs_load(priority_df, high_priority_job, best_effort_jobs, load_levels, out_directory="tally_bench_results/plots", metric="99th"):
+
+    savefig_dir = f"{out_directory}/latency_vs_load"
+    mkdir_if_not_exists(savefig_dir)
+
+    all_latencies = {}
+
+    for best_effort_job in best_effort_jobs:
+
+        all_latencies[best_effort_job] = []
+
+        for load_level in load_levels:
+
+            high_priority_job_key = f"{high_priority_job}_infer_server_load_{load_level}_1"
+
+            measurements = priority_df[
+                (priority_df["high_priority_job"] == high_priority_job_key) &
+                (priority_df["best_effort_job"] == best_effort_job)
+            ]
+
+            for param in tally_default_config:
+                val = tally_default_config[param]
+                measurements = measurements[measurements[param] == val]
+
+            if measurements.empty:
+                all_latencies[best_effort_job].append(0.)
+                continue
+
+            baseline_latency = measurements[f"high_priority_orig_{metric}_latency"].values[0]
+            latency = measurements[f"high_priority_tally_{metric}_latency"].values[0]
+            all_latencies[best_effort_job].append(latency / baseline_latency)
+    
+    # plotting
+    plt.clf()
+    plt.figure(figsize=(10, 6))
+
+    load_levels = np.array(load_levels)
+
+    for best_effort_job in best_effort_jobs:
+
+        latencies = np.array(all_latencies[best_effort_job])
+
+        x = load_levels[latencies != 0]
+        y = latencies[latencies != 0]
+
+        plt.plot(x, y, label=get_best_effort_job_label(best_effort_job), marker='o')
+
+    plt.yticks(np.arange(0.8, 1.3, 0.1))
+    plt.xlabel('Load')
+    plt.ylabel(f"Latency Slowdown")
+
+    plt.legend()
+    # plt.grid(True)
+
+    plt.savefig(f"{savefig_dir}/{high_priority_job}.png")
+
+
 def plot_throughput_vs_load(priority_df, high_priority_job, best_effort_jobs, load_levels, out_directory="tally_bench_results/plots"):
 
     savefig_dir = f"{out_directory}/throughput_vs_load"
@@ -455,6 +512,7 @@ def plot_throughput_vs_load(priority_df, high_priority_job, best_effort_jobs, lo
                 measurements = measurements[measurements[param] == val]
 
             if measurements.empty:
+                all_throughputs[best_effort_job].append(0.)
                 continue
 
             best_effort_job_throughput = measurements[f"best_effort_tally_throughput"].values[0]
@@ -464,15 +522,85 @@ def plot_throughput_vs_load(priority_df, high_priority_job, best_effort_jobs, lo
     plt.clf()
     plt.figure(figsize=(10, 6))
 
-    idle_percentage = [1 - x for x in load_levels]
+    idle_percentage = np.array([1 - x for x in load_levels])
 
     for best_effort_job in best_effort_jobs:
-        plt.plot(idle_percentage, all_throughputs[best_effort_job], label=get_best_effort_job_label(best_effort_job), marker='o')
+
+        throughputs = np.array(all_throughputs[best_effort_job])
+        
+        x = idle_percentage[throughputs != 0]
+        y = throughputs[throughputs != 0]
+
+        plt.plot(x, y, label=get_best_effort_job_label(best_effort_job), marker='o')
 
     plt.xlabel('Idle Percentage (%)')
     plt.ylabel('Normalized Throughput')
 
     plt.legend()
-    plt.grid(True)
+    # plt.grid(True)
+
+    plt.savefig(f"{savefig_dir}/{high_priority_job}.png")
+
+def plot_varying_load(priority_df, high_priority_job, best_effort_jobs, load_levels, out_directory="tally_bench_results/plots", metric="99th"):
+
+    savefig_dir = f"{out_directory}/varying_load"
+    mkdir_if_not_exists(savefig_dir)
+    all_throughputs = {}
+    all_latencies = {}
+
+    for best_effort_job in best_effort_jobs:
+
+        all_throughputs[best_effort_job] = []
+        all_latencies[best_effort_job] = []
+
+        for load_level in load_levels:
+
+            high_priority_job_key = f"{high_priority_job}_infer_server_load_{load_level}_1"
+
+            measurements = priority_df[
+                (priority_df["high_priority_job"] == high_priority_job_key) &
+                (priority_df["best_effort_job"] == best_effort_job)
+            ]
+
+            for param in tally_default_config:
+                val = tally_default_config[param]
+                measurements = measurements[measurements[param] == val]
+
+            if measurements.empty:
+                all_throughputs[best_effort_job].append(0.)
+                continue
+
+            best_effort_job_throughput = measurements[f"best_effort_tally_throughput"].values[0]
+            all_throughputs[best_effort_job].append(best_effort_job_throughput)
+
+            baseline_latency = measurements[f"high_priority_orig_{metric}_latency"].values[0]
+            latency = measurements[f"high_priority_tally_{metric}_latency"].values[0]
+            all_latencies[best_effort_job].append(latency / baseline_latency)
+    
+    fig, ax1 = plt.subplots()
+    ax1.set_xlabel('Time (s)')
+    ax1.set_ylabel('Sin')
+
+    ax2 = ax1.twinx()
+    ax2.set_ylabel('Log')
+
+    idle_percentage = np.array([1 - x for x in load_levels])
+
+    for best_effort_job in best_effort_jobs:
+        throughputs = np.array(all_throughputs[best_effort_job])
+        latencies = np.array(all_latencies[best_effort_job])
+
+        ax1.plot(idle_percentage, throughputs, label=get_best_effort_job_label(best_effort_job), marker='o')
+        ax2.plot(idle_percentage, latencies, label=get_best_effort_job_label(best_effort_job), marker='o')
+
+    ax1.tick_params(axis='y')
+
+    ax2.tick_params(axis='y')
+    yticks2 = [0.5, 0.75, 1, 1.25, 1.5]
+    ax2.set_yticks(yticks2)
+    ax2.set_yticklabels([f'{tick:.1f}' for tick in yticks2])
+
+    plt.legend()
+    # plt.grid(True)
 
     plt.savefig(f"{savefig_dir}/{high_priority_job}.png")

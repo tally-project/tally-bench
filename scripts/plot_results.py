@@ -11,7 +11,9 @@ from bench_utils.plot import (
     plot_slo_comparison_system_throughput,
     plot_slo_comparison_tally_sensitivity,
     plot_slo_comparison_system_throughput_all,
-    plot_throughput_vs_load
+    plot_throughput_vs_load,
+    plot_latency_vs_load,
+    plot_varying_load
 )
 
 
@@ -27,6 +29,7 @@ def main():
     # metrics = ["avg", "90th", "95th", "99th"]
     metrics = ["99th"]
     # tolerance_levels = [0.10]
+    varying_loads = [0.1, 0.3, 0.5, 0.7, 0.9]
 
     # # plot Baseline, MPS, Time-sliced latency comparison
     # for high_priority_job in high_priority_jobs:
@@ -44,11 +47,20 @@ def main():
     # plot Baseline, MPS, Time-sliced, Tally latency and Throughput comparison under a certain SLO
     for high_priority_job in high_priority_jobs:
         for metric in metrics:
+            pass
             # plot_slo_comparison_seperate_throughput(priority_df, high_priority_job, best_effort_jobs, metric=metric)
-            plot_slo_comparison_system_throughput(priority_df, high_priority_job, best_effort_jobs, metric=metric)
-            plot_slo_comparison_tally_sensitivity(priority_df, high_priority_job, best_effort_jobs, metric=metric)
+            # plot_slo_comparison_system_throughput(priority_df, high_priority_job, best_effort_jobs, metric=metric)
+            # plot_slo_comparison_tally_sensitivity(priority_df, high_priority_job, best_effort_jobs, metric=metric)
 
-    plot_throughput_vs_load(priority_df, "onnxruntime_bert", best_effort_jobs, [0.25, 0.5, 0.75])
+    plot_throughput_vs_load(priority_df, "onnxruntime_bert", best_effort_jobs, varying_loads)
+    plot_throughput_vs_load(priority_df, "onnxruntime_llama-2-7b", best_effort_jobs, varying_loads)
+
+    plot_latency_vs_load(priority_df, "onnxruntime_bert", best_effort_jobs, varying_loads)
+    plot_latency_vs_load(priority_df, "onnxruntime_llama-2-7b", best_effort_jobs, varying_loads)
+
+    # plot_varying_load(priority_df, "onnxruntime_bert", best_effort_jobs, varying_loads)
+    # plot_varying_load(priority_df, "onnxruntime_llama-2-7b", best_effort_jobs, varying_loads)
+
 
 if __name__ == "__main__":
     main()

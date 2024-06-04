@@ -1,4 +1,3 @@
-# inference_load_factors = [0.25, 0.5, 0.75]
 inference_load_factors = [0.5]
 
 inference_workloads = {

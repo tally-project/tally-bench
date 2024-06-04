@@ -5,14 +5,7 @@ import matplotlib.pyplot as plt
 from bench_utils.utils import compute_avg, compute_percentile, mkdir_if_not_exists
 from bench_utils.plot import get_metric_str, get_best_effort_job_label
 
-# infer_bench_id = "onnxruntime_bert_infer_server_1"
-# train_bench_id = "pytorch_bert_train_32"
-
-# pair_bench_id = "pytorch_bert_train_32_onnxruntime_bert_infer_server_1"
-# best_effort_key = "pytorch_bert_train_32_0"
-# high_priority_key = "onnxruntime_bert_infer_server_1_1"
-
-colors = ['tab:blue', 'tab:orange', 'tab:red', 'tab:green', 'xkcd:light purple', 'tab:olive', 'tab:brown', 'tab:pink', 'tab:gray', 'tab:purple', 'tab:cyan', 'xkcd:sky blue', 'xkcd:light green', 'xkcd:light red', 'xkcd:light purple', 'xkcd:light brown', 'xkcd:light pink', 'xkcd:light gray', 'xkcd:light olive', 'xkcd:light cyan']
+colors = ['tab:blue', 'tab:orange', 'tab:red', 'tab:green', 'tab:olive', 'xkcd:light purple', 'tab:brown', 'tab:pink', 'tab:gray', 'tab:purple', 'tab:cyan', 'xkcd:sky blue', 'xkcd:light green', 'xkcd:light red', 'xkcd:light purple', 'xkcd:light brown', 'xkcd:light pink', 'xkcd:light gray', 'xkcd:light olive', 'xkcd:light cyan']
 
 
 def plot_azure_trace_simulation(
@@ -39,6 +32,7 @@ def plot_azure_trace_simulation(
     mps_res = result["mps"]
     mps_priority_res = result["mps-priority"]
     tally_priority_res = result["tally_priority"]
+    tgs_res = result["tgs"]
 
     last_ts = trace_timestamps[-1]
 
@@ -65,14 +59,15 @@ def plot_azure_trace_simulation(
     time_sliced_infer_timestamps, time_sliced_latencies = get_infer_timestamps_latencies_list(default_res, pair_bench_id, high_priority_key)[0]
     mps_infer_timestamps, mps_latencies = get_infer_timestamps_latencies_list(mps_res, pair_bench_id, high_priority_key)[0]
     mps_priority_infer_timestamps, mps_priority_latencies = get_infer_timestamps_latencies_list(mps_priority_res, pair_bench_id, high_priority_key)[0]
+    tgs_infer_timestamps, tgs_latencies = get_infer_timestamps_latencies_list(tgs_res, pair_bench_id, high_priority_key)[0]
     tally_infer_timestamps_latencies_list = get_infer_timestamps_latencies_list(tally_priority_res, pair_bench_id, high_priority_key)
-
-    print(f"Metric: {metric}")
-    print(f"avg baseline_latencies: {compute_avg(baseline_latencies)}")
-    print(f"avg time_sliced_latencies: {compute_avg(time_sliced_latencies)}")
-    print(f"avg mps_latencies: {compute_avg(mps_latencies)}")
-    print(f"avg mps_priority_latencies: {compute_avg(mps_priority_latencies)}")
-    print(f"avg tally_latencies: {compute_avg(tally_infer_timestamps_latencies_list[0][1])}")
+    
+    # print(f"Metric: {metric}")
+    # print(f"avg baseline_latencies: {compute_avg(baseline_latencies)}")
+    # print(f"avg time_sliced_latencies: {compute_avg(time_sliced_latencies)}")
+    # print(f"avg mps_latencies: {compute_avg(mps_latencies)}")
+    # print(f"avg mps_priority_latencies: {compute_avg(mps_priority_latencies)}")
+    # print(f"avg tally_latencies: {compute_avg(tally_infer_timestamps_latencies_list[0][1])}")
 
     latency_num_intervals = math.floor(last_ts / latency_interval)
 
@@ -107,6 +102,7 @@ def plot_azure_trace_simulation(
     time_sliced_infer_interval_statistics = get_interval_statistics(time_sliced_infer_timestamps, time_sliced_latencies, metric)
     mps_infer_interval_statistics = get_interval_statistics(mps_infer_timestamps, mps_latencies, metric)
     mps_priority_infer_interval_statistics = get_interval_statistics(mps_priority_infer_timestamps, mps_priority_latencies, metric)
+    tgs_infer_interval_statistics = get_interval_statistics(tgs_infer_timestamps, tgs_latencies, metric)
     tally_infer_interval_statistics_list = [
         get_interval_statistics(tally_infer_timestamps, tally_latencies, metric)
         for tally_infer_timestamps, tally_latencies in tally_infer_timestamps_latencies_list
@@ -129,14 +125,14 @@ def plot_azure_trace_simulation(
     time_sliced_train_timestamps = get_train_timestamps_list(default_res, pair_bench_id, best_effort_key)[0]
     mps_train_timestamps = get_train_timestamps_list(mps_res, pair_bench_id, best_effort_key)[0]
     mps_priority_train_timestamps = get_train_timestamps_list(mps_priority_res, pair_bench_id, best_effort_key)[0]
+    tgs_train_timestamps = get_train_timestamps_list(tgs_res, pair_bench_id, best_effort_key)[0]
     tally_train_timestamps_list = get_train_timestamps_list(tally_priority_res, pair_bench_id, best_effort_key)
     
-    print(f"len(baseline_train_timestamps): {len(baseline_train_timestamps)}")
-    print(f"len(time_sliced_train_timestamps): {len(time_sliced_train_timestamps)}")
-    print(f"len(mps_train_timestamps): {len(mps_train_timestamps)}")
-    print(f"len(mps_priority_train_timestamps): {len(mps_priority_train_timestamps)}")
-    print(f"len(tally_train_timestamps_list[0]): {len(tally_train_timestamps_list[0])}")
-
+    # print(f"len(baseline_train_timestamps): {len(baseline_train_timestamps)}")
+    # print(f"len(time_sliced_train_timestamps): {len(time_sliced_train_timestamps)}")
+    # print(f"len(mps_train_timestamps): {len(mps_train_timestamps)}")
+    # print(f"len(mps_priority_train_timestamps): {len(mps_priority_train_timestamps)}")
+    # print(f"len(tally_train_timestamps_list[0]): {len(tally_train_timestamps_list[0])}")
 
     throughput_num_intervals = math.floor(last_ts / throughput_interval)
 
@@ -161,6 +157,7 @@ def plot_azure_trace_simulation(
     time_sliced_interval_throughputs = get_interval_throughputs(time_sliced_train_timestamps)
     mps_interval_throughputs = get_interval_throughputs(mps_train_timestamps)
     mps_priority_interval_throughputs = get_interval_throughputs(mps_priority_train_timestamps)
+    tgs_interval_throughputs = get_interval_throughputs(tgs_train_timestamps)
     tally_interval_throughputs_list = [
         get_interval_throughputs(tally_train_timestamps)
         for tally_train_timestamps in tally_train_timestamps_list
@@ -182,8 +179,9 @@ def plot_azure_trace_simulation(
     ax2.plot(latency_interval_timestamps, time_sliced_infer_interval_statistics, linestyle='-', color=colors[1], label="Time-sliced")
     ax2.plot(latency_interval_timestamps, mps_infer_interval_statistics, linestyle='-', color=colors[2], label="MPS")
     ax2.plot(latency_interval_timestamps, mps_priority_infer_interval_statistics, linestyle='-', color=colors[3], label="MPS-Priority")
+    ax2.plot(latency_interval_timestamps, tgs_infer_interval_statistics, linestyle='-', color=colors[4], label="TGS")
     for idx, tally_interval_statistics in enumerate(tally_infer_interval_statistics_list):
-        ax2.plot(latency_interval_timestamps, tally_interval_statistics, linestyle='-', color=colors[4 + idx], label=f"Tally")
+        ax2.plot(latency_interval_timestamps, tally_interval_statistics, linestyle='-', color=colors[5 + idx], label=f"Tally")
         break
 
     ax2.set_ylabel(f'{get_metric_str(metric)} Latency (ms)')
@@ -194,8 +192,9 @@ def plot_azure_trace_simulation(
     # ax3.plot(throughput_interval_timestamps, time_sliced_interval_throughputs, linestyle='-', color=colors[1], label="Time-sliced")
     # ax3.plot(throughput_interval_timestamps, mps_interval_throughputs, linestyle='-', color=colors[2], label="MPS")
     # ax3.plot(throughput_interval_timestamps, mps_priority_interval_throughputs, linestyle='-', color=colors[3], label="MPS-Priority")
+    # ax3.plot(throughput_interval_timestamps, tgs_interval_throughputs, linestyle='-', color=colors[4], label="MPS-Priority")
     for idx, tally_interval_throughputs in enumerate(tally_interval_throughputs_list):
-        ax3.plot(throughput_interval_timestamps, tally_interval_throughputs, linestyle='-', color=colors[4 + idx], label=f"Tally")
+        ax3.plot(throughput_interval_timestamps, tally_interval_throughputs, linestyle='-', color=colors[5 + idx], label=f"Tally")
         break
 
     ax3.set_ylabel(f'Throughput (Iterations/sec)')

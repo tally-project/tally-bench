@@ -130,7 +130,9 @@ def parse_result(file_name, single_job_result_out=None, priority_result_out=None
         job_1_clean = job_1.rsplit("_", 1)[0]
         job_2_clean = job_2.rsplit("_", 1)[0]
 
-        assert(job_1_clean in baseline_res and job_2_clean in baseline_res)
+        
+        if not (job_1_clean in baseline_res and job_2_clean in baseline_res):
+            continue
 
         for tally_measurement in tally_measurments:
 
@@ -202,7 +204,11 @@ def parse_result(file_name, single_job_result_out=None, priority_result_out=None
                 "high_priority_tgs_99th_latency": "",
             }
 
-            high_priority_baseline_perf = single_job_baseline_perf[high_priority_job_clean]
+            single_job_baseline_perf_key = high_priority_job_clean
+            if "server" in single_job_baseline_perf_key:
+                single_job_baseline_perf_key = single_job_baseline_perf_key.split("infer_")[0] + "infer_single-stream_1"
+                
+            high_priority_baseline_perf = single_job_baseline_perf[single_job_baseline_perf_key]
             best_effort_baseline_perf = single_job_baseline_perf[best_effort_job_clean]
 
             lc_result_row["best_effort_tally_throughput"] = compute_relative_tp(tally_measurement[best_effort_job], best_effort_baseline_perf)
@@ -234,8 +240,6 @@ def parse_result(file_name, single_job_result_out=None, priority_result_out=None
             if time_slicing_measurment:
                 lc_result_row["high_priority_time_slicing_avg_latency"] = compute_avg(time_slicing_measurment[high_priority_job]["latencies"])
             if tgs_measurment:
-                # print(key)
-                # print(tgs_measurment[high_priority_job].keys())
                 lc_result_row["high_priority_tgs_avg_latency"] = compute_avg(tgs_measurment[high_priority_job]["latencies"])
 
             for percentile in [90, 95, 99]:

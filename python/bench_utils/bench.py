@@ -178,6 +178,21 @@ def get_infer_benchmarks(inference_workloads, inference_load_factors, warmup_ite
     return infer_benchmarks
 
 
+def get_varying_load_benchmarks(warmup_iters, runtime):
+
+    infer_benchmarks = []
+
+    inference_load_factors = [0.1, 0.3, 0.5, 0.7, 0.9]
+    for load in inference_load_factors:
+        bert_bench = Benchmark("onnxruntime", "bert", warmup_iters, runtime, is_train=False, 
+                                 batch_size=1, infer_mode="server", infer_load=load)
+        llama_bench = Benchmark("onnxruntime", "llama-2-7b", warmup_iters, runtime, is_train=False, 
+                                 batch_size=1, infer_mode="server", infer_load=load)
+        infer_benchmarks.append(bert_bench)
+        infer_benchmarks.append(llama_bench)
+    
+    return infer_benchmarks
+
 def get_smallest_max_allowed_latency():
     smallest_max_allowed_latency = 1
     for config in sensitivity_analysis_configs:
@@ -461,9 +476,10 @@ def run_benchmark_suite(
 
     train_benchmarks = get_train_benchmarks(training_workloads, warmup_iters, runtime)
     infer_benchmarks = get_infer_benchmarks(inference_workloads, inference_load_factors, warmup_iters, runtime)
-    
+    vary_load_infer_benchmarks = get_varying_load_benchmarks(warmup_iters, runtime)
+
     # reduce warmup iters for long-pipeline inference benchmarks
-    for bench in infer_benchmarks:
+    for bench in infer_benchmarks + vary_load_infer_benchmarks:
         if bench.model_name in ["stable-diffusion", "gpt-neo-2.7B", "llama-2-7b"]:
             bench.warmup_iters = 10
 
@@ -471,7 +487,7 @@ def run_benchmark_suite(
     use_mps = use_mps or use_mps_priority
     init_env(use_mps, use_tally, run_pairwise)
 
-    single_job_benchmarks = train_benchmarks + infer_benchmarks
+    single_job_benchmarks = train_benchmarks + infer_benchmarks + vary_load_infer_benchmarks
     if use_tally_priority:
         if profile_only:
             single_job_benchmarks = [b for b in single_job_benchmarks if not b.is_latency_critical()]
@@ -521,6 +537,15 @@ def run_benchmark_suite(
                     continue
 
                 pair = (copy.copy(train_benchmarks[i]), copy.copy(infer_benchmarks[j]))
+                pair_wise_benchmarks.append(pair)
+
+        for j in range(len(vary_load_infer_benchmarks)):
+            for i in range(len(train_benchmarks)):
+
+                if not use_tally_priority:
+                    continue
+
+                pair = (copy.copy(train_benchmarks[i]), copy.copy(vary_load_infer_benchmarks[j]))
                 pair_wise_benchmarks.append(pair)
 
         for idx, pair in enumerate(pair_wise_benchmarks):
