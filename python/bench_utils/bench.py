@@ -121,11 +121,7 @@ class Benchmark:
         return launch_cmd
 
 
-def get_infer_benchmark_trace(benchmark, result, trace_path, trace_start_day=3, trace_end_day=4, max_trace_span=600):
-    if os.path.exists(trace_path):
-        trace = load_json_from_file(trace_path)
-        return trace
-
+def get_infer_benchmark_latency(benchmark, result):
     single_stream_bench = copy.deepcopy(benchmark)
     single_stream_bench.infer_mode = "single-stream"
     single_stream_bench_id = get_bench_id((single_stream_bench,))
@@ -134,6 +130,16 @@ def get_infer_benchmark_trace(benchmark, result, trace_path, trace_start_day=3, 
     single_stream_latencies = result["default"][single_stream_bench_id]["measurements"][0][f"{single_stream_bench_id}_0"]["latencies"]
     avg_latency = sum(single_stream_latencies) / len(single_stream_latencies)
     avg_latency /= 1000
+
+    return avg_latency
+
+
+def get_infer_benchmark_trace(benchmark, result, trace_path, trace_start_day=3, trace_end_day=4, max_trace_span=600):
+    if os.path.exists(trace_path):
+        trace = load_json_from_file(trace_path)
+        return trace
+
+    avg_latency = get_infer_benchmark_latency(benchmark, result)
     
     azure_trace_path = "infer_trace/AzureFunctionsInvocationTraceForTwoWeeksJan2021.txt"
     trace = generate_azure_trace_with_load(azure_trace_path, avg_latency, max_trace_span, start_day=trace_start_day, end_day=trace_end_day, target_load=benchmark.infer_load)
@@ -256,7 +262,10 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_mps_priorit
             start_iox_roudi()
             start_tally(tally_config, use_tgs=use_tgs)
 
-        for idx, benchmark in enumerate(reversed(benchmarks)):
+        benchmark_list = benchmarks
+        if use_tgs:
+            benchmark_list.reverse()
+        for idx, benchmark in enumerate(benchmark_list):
 
             pipe_name = get_pipe_name(idx)
 
@@ -359,9 +368,6 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_mps_priorit
         logger.info("waiting for benchmark to finish ...")
         
         abort_timeout = benchmarks[0].runtime * 2
-
-        # as we reverse before
-        processes.reverse()
 
         for i in range(len(processes)):
             process = processes[i]
@@ -583,13 +589,21 @@ def run_benchmark_suite(
             bench_2.set_priority(2)
 
             updated = False
-            tally_config = None
             if use_tally_priority:
-                tally_config = default_tally_config
+                for tally_config in sensitivity_analysis_configs:
 
-            updated = launch_benchmark(pair, use_mps=use_mps, use_mps_priority=use_mps_priority, use_tgs=use_tgs,
-                                        use_tally=use_tally, result=result, tally_config=tally_config,
-                                        truncate_result=True)
+                    if tally_config != default_tally_config and (
+                        bench_2.infer_load not in inference_load_factors or
+                        bench_2.model_name not in ["bert", "llama-2-7b"]
+                    ):
+                        continue
+
+                    updated = launch_benchmark(pair, use_mps=use_mps, use_mps_priority=use_mps_priority, use_tgs=use_tgs,
+                                               use_tally=use_tally, result=result, tally_config=tally_config,
+                                               truncate_result=True)
+            else:
+                updated = launch_benchmark(pair, use_mps=use_mps, use_mps_priority=use_mps_priority, use_tgs=use_tgs,
+                                            use_tally=use_tally, result=result, truncate_result=True)
             
             save_results_to_file(result, updated, save_results)
 

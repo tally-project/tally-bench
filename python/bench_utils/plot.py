@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import matplotlib.ticker as ticker
+import re
 
 from bench_utils.utils import mkdir_if_not_exists
 from bench_utils.parse import get_slo_comparison_data
@@ -11,7 +12,8 @@ colors = ['tab:blue', 'tab:orange', 'tab:red', 'tab:green', 'tab:olive', 'xkcd:l
 markers = ['o', '^', 's', 'p', '*', '+', 'x', 'd', 'v', '<', '>', 'h', 'H', 'D', 'P', 'X']
 
 tally_default_config = {
-    "preemption_latency_limit": 0.1,
+    "preemption_latency_limit": 0.0316,
+    # "preemption_latency_limit": 0.1,
     "min_wait_time": "Default",
     "use_original_configs": False,
     "use_space_share": False,
@@ -27,7 +29,7 @@ def get_best_effort_job_label(best_effort_job, break_lines=False):
         best_effort_job = best_effort_job.replace("_", " ")
         best_effort_job = best_effort_job.replace("-", " ")
         best_effort_job = best_effort_job.replace(" ", "\n")
-    return best_effort_job
+    return re.sub(r'\d+$', '', best_effort_job)
 
 
 def get_high_priority_job_label(high_priority_job, break_lines=False):
@@ -405,10 +407,10 @@ def plot_slo_comparison_tally_sensitivity(priority_df, high_priority_job, best_e
 
     # plotting
     plt.clf()
-    fig, ax1 = plt.subplots(figsize=(max(len(used_best_effort_jobs) * 1, 5), 8), sharex=True)
+    fig, ax1 = plt.subplots(figsize=(max(len(used_best_effort_jobs) * 1, 5), 5), sharex=True)
 
     # Width of a bar
-    width = 0.15
+    width = 0.2
     
     pos = np.arange(len(used_best_effort_jobs))
 
@@ -418,7 +420,7 @@ def plot_slo_comparison_tally_sensitivity(priority_df, high_priority_job, best_e
     ax1.bar(pos + 2 * width, tally_no_transform_latencies, width, label=f"Scheduling w/o Transformation", color=colors[2], alpha=0.7, edgecolor='black')
     ax1.bar(pos + 3 * width, tally_latencies, width, label=f"Scheduling + Transformation (Tally)", color=colors[3], alpha=0.7, edgecolor='black')
 
-    ax1.set_yscale("log")
+    ax1.set_yscale("log", base=10)
     ax1.set_title(f"High-Priority {get_metric_str(metric)} Latency Comparison")
     ax1.set_ylabel(f"Latency (ms)")
     ax1.legend()
@@ -437,6 +439,7 @@ def plot_latency_vs_load(priority_df, high_priority_job, best_effort_jobs, load_
     mkdir_if_not_exists(savefig_dir)
 
     all_latencies = {}
+    baseline_latency = 0
 
     for best_effort_job in best_effort_jobs:
 
@@ -459,9 +462,9 @@ def plot_latency_vs_load(priority_df, high_priority_job, best_effort_jobs, load_
                 all_latencies[best_effort_job].append(0.)
                 continue
 
-            baseline_latency = measurements[f"high_priority_orig_{metric}_latency"].values[0]
+            baseline_latency = max(baseline_latency, measurements[f"high_priority_orig_{metric}_latency"].values[0])
             latency = measurements[f"high_priority_tally_{metric}_latency"].values[0]
-            all_latencies[best_effort_job].append(latency / baseline_latency)
+            all_latencies[best_effort_job].append(latency)
     
     # plotting
     plt.clf()
@@ -478,9 +481,14 @@ def plot_latency_vs_load(priority_df, high_priority_job, best_effort_jobs, load_
 
         plt.plot(x, y, label=get_best_effort_job_label(best_effort_job), marker='o')
 
-    plt.yticks(np.arange(0.8, 1.3, 0.1))
+    if "bert" in high_priority_job:
+        plt.yticks(np.arange(2, 7, 1))
+    elif "llama" in high_priority_job:
+        plt.yticks(np.arange(1700, 2400, 100))
+
     plt.xlabel('Load')
-    plt.ylabel(f"Latency Slowdown")
+    plt.ylabel(f"Latency (ms)")
+    plt.axhline(y=baseline_latency, color='b', linestyle=':', label="baseline") 
 
     plt.legend()
     # plt.grid(True)
