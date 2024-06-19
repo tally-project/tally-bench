@@ -11,6 +11,8 @@ from bench_utils.plot import (
     plot_slo_comparison_system_throughput,
     plot_slo_comparison_tally_sensitivity,
     plot_slo_comparison_system_throughput_all,
+    plot_slo_comparison_system_throughput_combined,
+    plot_latency_throughput_vs_load,
     plot_throughput_vs_load,
     plot_latency_vs_load,
     plot_varying_load
@@ -24,6 +26,8 @@ def main():
     priority_df = pd.read_csv("tally_bench_results/priority-aware-perf.csv")
     high_priority_jobs = priority_df["high_priority_job"].unique()
     high_priority_jobs = [high_priority_job for high_priority_job in high_priority_jobs if "server" in high_priority_job]
+    high_priority_jobs = [high_priority_job for high_priority_job in high_priority_jobs if "load_0.5" in high_priority_job]
+    high_priority_jobs = [high_priority_job for high_priority_job in high_priority_jobs if "inception" not in high_priority_job]
     best_effort_jobs = priority_df["best_effort_job"].unique()
 
     # metrics = ["avg", "90th", "95th", "99th"]
@@ -47,19 +51,21 @@ def main():
     # plot Baseline, MPS, Time-sliced, Tally latency and Throughput comparison under a certain SLO
     for high_priority_job in high_priority_jobs:
 
-        if "load_0.5" not in high_priority_job:
-            continue
-        
         for metric in metrics:
             # plot_slo_comparison_seperate_throughput(priority_df, high_priority_job, best_effort_jobs, metric=metric)
-            plot_slo_comparison_system_throughput(priority_df, high_priority_job, best_effort_jobs, metric=metric)
-            plot_slo_comparison_tally_sensitivity(priority_df, high_priority_job, best_effort_jobs, metric=metric)
+            # plot_slo_comparison_system_throughput(priority_df, high_priority_job, best_effort_jobs, metric=metric)
+            # plot_slo_comparison_tally_sensitivity(priority_df, high_priority_job, best_effort_jobs, metric=metric)
+            pass
 
-    plot_throughput_vs_load(priority_df, "onnxruntime_bert", best_effort_jobs, varying_loads)
-    plot_throughput_vs_load(priority_df, "onnxruntime_llama-2-7b", best_effort_jobs, varying_loads)
+    # plot_slo_comparison_system_throughput_combined(priority_df, high_priority_jobs, best_effort_jobs, metric=metrics[0])
 
-    plot_latency_vs_load(priority_df, "onnxruntime_bert", best_effort_jobs, varying_loads)
-    plot_latency_vs_load(priority_df, "onnxruntime_llama-2-7b", best_effort_jobs, varying_loads)
+    plot_latency_throughput_vs_load(priority_df, ["onnxruntime_bert", "onnxruntime_llama-2-7b"], best_effort_jobs, varying_loads)
+
+    # plot_throughput_vs_load(priority_df, "onnxruntime_bert", best_effort_jobs, varying_loads)
+    # plot_throughput_vs_load(priority_df, "onnxruntime_llama-2-7b", best_effort_jobs, varying_loads)
+
+    # plot_latency_vs_load(priority_df, "onnxruntime_bert", best_effort_jobs, varying_loads)
+    # plot_latency_vs_load(priority_df, "onnxruntime_llama-2-7b", best_effort_jobs, varying_loads)
 
     # plot_varying_load(priority_df, "onnxruntime_bert", best_effort_jobs, varying_loads)
     # plot_varying_load(priority_df, "onnxruntime_llama-2-7b", best_effort_jobs, varying_loads)

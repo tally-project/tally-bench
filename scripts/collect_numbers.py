@@ -16,9 +16,12 @@ if __name__ == "__main__":
     metric = "99th"
 
     count_pairs = 0
+    avg_latency_slowdown_dict = {}
+    avg_sys_throughput_dict = {}
+    max_latency_slowdown_dict = {}
+    min_latency_slowdown_dict = {}
 
-    tally_avg_latency_slowdown = 0.
-    tally_avg_sys_throughput = 0.
+    systems = ["time_sliced", "mps", "mps_priority", "tgs", "tally"]
 
     for high_priority_job in high_priority_jobs:
 
@@ -26,23 +29,41 @@ if __name__ == "__main__":
             continue
 
         data = get_slo_comparison_data(priority_df, high_priority_job, best_effort_jobs, tally_default_config, metric=metric)
-        
         baseline_latencies = data["baseline_latencies"]
-        tally_latencies = data["tally_latencies"]
-        priority_tally_throughputs = data["priority_tally_throughputs"]
-        tally_throughputs = data["tally_throughputs"]
         
-        tally_latency_slowdowns = [x / y for x, y in zip(tally_latencies, baseline_latencies)]
-        tally_system_throughputs = [x + y for x, y in zip(priority_tally_throughputs, tally_throughputs)]
+        for system in systems:
+            latencies = data[f"{system}_latencies"]
+            priority_throughputs = data[f"priority_{system}_throughputs"]
+            throughputs = data[f"{system}_throughputs"]
+            
+            latency_slowdowns = [x / y for x, y in zip(latencies, baseline_latencies)]
+            system_throughputs = [x + y for x, y in zip(throughputs, priority_throughputs)]
 
-        tally_avg_latency_slowdown += sum(tally_latency_slowdowns)
-        tally_avg_sys_throughput += sum(tally_system_throughputs)
+            if system not in avg_latency_slowdown_dict:
+                avg_latency_slowdown_dict[system] = 0
+                avg_sys_throughput_dict[system] = 0
+                max_latency_slowdown_dict[system] = 0
+                min_latency_slowdown_dict[system] = 1000
 
-        count_pairs += len(tally_latency_slowdowns)
+            if system == "tally":
+                print(high_priority_job)
+                print(latency_slowdowns)
+
+            avg_latency_slowdown_dict[system] += sum(latency_slowdowns)
+            avg_sys_throughput_dict[system] += sum(system_throughputs)
+            max_latency_slowdown_dict[system] = max(max(latency_slowdowns), max_latency_slowdown_dict[system])
+            min_latency_slowdown_dict[system] = min(min(latency_slowdowns), min_latency_slowdown_dict[system])
+
+        count_pairs += len(latency_slowdowns)
     
-    tally_avg_latency_slowdown /= count_pairs
-    tally_avg_sys_throughput /= count_pairs
+    for system in systems:
+        avg_latency_slowdown_dict[system] /= count_pairs
+        avg_sys_throughput_dict[system] /= count_pairs
 
-    print(f"tally_avg_latency_slowdown: {tally_avg_latency_slowdown}")
-    print(f"tally_avg_sys_throughput: {tally_avg_sys_throughput}")
+        print(f"System: {system}")
+        print(f"avg_latency_slowdown: {avg_latency_slowdown_dict[system]}")
+        print(f"avg_sys_throughput: {avg_sys_throughput_dict[system]}")
+        print(f"max_latency_slowdown: {max_latency_slowdown_dict[system]}")
+        print(f"min_latency_slowdown: {min_latency_slowdown_dict[system]}")
+        print()
         

@@ -206,6 +206,7 @@ def plot_azure_trace_simulation(
     if out_filename is None:
         out_filename = train_bench_id
 
+    plt.tight_layout()
     fig.savefig(f"{save_dir}/{out_filename}.png")
 
 def plot_azure_slo_comparison_system_throughput(
@@ -345,4 +346,5 @@ def plot_azure_slo_comparison_system_throughput(
     if out_filename is None:
         out_filename = infer_bench_id
 
+    plt.tight_layout()
     plt.savefig(f"{save_dir}/{out_filename}.png")
