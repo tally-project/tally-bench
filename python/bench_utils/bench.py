@@ -598,7 +598,7 @@ def run_benchmark_suite(
                     ):
                         continue
 
-                    updated = launch_benchmark(pair, use_mps=use_mps, use_mps_priority=use_mps_priority, use_tgs=use_tgs,
+                    updated |= launch_benchmark(pair, use_mps=use_mps, use_mps_priority=use_mps_priority, use_tgs=use_tgs,
                                                use_tally=use_tally, result=result, tally_config=tally_config,
                                                truncate_result=True)
             else:
