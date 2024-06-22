@@ -208,6 +208,9 @@ def parse_result(file_name, single_job_result_out=None, priority_result_out=None
             if "server" in single_job_baseline_perf_key:
                 single_job_baseline_perf_key = single_job_baseline_perf_key.split("infer_")[0] + "infer_single-stream_1"
                 
+            if single_job_baseline_perf_key not in single_job_baseline_perf:
+                single_job_baseline_perf_key = high_priority_job_clean
+
             high_priority_baseline_perf = single_job_baseline_perf[high_priority_job_clean]
             high_priority_baseline_latency_perf = single_job_baseline_perf[single_job_baseline_perf_key]
             best_effort_baseline_perf = single_job_baseline_perf[best_effort_job_clean]
