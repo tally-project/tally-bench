@@ -39,7 +39,10 @@ RUN cd /home && \
     tar xvf boost_1_80_0.tar.gz && \
     cd boost_1_80_0 && \
     ./bootstrap.sh --prefix=/usr/ && \
-    ./b2 install
+    ./b2 install && \
+    cd /home && \
+    rm boost_1_80_0.tar.gz && \
+    rm -rf boost_1_80_0
 
 RUN cp /usr/include/cudnn*.h /usr/local/cuda/include && \
     cp -P /usr/lib/$(uname -m)-linux-gnu/libcudnn* /usr/local/cuda/lib64 && \
@@ -51,6 +54,7 @@ COPY . .
 
 RUN cd tally/third_party && \
     cp cudnn-frontend /usr/local/cuda -r
-
-RUN cd tally && \
-    make
+ 
+RUN cd tally/third_party/nccl && make -j src.build
+# RUN cd tally/third_party/nccl/ext-net/example && make
+# RUN cd tally && mkdir -p build && cd build && cmake .. && make -j
