@@ -17,15 +17,8 @@ RUN apt-get update && \
         sudo \
         libssl-dev \
         vim \
-        libfreeimage-dev
-
-RUN apt remove python3.8 -y && \
-    apt autoremove -y && \
-    apt update && \
-    DEBIAN_FRONTEND=noninteractive apt install software-properties-common -y && \
-    add-apt-repository ppa:deadsnakes/ppa && \
-    apt install -y python3.11-dev && \
-    cp /usr/bin/python3.11 /usr/bin/python3
+        libfreeimage-dev \
+        python3-dev
 
 RUN cd /home && \
     curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && \
@@ -54,6 +47,8 @@ RUN cd /home/pytorch && \
     USE_CUDNN=0 MAX_JOBS=32 TORCH_CUDA_ARCH_LIST="8.0"  \
         python3 setup.py develop \
         --install-dir $(python3 -c "import site; print(site.getsitepackages()[0])")
+
+RUN pip3 install Pillow numpy
 
 RUN cd /home && \ 
     git clone https://github.com/pytorch/vision.git && \
@@ -95,9 +90,7 @@ RUN cd /home/boost_1_80_0 && \
     rm boost_1_80_0.tar.gz && \
     rm -rf boost_1_80_0
 
-RUN rm /usr/bin/python3.8* && \
-    rm /usr/bin/python3 && \
-    cp /usr/bin/python3.11 /usr/bin/python3
+RUN DEBIAN_FRONTEND=noninteractive apt install tzdata -y
 
 RUN cd /home && \
     git clone https://github.com/facebook/folly && \
