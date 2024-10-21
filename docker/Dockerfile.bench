@@ -1,0 +1,6 @@
+FROM wzhao18/tally:base
+
+ENV TALLY_HOME=/home/tally-bench/tally
+
+# run tests
+RUN cd /home/tally-bench/tally && ./scripts/run_test.sh

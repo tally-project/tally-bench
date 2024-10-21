@@ -5,8 +5,8 @@ export TALLY_HOME=$PWD/tally
 TALLY_PRELOAD_LOCAL="./tally/scripts/start_client_local.sh"
 TALLY_PRELOAD="./tally/scripts/start_client.sh"
 
-RUN_ORIGINAL=FALSE
-RUN_TALLY_LOCAL=FALSE
+RUN_ORIGINAL=TRUE
+RUN_TALLY_LOCAL=TRUE
 RUN_TALLY=TRUE
 
 train_pytorch_models=(
@@ -32,14 +32,7 @@ infer_pytorch_models=(
     "yolov6m"
     "gpt-neo-2.7B"
     "stable-diffusion"
-    # "llama-2-7b"
-)
-
-# Will not include TensorRT as a benchmark for the
-# huge engineering effort to preload libnvinfer
-infer_tensorrt_models=(
-    # "bert"
-    # "stable-diffusion"
+    "llama-2-7b"
 )
 
 cleanup() {
@@ -117,10 +110,6 @@ if [ "$RUN_TALLY" = "TRUE" ]; then
     ./tally/scripts/start_iox.sh &
     sleep 5
 fi
-
-for model in "${infer_tensorrt_models[@]}"; do
-    launch_bench tensorrt $model --infer --batch-size 1
-done
 
 for model in "${infer_hidet_models[@]}"; do
     launch_bench hidet $model --infer --batch-size 1
