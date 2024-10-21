@@ -63,13 +63,15 @@ RUN cd /home && \
         python3 setup.py develop \
         --install-dir $(python3 -c "import site; print(site.getsitepackages()[0])")
 
+RUN apt install -y zlib1g-dev
+
 RUN cd /home && \ 
     git clone https://github.com/tally-project/triton.git && \
     cd triton && \
     git checkout v2.1.0-tally && \
     cd python && \
     pip3 install cmake && \
-    pip3 install -e .
+    pip3 install -v -e .
 
 RUN cd /home && \ 
     git clone https://github.com/tally-project/hidet.git && \
@@ -84,13 +86,18 @@ RUN cd /home && \
 
 RUN cd /home && \
     wget https://boostorg.jfrog.io/artifactory/main/release/1.80.0/source/boost_1_80_0.tar.gz && \
-    tar xvf boost_1_80_0.tar.gz && \
-    cd boost_1_80_0 && \
+    tar xvf boost_1_80_0.tar.gz
+
+RUN cd /home/boost_1_80_0 && \
     ./bootstrap.sh --prefix=/usr/ && \
     ./b2 install && \
     cd /home && \
     rm boost_1_80_0.tar.gz && \
     rm -rf boost_1_80_0
+
+RUN rm /usr/bin/python3.8* && \
+    rm /usr/bin/python3 && \
+    cp /usr/bin/python3.11 /usr/bin/python3
 
 RUN cd /home && \
     git clone https://github.com/facebook/folly && \
