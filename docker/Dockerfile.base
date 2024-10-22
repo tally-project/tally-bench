@@ -69,13 +69,11 @@ RUN cd /home && \
 RUN cd /home && \ 
     git clone https://github.com/tally-project/hidet.git && \
     cd hidet && \
-    mkdir build && \
-    cd build && \
-    cp ../config.cmake .  && \
-    cmake .. && \
-    make -j4 && \
-    cd .. && \
-    pip3 install -e .
+    git checkout tally && \
+    bash scripts/wheel/build_wheel.sh && \
+    pip3 install scripts/wheel/built_wheel/hidet-0.3.0.dev0-py3-none-any.whl
+
+RUN pip3 install cuda-python==12.2.0
 
 RUN cd /home && \
     wget https://boostorg.jfrog.io/artifactory/main/release/1.80.0/source/boost_1_80_0.tar.gz && \

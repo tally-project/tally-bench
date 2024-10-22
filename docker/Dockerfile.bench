@@ -2,5 +2,16 @@ FROM wzhao18/tally:base
 
 ENV TALLY_HOME=/home/tally-bench/tally
 
+COPY requirements.txt requirements.txt
+
+RUN pip3 install -r requirements.txt
+
 # run tests
 RUN cd /home/tally-bench/tally && ./scripts/run_test.sh
+
+RUN pip3 install gdown && \
+    apt install unzip && \
+    gdown 1lbPWcs7ymU4vs-uHN1Q6WQaSxnxfT3p2 && \
+    gdown 1nekmncwZXSzlEZhe0Z4AQyuqKPfxQA3k && \
+    unzip data.zip && \
+    pip3 install ort_nightly_gpu-1.17.0.dev20240118002-cp38-cp38-manylinux_2_28_x86_64.whl

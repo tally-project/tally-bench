@@ -80,8 +80,8 @@ def train_whisper(model_name, batch_size, amp, warmup_iters, total_time,
         return batch
 
     common_voice = DatasetDict()
-    common_voice["train"] = load_dataset("mozilla-foundation/common_voice_11_0", "hi", split="train+validation")
-    common_voice["test"] = load_dataset("mozilla-foundation/common_voice_11_0", "hi", split="test")
+    common_voice["train"] = load_dataset("mozilla-foundation/common_voice_11_0", "hi", split="train+validation", trust_remote_code=True)
+    common_voice["test"] = load_dataset("mozilla-foundation/common_voice_11_0", "hi", split="test", trust_remote_code=True)
     common_voice = common_voice.remove_columns(["accent", "age", "client_id", "down_votes", "gender", "locale", "path", "segment", "up_votes"])
     common_voice = common_voice.cast_column("audio", Audio(sampling_rate=16000))
     common_voice = common_voice.map(prepare_dataset, remove_columns=common_voice.column_names["train"], num_proc=2)  

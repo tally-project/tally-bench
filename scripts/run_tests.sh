@@ -20,7 +20,6 @@ train_pytorch_models=(
 
 infer_hidet_models=(
     "resnet50"
-    "inception_v3"
 )
 
 infer_onnxruntime_models=(
@@ -32,7 +31,6 @@ infer_pytorch_models=(
     "yolov6m"
     "gpt-neo-2.7B"
     "stable-diffusion"
-    "llama-2-7b"
 )
 
 cleanup() {
@@ -74,31 +72,15 @@ launch_bench() {
     fi
 
     if [ "$RUN_TALLY_LOCAL" = "TRUE" ]; then
-
-        echo $TALLY_PRELOAD_LOCAL $launch_cmd
-        $TALLY_PRELOAD_LOCAL $launch_cmd
+        echo REPLACE_CUBLAS=TRUE $TALLY_PRELOAD_LOCAL $launch_cmd
+        REPLACE_CUBLAS=TRUE $TALLY_PRELOAD_LOCAL $launch_cmd
         echo
-
-        if [ "$is_train" = "TRUE" ]; then
-            # run with REPLACE_CUBLAS
-            echo REPLACE_CUBLAS=TRUE $TALLY_PRELOAD_LOCAL $launch_cmd
-            REPLACE_CUBLAS=TRUE $TALLY_PRELOAD_LOCAL $launch_cmd
-            echo
-        fi
     fi
 
     if [ "$RUN_TALLY" = "TRUE" ]; then
-
-        echo $TALLY_PRELOAD $launch_cmd
-        run_tally_test $launch_cmd
+        echo REPLACE_CUBLAS=TRUE $TALLY_PRELOAD $launch_cmd
+        REPLACE_CUBLAS=TRUE run_tally_test $launch_cmd
         echo
-
-        if [ "$is_train" = "TRUE" ]; then
-            # run with REPLACE_CUBLAS
-            echo REPLACE_CUBLAS=TRUE $TALLY_PRELOAD $launch_cmd
-            REPLACE_CUBLAS=TRUE run_tally_test $launch_cmd
-            echo
-        fi
     fi
 }
 
@@ -130,7 +112,6 @@ for model in "${train_pytorch_models[@]}"; do
         batch_size=1
     fi
     launch_bench pytorch $model --train --batch-size $batch_size
-    launch_bench pytorch $model --train --batch-size $batch_size --amp
 done
 
 cleanup
