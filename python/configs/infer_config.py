@@ -12,6 +12,12 @@ inference_workloads = {
     ],
     "hidet": [
         "resnet50",
-        # "inception_v3",
     ]
+}
+
+inference_workloads_small = {
+    "onnxruntime": [
+        "bert",
+        "llama-2-7b"
+    ],
 }

@@ -17,6 +17,7 @@ parser.add_argument("--run-pairwise", action="store_true", default=False)
 parser.add_argument("--runtime", type=int, default=10)
 parser.add_argument("--warmup-iters", type=int, default=100)
 parser.add_argument("--profile-only", action="store_true", default=False)
+parser.add_argument("--run-full-benchmark", action="store_true", default=False)
 
 args = parser.parse_args()
 assert(sum([args.use_mps, args.use_mps_priority, args.use_tally_naive, args.use_tally_priority]) <= 1)
@@ -34,5 +35,6 @@ if __name__ == "__main__":
         runtime=args.runtime,
         warmup_iters=args.warmup_iters,
         save_results=args.save_results,
-        profile_only=args.profile_only
+        profile_only=args.profile_only,
+        run_full_benchmark=args.run_full_benchmark,
     )

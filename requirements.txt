@@ -9,3 +9,5 @@ librosa
 jiwer
 tensorboardX
 onnx
+plyfile
+matplotlib

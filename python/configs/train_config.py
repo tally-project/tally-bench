@@ -1,4 +1,4 @@
-training_workloads = {
+training_workloads_large = {
     "pytorch": {
         "whisper-large-v3": {
             "batch-sizes": [16],

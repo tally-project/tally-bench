@@ -35,7 +35,7 @@ from bench_utils.tally_config import default_tally_config, sensitivity_analysis_
 from bench_utils.trace import generate_azure_trace_with_load
 
 from configs.train_config import training_workloads
-from configs.infer_config import inference_workloads, inference_load_factors
+from configs.infer_config import inference_workloads, inference_workloads_small, inference_load_factors
 
 
 class Benchmark:
@@ -449,16 +449,17 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_mps_priorit
 
 
 def run_benchmark_suite(
-        use_mps=False,
-        use_mps_priority=False,
-        use_tally_naive=False,
-        use_tally_priority=False,
-        use_tgs=False,
-        run_pairwise=False,
-        runtime=10,
-        warmup_iters=10,
-        save_results=False,
-        profile_only=False,
+    use_mps=False,
+    use_mps_priority=False,
+    use_tally_naive=False,
+    use_tally_priority=False,
+    use_tgs=False,
+    run_pairwise=False,
+    runtime=10,
+    warmup_iters=10,
+    save_results=False,
+    profile_only=False,
+    run_full_benchmark=False,
 ):
     tally_bench_result_dir = "tally_bench_results"
     if not os.path.exists(tally_bench_result_dir):
@@ -480,8 +481,13 @@ def run_benchmark_suite(
 
     result = load_json_from_file(result_file)
 
+    if run_full_benchmark:
+        infer_workloads = inference_workloads
+    else:
+        infer_workloads = inference_workloads_small
+
     train_benchmarks = get_train_benchmarks(training_workloads, warmup_iters, runtime)
-    infer_benchmarks = get_infer_benchmarks(inference_workloads, inference_load_factors, warmup_iters, runtime)
+    infer_benchmarks = get_infer_benchmarks(infer_workloads, inference_load_factors, warmup_iters, runtime)
     vary_load_infer_benchmarks = get_varying_load_benchmarks(warmup_iters, runtime)
 
     # reduce warmup iters for long-pipeline inference benchmarks
@@ -493,7 +499,9 @@ def run_benchmark_suite(
     use_mps = use_mps or use_mps_priority
     init_env(use_mps, use_tally, run_pairwise)
 
-    single_job_benchmarks = train_benchmarks + infer_benchmarks + vary_load_infer_benchmarks
+    single_job_benchmarks = train_benchmarks + infer_benchmarks
+    if run_full_benchmark:
+        single_job_benchmarks = single_job_benchmarks + vary_load_infer_benchmarks
     if use_tally_priority:
         if profile_only:
             single_job_benchmarks = [b for b in single_job_benchmarks if not b.is_latency_critical()]
@@ -507,8 +515,8 @@ def run_benchmark_suite(
         logger.info(f"Running {idx + 1} out of {len(single_job_benchmarks)} single-job benchmarks: {bench_id} ...")
 
         if benchmark.infer_mode == "server":
-            trace_path = f"infer_trace/{bench_id}.json"
-            trace = get_infer_benchmark_trace(benchmark, result, trace_path)
+            trace_path = f"infer_trace/{bench_id}_runtime_{runtime}.json"
+            trace = get_infer_benchmark_trace(benchmark, result, trace_path, max_trace_span=runtime)
             benchmark.trace_file = trace_path
 
             trace_last_ts = trace[-1]
@@ -545,14 +553,15 @@ def run_benchmark_suite(
                 pair = (copy.copy(train_benchmarks[i]), copy.copy(infer_benchmarks[j]))
                 pair_wise_benchmarks.append(pair)
 
-        for j in range(len(vary_load_infer_benchmarks)):
-            for i in range(len(train_benchmarks)):
+        if run_full_benchmark:
+            for j in range(len(vary_load_infer_benchmarks)):
+                for i in range(len(train_benchmarks)):
 
-                if not use_tally_priority:
-                    continue
+                    if not use_tally_priority:
+                        continue
 
-                pair = (copy.copy(train_benchmarks[i]), copy.copy(vary_load_infer_benchmarks[j]))
-                pair_wise_benchmarks.append(pair)
+                    pair = (copy.copy(train_benchmarks[i]), copy.copy(vary_load_infer_benchmarks[j]))
+                    pair_wise_benchmarks.append(pair)
 
         for idx, pair in enumerate(pair_wise_benchmarks):
 
@@ -561,8 +570,8 @@ def run_benchmark_suite(
 
             if bench_2.infer_mode == "server":
                 bench_2_id = get_bench_id([bench_2])
-                trace_path = f"infer_trace/{bench_2_id}.json"
-                trace = get_infer_benchmark_trace(bench_2, result, trace_path)
+                trace_path = f"infer_trace/{bench_2_id}_runtime_{runtime}.json"
+                trace = get_infer_benchmark_trace(bench_2, result, trace_path, max_trace_span=runtime)
                 bench_2.trace_file = trace_path
 
                 trace_last_ts = trace[-1]
