@@ -23,7 +23,7 @@ time_cmd() {
 
 set -e
 
-export RUNTIME=30
+export RUNTIME=600
 export WARMUP_ITERS=30
 
 # Set a single cuda device to run the benchmarks
@@ -41,16 +41,6 @@ time_cmd \
         --use-tally-naive \
         --runtime $RUNTIME \
         --warmup-iters $WARMUP_ITERS
-
-# Profile preemptive kernel metrics for throughput-oriented jobs for priority scheduler
-echo "======== Profiling kernel metrics for throughput-oriented jobs for priority scheduler ... ========"
-    time_cmd \
-    python3 -u scripts/run_bench.py \
-        --use-tally-priority \
-        --runtime 60 \
-        --warmup-iters 500 \
-        --profile-only \
-        --save-results
 
 # Run priority-related co-located experiments with MPS
 if [[ $GPU_MODE == "Exclusive_Process" ]]; then

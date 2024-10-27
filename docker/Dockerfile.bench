@@ -1,0 +1,34 @@
+FROM wzhao18/tally:base
+
+ENV TALLY_HOME=/home/tally-bench/tally
+
+COPY requirements.txt requirements.txt
+
+RUN pip3 install -r requirements.txt
+
+# run basic tests
+RUN cd /home/tally-bench/tally && ./scripts/run_test.sh
+
+RUN pip3 install gdown && \
+    apt install unzip && \
+    gdown 1UEDTgKrrqsFjShd-qlBoQ8BsmJAKL2SI && \
+    gdown 1nekmncwZXSzlEZhe0Z4AQyuqKPfxQA3k && \
+    gdown 1PdA0e4LPPcMqKyYqKAfyWg4zwYWe2XF3 && \
+    unzip data.zip && \
+    pip3 install ort_nightly_gpu-1.17.0.dev20240118002-cp38-cp38-manylinux_2_28_x86_64.whl && \
+    mkdir -p infer_trace && \
+    mv AzureFunctionsInvocationTraceForTwoWeeksJan2021.txt infer_trace
+
+RUN wget https://github.com/meituan/YOLOv6/releases/download/0.4.0/yolov6m.pt && \
+    mkdir -p data/weights && \
+    mv yolov6m.pt data/weights
+
+RUN pip3 uninstall networkx -y && \
+    pip3 install networkx
+
+# compile benchmark models
+RUN ./scripts/run_tests.sh
+
+RUN ./scripts/profile.sh
+
+RUN rm -rf tally_bench_results

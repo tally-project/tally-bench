@@ -28,7 +28,7 @@ def train_gpt2(model_name, batch_size, amp, warmup_iters, total_time, total_iter
     model = AutoModelForCausalLM.from_pretrained(model_name, config=config)
     model.resize_token_embeddings(len(tokenizer))
 
-    datasets = load_dataset("bookcorpus")
+    datasets = load_dataset("bookcorpus", trust_remote_code=True)
     datasets["train"] = datasets["train"].select(range(1000000))
     column_names = datasets["train"].column_names
     text_column_name = "text" if "text" in column_names else column_names[0]

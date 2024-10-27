@@ -80,7 +80,7 @@ def train_pegasus(model_name, batch_size, amp, warmup_iters, total_time,
                   total_iters=None, result_dict=None, signal=False, pipe=None,
                   freeze_encoder=False, output_dir="./pegasus_out"):
     from datasets import load_dataset
-    dataset = load_dataset("xsum")
+    dataset = load_dataset("xsum", trust_remote_code=True)
     train_texts, train_labels = dataset['train']['document'][:1000], dataset['train']['summary'][:1000]
     
     # use Pegasus Large model as base for fine-tuning

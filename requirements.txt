@@ -1,0 +1,13 @@
+transformers==4.45.1
+accelerate>=0.26.0
+diffusers
+datasets
+SentencePiece
+evaluate
+soundfile
+librosa
+jiwer
+tensorboardX
+onnx
+plyfile
+matplotlib
