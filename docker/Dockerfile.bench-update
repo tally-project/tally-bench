@@ -1,0 +1,7 @@
+FROM wzhao18/tally:bench
+
+ENV TALLY_HOME=/home/tally-bench/tally
+
+COPY requirements.txt requirements.txt
+COPY python python
+COPY scripts scripts
