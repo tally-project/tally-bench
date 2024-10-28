@@ -2,25 +2,6 @@
 
 # This script serves as an automated script to launch all benchmarks
 
-# Utility function to measure benchmark duration
-time_cmd() {
-
-    # Record the start time
-    start_time=$(date +%s.%N)
-
-    # Execute the provided commands
-    "$@"
-
-    # Record the end time
-    end_time=$(date +%s.%N)
-
-    # Calculate the elapsed time
-    elapsed_time=$(echo "$end_time - $start_time" | bc)
-
-    echo "Time elapsed: $elapsed_time seconds."
-
-}
-
 set -e
 
 export RUNTIME=600
@@ -35,17 +16,15 @@ export GPU_MODE=$(nvidia-smi -i $CUDA_VISIBLE_DEVICES --query-gpu=compute_mode -
 # Collect single-job performance with and without Tally
 # This should give insights of the overhead of API forwarding in Tally
 echo "======== Collecting single-job performance with and without Tally ... ========"
-time_cmd \
-    python3 -u scripts/run_bench.py \
-        --save-results \
-        --use-tally-naive \
-        --runtime $RUNTIME \
-        --warmup-iters $WARMUP_ITERS
+python3 -u scripts/run_bench.py \
+    --save-results \
+    --use-tally-naive \
+    --runtime $RUNTIME \
+    --warmup-iters $WARMUP_ITERS
 
 # Run priority-related co-located experiments with MPS
 if [[ $GPU_MODE == "Exclusive_Process" ]]; then
-echo "======== Collecting priority-related pair-wise performance with MPS ... ========"
-time_cmd \
+    echo "======== Collecting priority-related pair-wise performance with MPS ... ========"
     python3 -u scripts/run_bench.py \
         --save-results \
         --use-mps \
@@ -59,7 +38,6 @@ fi
 # Run priority-related co-located experiments with MPS
 if [[ $GPU_MODE == "Exclusive_Process" ]]; then
 echo "======== Collecting priority-related pair-wise performance with MPS Priority ... ========"
-time_cmd \
     python3 -u scripts/run_bench.py \
         --save-results \
         --use-mps-priority \
@@ -73,8 +51,7 @@ fi
 # Run priority-related co-located experiments with hardware multi-processing
 if [[ $GPU_MODE == "Default" ]]; then
 echo "======== Collecting priority-related pair-wise performance with hardware multi-processing ... ========"
-SCHEDULER_POLICY=PRIORITY \
-    time_cmd \
+    SCHEDULER_POLICY=PRIORITY \
     python3 -u scripts/run_bench.py \
         --save-results \
         --runtime $RUNTIME \
@@ -87,7 +64,6 @@ fi
 # Run priority-related co-located experiments with Tally priority scheduler
 if [[ $GPU_MODE == "Exclusive_Process" ]]; then
 echo "======== Collecting priority-related pair-wise performance with Tally priority scheduler ... ========"
-    time_cmd \
     python3 -u scripts/run_bench.py \
         --save-results \
         --use-tally-priority \
@@ -101,7 +77,6 @@ fi
 # Run priority-related co-located experiments with TGS
 if [[ $GPU_MODE == "Exclusive_Process" ]]; then
 echo "======== Collecting priority-related pair-wise performance with TGS ... ========"
-    time_cmd \
     python3 -u scripts/run_bench.py \
         --save-results \
         --use-tgs \
