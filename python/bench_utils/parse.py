@@ -223,6 +223,7 @@ def parse_result(file_name, single_job_result_out=None, priority_result_out=None
             if time_slicing_measurment:
                 lc_result_row["best_effort_time_slicing_throughput"] = compute_relative_tp(time_slicing_measurment[best_effort_job], best_effort_baseline_perf)
             if tgs_measurment:
+                print(tgs_measurment.keys())
                 lc_result_row["best_effort_tgs_throughput"] = compute_relative_tp(tgs_measurment[best_effort_job], best_effort_baseline_perf)
 
             lc_result_row["high_priority_tally_throughput"] = compute_relative_tp(tally_measurement[high_priority_job], high_priority_baseline_perf)
@@ -244,6 +245,8 @@ def parse_result(file_name, single_job_result_out=None, priority_result_out=None
             if time_slicing_measurment:
                 lc_result_row["high_priority_time_slicing_avg_latency"] = compute_avg(time_slicing_measurment[high_priority_job]["latencies"])
             if tgs_measurment:
+                print(high_priority_job)
+                print(tgs_measurment[high_priority_job].keys())
                 lc_result_row["high_priority_tgs_avg_latency"] = compute_avg(tgs_measurment[high_priority_job]["latencies"])
 
             for percentile in [90, 95, 99]:

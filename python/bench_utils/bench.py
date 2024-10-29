@@ -262,7 +262,7 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_mps_priorit
             start_iox_roudi()
             start_tally(tally_config, use_tgs=use_tgs)
 
-        benchmark_list = benchmarks
+        benchmark_list = copy.copy(benchmarks)
         if use_tgs:
             benchmark_list.reverse()
         for idx, benchmark in enumerate(benchmark_list):
@@ -369,6 +369,8 @@ def launch_benchmark(benchmarks: List[Benchmark], use_mps=False, use_mps_priorit
         
         abort_timeout = benchmarks[0].runtime * 2
 
+        if use_tgs:
+            processes.reverse()
         for i in range(len(processes)):
             process = processes[i]
             stdout, stderr = process.communicate(timeout=abort_timeout)
@@ -550,7 +552,7 @@ def run_benchmark_suite(
                 if infer_benchmarks[j].infer_mode == "single-stream":
                     continue
 
-                pair = (copy.copy(train_benchmarks[i]), copy.copy(infer_benchmarks[j]))
+                pair = [copy.copy(train_benchmarks[i]), copy.copy(infer_benchmarks[j])]
                 pair_wise_benchmarks.append(pair)
 
         if run_full_benchmark:
@@ -560,7 +562,7 @@ def run_benchmark_suite(
                     if not use_tally_priority:
                         continue
 
-                    pair = (copy.copy(train_benchmarks[i]), copy.copy(vary_load_infer_benchmarks[j]))
+                    pair = [copy.copy(train_benchmarks[i]), copy.copy(vary_load_infer_benchmarks[j])]
                     pair_wise_benchmarks.append(pair)
 
         for idx, pair in enumerate(pair_wise_benchmarks):
@@ -603,7 +605,7 @@ def run_benchmark_suite(
 
                     if tally_config != default_tally_config and (
                         bench_2.infer_load not in inference_load_factors or
-                        bench_2.model_name not in ["bert", "llama-2-7b"]
+                        bench_2.model_name not in ["bert"]
                     ):
                         continue
 

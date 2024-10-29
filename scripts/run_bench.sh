@@ -4,7 +4,7 @@
 
 set -e
 
-export RUNTIME=600
+export RUNTIME=300
 export WARMUP_ITERS=30
 
 # Set a single cuda device to run the benchmarks

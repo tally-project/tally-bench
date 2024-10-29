@@ -59,7 +59,7 @@ def main():
 
     plot_slo_comparison_system_throughput_combined(priority_df, high_priority_jobs, best_effort_jobs, metric=metrics[0])
 
-    plot_latency_throughput_vs_load(priority_df, ["onnxruntime_bert", "onnxruntime_llama-2-7b"], best_effort_jobs, varying_loads)
+    # plot_latency_throughput_vs_load(priority_df, ["onnxruntime_bert", "onnxruntime_llama-2-7b"], best_effort_jobs, varying_loads)
 
     # plot_throughput_vs_load(priority_df, "onnxruntime_bert", best_effort_jobs, varying_loads)
     # plot_throughput_vs_load(priority_df, "onnxruntime_llama-2-7b", best_effort_jobs, varying_loads)
