@@ -1,0 +1,11 @@
+,exp_key,workload_type,mem,mem_util,gpu_util,original_avg_latency,original_throughput,tally_naive_throughput
+9,pytorch_whisper-large-v3_train_16,training,9717.0,12.714,49.994,,1,0.96
+8,pytorch_resnet50_train_128,training,12685.0,10.586,99.506,,1,1.0
+7,pytorch_pointnet_train_128,training,11285.0,31.347,93.23,,1,0.98
+6,pytorch_pegasus-x-base_train_4,training,14131.0,29.368,89.767,,1,1.0
+5,pytorch_gpt2-large_train_1,training,18129.0,34.834,89.45,,1,1.0
+4,pytorch_bert_train_32,training,9615.0,24.445,98.041,,1,1.0
+3,onnxruntime_llama-2-7b_infer_single-stream_1,inference-single-stream,16939.0,55.174,90.847,1963.886,1,0.99
+1,onnxruntime_bert_infer_single-stream_1,inference-single-stream,1475.0,22.982,89.08,4.05,1,0.99
+2,onnxruntime_llama-2-7b_infer_server_load_0.5_1,inference-server,15915.0,27.311,45.15,1989.191,1,
+0,onnxruntime_bert_infer_server_load_0.5_1,inference-server,1475.0,11.306,44.223,4.033,1,
