@@ -31,14 +31,16 @@ mkdir tally_bench_results
 docker run -it --shm-size=64g -v ${PWD}/tally_bench_results:/home/tally-bench/tally_bench_results wzhao18/tally:bench /bin/bash
 ```
 
-Inside the container, run the following commands to run the benchmark.
+Inside the container, run the following commands to run the benchmark and generate the plots.
 Note, the experiments need to be run in two steps due to the need to change the GPU mode (Time-Slicing requires DEFAULT while MPS requires EXCLUSIVE_PROCESS), which requires sudo permission.
 ```bash
 sudo nvidia-smi -i 0 -c DEFAULT
-./scripts/run_bench.sh > tally_bench_results/bench.log 2>&1
+./scripts/run_bench.sh > tally_bench_results/bench-step1.log 2>&1
 
 sudo nvidia-smi -i 0 -c EXCLUSIVE_PROCESS
-./scripts/run_bench.sh > tally_bench_results/bench.log 2>&1
+./scripts/run_bench.sh > tally_bench_results/bench-step2.log 2>&1
+
+python3 ./scripts/plot_results_micro.py
 ```
 
 
