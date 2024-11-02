@@ -18,7 +18,7 @@ from bench_utils.plot import (
     plot_slo_comparison_tally_sensitivity
 )
 
-def plot_slo_comparison_system_throughput_combined(priority_df, high_priority_jobs, best_effort_jobs, metric="avg", out_directory="tally_bench_results/plots"):
+def plot_slo_comparison_system_throughput_combined(priority_df, high_priority_jobs, best_effort_jobs, metric="avg", out_directory="tally_results/plots"):
 
     savefig_dir = f"{out_directory}/slo_comparison_system_throughput_combined/{metric}"
     mkdir_if_not_exists(savefig_dir)
@@ -88,10 +88,10 @@ def plot_slo_comparison_system_throughput_combined(priority_df, high_priority_jo
 
 
 def main():
-    plot_directory = "tally_bench_results/plots"
+    plot_directory = "tally_results/plots"
     mkdir_if_not_exists(plot_directory)
 
-    priority_df = pd.read_csv("tally_bench_results/priority-aware-perf.csv")
+    priority_df = pd.read_csv("tally_results/priority-aware-perf.csv")
     high_priority_jobs = priority_df["high_priority_job"].unique()
     high_priority_jobs = [high_priority_job for high_priority_job in high_priority_jobs if ("bert" in high_priority_job) or ("llama" in high_priority_job)]
     high_priority_jobs = [high_priority_job for high_priority_job in high_priority_jobs if "server" in high_priority_job]

@@ -7,7 +7,7 @@ sys.path.append('python')
 from bench_utils.utils import mkdir_if_not_exists
 
 
-def plot_latency_throughput_tradeoff(priority_df, exp_key, metric="avg", out_directory="tally_bench_results/plots"):
+def plot_latency_throughput_tradeoff(priority_df, exp_key, metric="avg", out_directory="tally_results/plots"):
 
     savefig_dir = f"{out_directory}/latency_throughput_tradeoff/{metric}"
     mkdir_if_not_exists(savefig_dir)
@@ -73,10 +73,10 @@ def plot_latency_throughput_tradeoff(priority_df, exp_key, metric="avg", out_dir
 
 
 def main():
-    plot_directory = "tally_bench_results/plots"
+    plot_directory = "tally_results/plots"
     mkdir_if_not_exists(plot_directory)
 
-    priority_df = pd.read_csv("tally_bench_results/priority-aware-perf.csv")
+    priority_df = pd.read_csv("tally_results/priority-aware-perf.csv")
     exp_keys = priority_df["exp_key"].unique()
     exp_keys = [exp_key for exp_key in exp_keys if "single-stream" in exp_key]
     exp_keys = [exp_key for exp_key in exp_keys if "onnxruntime_bert" in exp_key]

@@ -15,7 +15,7 @@ def load_json_from_file(f_name):
             result = json.load(f)
     return result
 
-result = load_json_from_file("tally_bench_results/result.json")
+result = load_json_from_file("tally_results/result.json")
 
 def fix_result(result):
     if isinstance(result, dict):
@@ -39,5 +39,5 @@ def write_json_to_file(_dict, f_name):
     with open(f_name, 'w') as f:
         json.dump(_dict, f, indent=4, sort_keys=True)
 
-write_json_to_file(result, "tally_bench_results/result.json")
+write_json_to_file(result, "tally_results/result.json")
 

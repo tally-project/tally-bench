@@ -36,7 +36,7 @@ def plot_kernel_durations(file_name, out_image="kernel_durations.png"):
     plt.title("Kernel Duration Distribution")
     plt.savefig(out_image)
 
-data_folder = "tally_bench_results/kernel_durations"
+data_folder = "tally_results/kernel_durations"
 plot_kernel_durations(f"{data_folder}/pegasus_kernel_durations.txt", f"{data_folder}/pegasus_kernel_durations.png")
 plot_kernel_durations(f"{data_folder}/resnet50_kernel_durations.txt", f"{data_folder}/resnet50_kernel_durations.png")
 plot_kernel_durations(f"{data_folder}/whisper_kernel_durations.txt", f"{data_folder}/whisper_kernel_durations.png")

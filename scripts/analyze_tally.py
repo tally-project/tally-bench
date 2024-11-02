@@ -90,7 +90,7 @@ def analyze_tally_slo_performance(priority_df, high_priority_job, best_effort_jo
     return positive_res, negative_res
 
 if __name__ == "__main__":
-    priority_df = pd.read_csv("tally_bench_results/priority-aware-perf.csv")
+    priority_df = pd.read_csv("tally_results/priority-aware-perf.csv")
     high_priority_jobs = priority_df["high_priority_job"].unique()
     high_priority_jobs = [high_priority_job for high_priority_job in high_priority_jobs if "server" in high_priority_job]
     best_effort_jobs = priority_df["best_effort_job"].unique()
@@ -119,7 +119,7 @@ if __name__ == "__main__":
                 positive_res[metric][tolerance_level].update(pos)
                 negative_res[metric][tolerance_level].update(neg)
 
-    write_json_to_file(positive_res, "tally_bench_results/postive_results.json")
-    write_json_to_file(negative_res, "tally_bench_results/negative_results.json")
+    write_json_to_file(positive_res, "tally_results/postive_results.json")
+    write_json_to_file(negative_res, "tally_results/negative_results.json")
 
-    write_json_to_file(tally_config_best_counts, "tally_bench_results/tally_config_best_counts.json")
+    write_json_to_file(tally_config_best_counts, "tally_results/tally_config_best_counts.json")

@@ -463,7 +463,7 @@ def run_benchmark_suite(
     profile_only=False,
     run_full_benchmark=False,
 ):
-    tally_bench_result_dir = "tally_bench_results"
+    tally_bench_result_dir = "tally_results"
     if not os.path.exists(tally_bench_result_dir):
         os.makedirs(tally_bench_result_dir)
 

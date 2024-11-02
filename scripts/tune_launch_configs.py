@@ -14,7 +14,7 @@ from bench_utils.bench import Benchmark, launch_benchmark, get_train_benchmarks,
 
 def tune_launch_config(
     result_file, infer_framework, infer_model, tally_configs, parameter,
-    warmup_iters=30, runtime=30, plot_save_dir="tally_bench_results/plots/", x_axis_label=""
+    warmup_iters=30, runtime=30, plot_save_dir="tally_results/plots/", x_axis_label=""
 ):
 
     result = load_json_from_file(result_file)
@@ -150,12 +150,12 @@ def tune_launch_config(
 
 if __name__ == "__main__":
 
-    result_file = f"tally_bench_results/result.json"
+    result_file = f"tally_results/result.json"
     warmup_iters = 30
     runtime = 30
 
     # 1. tune max_allowed_latency for bert inference
-    plot_save_dir = "tally_bench_results/plots/preemption_latency_tuning"
+    plot_save_dir = "tally_results/plots/preemption_latency_tuning"
     mkdir_if_not_exists(plot_save_dir)
 
     parameter = "max_allowed_latency"

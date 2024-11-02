@@ -6,7 +6,7 @@ from bench_utils.utils import load_json_from_file, mkdir_if_not_exists
 from bench_utils.plot_azure import plot_azure_trace_simulation, plot_azure_slo_comparison_system_throughput
 
 def main():
-    tally_bench_result_dir = "tally_bench_results"
+    tally_bench_result_dir = "tally_results"
     plot_directory = f"{tally_bench_result_dir}/plots"
     mkdir_if_not_exists(plot_directory)
 

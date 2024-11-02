@@ -31,7 +31,7 @@ if __name__ == "__main__":
 
     # ========== For traffic load analysis ===============
     
-    single_job_df = pd.read_csv("tally_bench_results/single-job-perf.csv")
+    single_job_df = pd.read_csv("tally_results/single-job-perf.csv")
     single_job_df = single_job_df[single_job_df["workload_type"] == "inference-single-stream"]
     inference_jobs = single_job_df["exp_key"].unique()
     for inference_job in inference_jobs:

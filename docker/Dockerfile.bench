@@ -31,4 +31,4 @@ RUN ./scripts/run_tests.sh
 
 RUN ./scripts/profile.sh
 
-RUN rm -rf tally_bench_results
+RUN rm -rf tally_results

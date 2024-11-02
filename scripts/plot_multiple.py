@@ -6,7 +6,7 @@ sys.path.append("python")
 
 from bench_utils.utils import load_json_from_file, compute_avg, compute_percentile, mkdir_if_not_exists
 
-tally_bench_result_dir = "tally_bench_results"
+tally_bench_result_dir = "tally_results"
 result_file = f"{tally_bench_result_dir}/result_multiple.json"
 result = load_json_from_file(result_file)["tally_priority"]
 
@@ -65,5 +65,5 @@ ax2.tick_params(axis='y')
 plt.legend()
 fig.tight_layout()
 
-mkdir_if_not_exists(f"tally_bench_results/multiple_workloads")
-plt.savefig(f"tally_bench_results/multiple_workloads/multiple.png")
+mkdir_if_not_exists(f"tally_results/multiple_workloads")
+plt.savefig(f"tally_results/multiple_workloads/multiple.png")

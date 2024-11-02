@@ -8,7 +8,7 @@ from bench_utils.parse import get_slo_comparison_data
 from bench_utils.plot import tally_default_config
 
 def collect_end_to_end():
-    priority_df = pd.read_csv("tally_bench_results/priority-aware-perf.csv")
+    priority_df = pd.read_csv("tally_results/priority-aware-perf.csv")
     high_priority_jobs = priority_df["high_priority_job"].unique()
     high_priority_jobs = [high_priority_job for high_priority_job in high_priority_jobs if "server" in high_priority_job]
     best_effort_jobs = priority_df["best_effort_job"].unique()
@@ -62,7 +62,7 @@ def collect_end_to_end():
         
 
 def collect_azure():
-    priority_df = pd.read_csv("tally_bench_results/azure_priority-aware-perf.csv")
+    priority_df = pd.read_csv("tally_results/azure_priority-aware-perf.csv")
     high_priority_jobs = priority_df["high_priority_job"].unique()
     high_priority_jobs = [high_priority_job for high_priority_job in high_priority_jobs if "server" in high_priority_job]
     best_effort_jobs = priority_df["best_effort_job"].unique()

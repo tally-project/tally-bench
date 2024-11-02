@@ -13,7 +13,7 @@ def bench_multiple_workloads(
     num_workloads=3,
     result_file="result_multiple.json",
 ):
-    tally_bench_result_dir = "tally_bench_results"
+    tally_bench_result_dir = "tally_results"
     if not os.path.exists(tally_bench_result_dir):
         os.makedirs(tally_bench_result_dir)
 

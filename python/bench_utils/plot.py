@@ -77,7 +77,7 @@ def get_metric_str(metric):
         return f"{metric}-percentile"
 
 
-def plot_tally_slo_achievable_throughput(priority_df, high_priority_jobs, best_effort_jobs, tolerance_level=0.1, metric="avg", out_directory="tally_bench_results/plots"):
+def plot_tally_slo_achievable_throughput(priority_df, high_priority_jobs, best_effort_jobs, tolerance_level=0.1, metric="avg", out_directory="tally_results/plots"):
 
     savefig_dir = f"{out_directory}/tally_achievable_throughputs/{metric}"
     mkdir_if_not_exists(savefig_dir)
@@ -138,7 +138,7 @@ def plot_tally_slo_achievable_throughput(priority_df, high_priority_jobs, best_e
 
 
 def plot_motivation_latency_comparison(priority_df, high_priority_job, best_effort_jobs, metric="avg",
-                                       out_directory="tally_bench_results/plots", out_filename=None, remove_amp=False):
+                                       out_directory="tally_results/plots", out_filename=None, remove_amp=False):
     
     if not out_filename:
         out_filename = high_priority_job
@@ -192,7 +192,7 @@ def plot_motivation_latency_comparison(priority_df, high_priority_job, best_effo
     plt.savefig(f"{savefig_dir}/{out_filename}.png")
 
 
-def plot_slo_comparison_seperate_throughput(priority_df, high_priority_job, best_effort_jobs, metric="avg", out_directory="tally_bench_results/plots"):
+def plot_slo_comparison_seperate_throughput(priority_df, high_priority_job, best_effort_jobs, metric="avg", out_directory="tally_results/plots"):
 
     savefig_dir = f"{out_directory}/slo_comparison_seperate_throughput/{metric}"
     mkdir_if_not_exists(savefig_dir)
@@ -269,7 +269,7 @@ def plot_slo_comparison_seperate_throughput(priority_df, high_priority_job, best
     plt.savefig(f"{savefig_dir}/{high_priority_job}.png")
 
 
-def plot_slo_comparison_system_throughput(priority_df, high_priority_job, best_effort_jobs, metric="avg", out_directory="tally_bench_results/plots"):
+def plot_slo_comparison_system_throughput(priority_df, high_priority_job, best_effort_jobs, metric="avg", out_directory="tally_results/plots"):
 
     savefig_dir = f"{out_directory}/slo_comparison_system_throughput/{metric}"
     mkdir_if_not_exists(savefig_dir)
@@ -339,7 +339,7 @@ def plot_slo_comparison_system_throughput(priority_df, high_priority_job, best_e
     plt.savefig(f"{savefig_dir}/{high_priority_job}.png")
 
 
-def plot_slo_comparison_system_throughput_combined(priority_df, high_priority_jobs, best_effort_jobs, metric="avg", out_directory="tally_bench_results/plots"):
+def plot_slo_comparison_system_throughput_combined(priority_df, high_priority_jobs, best_effort_jobs, metric="avg", out_directory="tally_results/plots"):
 
     savefig_dir = f"{out_directory}/slo_comparison_system_throughput_combined/{metric}"
     mkdir_if_not_exists(savefig_dir)
@@ -421,7 +421,7 @@ def plot_slo_comparison_system_throughput_combined(priority_df, high_priority_jo
     plt.savefig(f"{savefig_dir}/end-to-end-results.png")
 
 
-def plot_slo_comparison_system_throughput_all(priority_df, high_priority_jobs, best_effort_jobs, metric="avg", out_directory="tally_bench_results/plots"):
+def plot_slo_comparison_system_throughput_all(priority_df, high_priority_jobs, best_effort_jobs, metric="avg", out_directory="tally_results/plots"):
 
     savefig_dir = f"{out_directory}/slo_comparison_system_throughput_all"
     mkdir_if_not_exists(savefig_dir)
@@ -502,7 +502,7 @@ def plot_slo_comparison_system_throughput_all(priority_df, high_priority_jobs, b
     plt.savefig(f"{savefig_dir}/{metric}.png")
 
 
-def plot_slo_comparison_tally_sensitivity(priority_df, high_priority_job, best_effort_jobs, metric="avg", out_directory="tally_bench_results/plots"):
+def plot_slo_comparison_tally_sensitivity(priority_df, high_priority_job, best_effort_jobs, metric="avg", out_directory="tally_results/plots"):
     savefig_dir = f"{out_directory}/slo_comparison_tally_sensitivity/{metric}"
     mkdir_if_not_exists(savefig_dir)
     
@@ -543,7 +543,7 @@ def plot_slo_comparison_tally_sensitivity(priority_df, high_priority_job, best_e
     plt.savefig(f"{savefig_dir}/{high_priority_job}.png")
 
 
-def plot_latency_vs_load(priority_df, high_priority_job, best_effort_jobs, load_levels, out_directory="tally_bench_results/plots", metric="99th"):
+def plot_latency_vs_load(priority_df, high_priority_job, best_effort_jobs, load_levels, out_directory="tally_results/plots", metric="99th"):
 
     savefig_dir = f"{out_directory}/latency_vs_load"
     mkdir_if_not_exists(savefig_dir)
@@ -606,7 +606,7 @@ def plot_latency_vs_load(priority_df, high_priority_job, best_effort_jobs, load_
     plt.savefig(f"{savefig_dir}/{high_priority_job}.png")
 
 
-def plot_throughput_vs_load(priority_df, high_priority_job, best_effort_jobs, load_levels, out_directory="tally_bench_results/plots"):
+def plot_throughput_vs_load(priority_df, high_priority_job, best_effort_jobs, load_levels, out_directory="tally_results/plots"):
 
     savefig_dir = f"{out_directory}/throughput_vs_load"
     mkdir_if_not_exists(savefig_dir)
@@ -660,7 +660,7 @@ def plot_throughput_vs_load(priority_df, high_priority_job, best_effort_jobs, lo
     plt.savefig(f"{savefig_dir}/{high_priority_job}.png")
 
 
-def plot_latency_throughput_vs_load(priority_df, high_priority_jobs, best_effort_jobs, load_levels, metric="99th", out_directory="tally_bench_results/plots"):
+def plot_latency_throughput_vs_load(priority_df, high_priority_jobs, best_effort_jobs, load_levels, metric="99th", out_directory="tally_results/plots"):
 
     savefig_dir = f"{out_directory}/latency_throughput_vs_load"
     mkdir_if_not_exists(savefig_dir)
@@ -775,7 +775,7 @@ def plot_latency_throughput_vs_load(priority_df, high_priority_jobs, best_effort
     plt.savefig(f"{savefig_dir}/varying_load.png")
 
 
-def plot_varying_load(priority_df, high_priority_job, best_effort_jobs, load_levels, out_directory="tally_bench_results/plots", metric="99th"):
+def plot_varying_load(priority_df, high_priority_job, best_effort_jobs, load_levels, out_directory="tally_results/plots", metric="99th"):
 
     savefig_dir = f"{out_directory}/varying_load"
     mkdir_if_not_exists(savefig_dir)

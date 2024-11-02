@@ -15,7 +15,7 @@ def bench_azure_trace(
     use_tally_priority=False,
     use_tgs=False,
 ):
-    tally_bench_result_dir = "tally_bench_results"
+    tally_bench_result_dir = "tally_results"
     if not os.path.exists(tally_bench_result_dir):
         os.makedirs(tally_bench_result_dir)
 

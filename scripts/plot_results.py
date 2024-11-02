@@ -20,10 +20,10 @@ from bench_utils.plot import (
 
 
 def main():
-    plot_directory = "tally_bench_results/plots"
+    plot_directory = "tally_results/plots"
     mkdir_if_not_exists(plot_directory)
 
-    priority_df = pd.read_csv("tally_bench_results/priority-aware-perf.csv")
+    priority_df = pd.read_csv("tally_results/priority-aware-perf.csv")
     high_priority_jobs = priority_df["high_priority_job"].unique()
     high_priority_jobs = [high_priority_job for high_priority_job in high_priority_jobs if "server" in high_priority_job]
     high_priority_jobs = [high_priority_job for high_priority_job in high_priority_jobs if "load_0.5" in high_priority_job]
