@@ -28,7 +28,7 @@ docker pull wzhao18/tally:bench
 Launch container with volumn. The results will be saved to the local directory `tally_results`.
 ```bash
 mkdir tally_results
-docker run -it --shm-size=64g -d -v ${PWD}/tally_results:/home/tally-bench/tally_results wzhao18/tally:bench /bin/bash
+docker run -it --shm-size=64g -v ${PWD}/tally_results:/home/tally-bench/tally_results wzhao18/tally:bench /bin/bash
 ```
 
 Inside the container, run the following commands to run the benchmark and generate the plots.
