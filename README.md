@@ -40,6 +40,7 @@ sudo nvidia-smi -i 0 -c DEFAULT
 sudo nvidia-smi -i 0 -c EXCLUSIVE_PROCESS
 ./scripts/run_bench.sh > tally_results/bench-step2.log 2>&1
 
+python3 ./scripts/parse_results.py
 python3 ./scripts/plot_results_micro.py
 ```
 
