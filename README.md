@@ -58,7 +58,7 @@ sudo nvidia-smi -i 0 -c DEFAULT
 # In Docker container
 ./scripts/run_bench.sh > tally_results/b1.log 2>&1
 ```
-2. 
+2. Set GPU to `EXCLUSIVE_PROCESS` mode and run the second set of experiments:
 ```bash
 # On host machine
 sudo nvidia-smi -i 0 -c EXCLUSIVE_PROCESS
