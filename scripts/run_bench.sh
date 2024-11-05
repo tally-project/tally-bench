@@ -13,6 +13,14 @@ echo "Running benchmarks on GPU: $CUDA_VISIBLE_DEVICES"
 
 export GPU_MODE=$(nvidia-smi -i $CUDA_VISIBLE_DEVICES --query-gpu=compute_mode --format=csv | awk 'NR==2')
 
+RUN_FULL_BENCHMARK=""
+for arg in "$@"; do
+  if [ "$arg" == "--run-full-benchmark" ]; then
+    RUN_FULL_BENCHMARK=" --run-full-benchmark "
+    break
+  fi
+done
+
 # Collect single-job performance with and without Tally
 # This should give insights of the overhead of API forwarding in Tally
 echo "======== Collecting single-job performance with and without Tally ... ========"
@@ -20,7 +28,8 @@ python3 -u scripts/run_bench.py \
     --save-results \
     --use-tally-naive \
     --runtime $RUNTIME \
-    --warmup-iters $WARMUP_ITERS
+    --warmup-iters $WARMUP_ITERS \
+    $RUN_FULL_BENCHMARK
 
 # Run priority-related co-located experiments with MPS
 if [[ $GPU_MODE == "Exclusive_Process" ]]; then
@@ -30,7 +39,8 @@ if [[ $GPU_MODE == "Exclusive_Process" ]]; then
         --use-mps \
         --runtime $RUNTIME \
         --warmup-iters $WARMUP_ITERS \
-        --run-pairwise
+        --run-pairwise \
+        $RUN_FULL_BENCHMARK
 else
     echo "Skip collecting pair-wise performance with MPS because GPU_MODE is not EXCLUSIVE"
 fi
@@ -43,7 +53,8 @@ echo "======== Collecting priority-related pair-wise performance with MPS Priori
         --use-mps-priority \
         --runtime $RUNTIME \
         --warmup-iters $WARMUP_ITERS \
-        --run-pairwise
+        --run-pairwise \
+        $RUN_FULL_BENCHMARK
 else
     echo "Skip collecting pair-wise performance with MPS Priority because GPU_MODE is not EXCLUSIVE"
 fi
@@ -56,7 +67,8 @@ echo "======== Collecting priority-related pair-wise performance with hardware m
         --save-results \
         --runtime $RUNTIME \
         --warmup-iters $WARMUP_ITERS \
-        --run-pairwise
+        --run-pairwise   \
+        $RUN_FULL_BENCHMARK
 else
     echo "Skip collecting pair-wise performance with hardware multi-processing because GPU_MODE is not Default"
 fi
@@ -69,7 +81,8 @@ echo "======== Collecting priority-related pair-wise performance with Tally prio
         --use-tally-priority \
         --runtime $RUNTIME \
         --warmup-iters $WARMUP_ITERS \
-        --run-pairwise
+        --run-pairwise \
+        $RUN_FULL_BENCHMARK
 else
     echo "Skip collecting pair-wise performance with Tally priority scheduler because GPU_MODE is not Exclusive_Process"
 fi
@@ -82,7 +95,8 @@ echo "======== Collecting priority-related pair-wise performance with TGS ... ==
         --use-tgs \
         --runtime $RUNTIME \
         --warmup-iters $WARMUP_ITERS \
-        --run-pairwise
+        --run-pairwise  \
+        $RUN_FULL_BENCHMARK
 else
     echo "Skip collecting pair-wise performance with TGS because GPU_MODE is not Exclusive_Process"
 fi
