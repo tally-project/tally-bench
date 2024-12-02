@@ -45,7 +45,7 @@ docker pull wzhao18/tally:bench
 Create a directory to store the results and start the Docker container:
 ```bash
 mkdir tally_results
-docker run -it --shm-size=64g -v ${PWD}/tally_results:/home/tally-bench/tally_results wzhao18/tally:bench /bin/bash
+docker run -it --shm-size=64g --gpus 0 -v ${PWD}/tally_results:/home/tally-bench/tally_results wzhao18/tally:bench /bin/bash
 ```
 
 ## Running the Experiments
