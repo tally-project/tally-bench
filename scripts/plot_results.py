@@ -57,6 +57,8 @@ def main():
             # plot_slo_comparison_tally_sensitivity(priority_df, high_priority_job, best_effort_jobs, metric=metric)
             pass
 
+    plot_slo_comparison_tally_sensitivity(priority_df, "onnxruntime_bert_infer_server_load_0.5_1", best_effort_jobs, metric=metric)
+
     plot_slo_comparison_system_throughput_combined(priority_df, high_priority_jobs, best_effort_jobs, metric=metrics[0])
 
     best_effort_jobs_varying_load = [job for job in best_effort_jobs if any(target in job for target in ["bert", "gpt2", "whisper"])]
