@@ -664,23 +664,32 @@ def plot_latency_throughput_vs_load(priority_df, high_priority_jobs, best_effort
 
     savefig_dir = f"{out_directory}/latency_throughput_vs_load"
     mkdir_if_not_exists(savefig_dir)
-    all_latencies = {}
-    all_throughputs = {}
+    tally_all_latencies = {}
+    tally_all_throughputs = {}
+    tgs_all_latencies = {}
+    tgs_all_throughputs = {}
     baseline_latency_dict = {}
 
     for high_priority_job in high_priority_jobs:
 
         baseline_latency_dict[high_priority_job] = 0.
-        all_latencies[high_priority_job] = {}
-        all_throughputs[high_priority_job] = {}
 
-        job_all_latencies = all_latencies[high_priority_job]
-        job_all_throughputs = all_throughputs[high_priority_job]
+        tally_all_latencies[high_priority_job] = {}
+        tally_all_throughputs[high_priority_job] = {}
+        tgs_all_latencies[high_priority_job] = {}
+        tgs_all_throughputs[high_priority_job] = {}
+
+        job_tally_all_latencies = tally_all_latencies[high_priority_job]
+        job_tally_all_throughputs = tally_all_throughputs[high_priority_job]
+        job_tgs_all_latencies = tgs_all_latencies[high_priority_job]
+        job_tgs_all_throughputs = tgs_all_throughputs[high_priority_job]
 
         for best_effort_job in best_effort_jobs:
 
-            job_all_latencies[best_effort_job] = []
-            job_all_throughputs[best_effort_job] = []
+            job_tally_all_latencies[best_effort_job] = []
+            job_tally_all_throughputs[best_effort_job] = []
+            job_tgs_all_latencies[best_effort_job] = []
+            job_tgs_all_throughputs[best_effort_job] = []
 
             for load_level in load_levels:
 
@@ -696,17 +705,23 @@ def plot_latency_throughput_vs_load(priority_df, high_priority_jobs, best_effort
                     measurements = measurements[measurements[param] == val]
 
                 if measurements.empty:
-                    job_all_latencies[best_effort_job].append(0.)
-                    job_all_throughputs[best_effort_job].append(0.)
+                    job_tally_all_latencies[best_effort_job].append(0.)
+                    job_tally_all_throughputs[best_effort_job].append(0.)
                     continue
 
                 best_effort_job_throughput = measurements[f"best_effort_tally_throughput"].values[0]
                 latency = measurements[f"high_priority_tally_{metric}_latency"].values[0]
                 baseline_latency = measurements[f"high_priority_orig_{metric}_latency"].values[0]
                 
+                tgs_latency = measurements[f"high_priority_tgs_{metric}_latency"].values[0]
+                tgs_throughput = measurements[f"best_effort_tgs_throughput"].values[0]
+
                 baseline_latency_dict[high_priority_job] = max(baseline_latency_dict[high_priority_job], baseline_latency)
-                job_all_latencies[best_effort_job].append(latency)
-                job_all_throughputs[best_effort_job].append(best_effort_job_throughput)
+                job_tally_all_latencies[best_effort_job].append(latency)
+                job_tally_all_throughputs[best_effort_job].append(best_effort_job_throughput)
+
+                job_tgs_all_latencies[best_effort_job].append(tgs_latency)
+                job_tgs_all_throughputs[best_effort_job].append(tgs_throughput)
 
     # plotting
     plt.clf()
@@ -724,11 +739,17 @@ def plot_latency_throughput_vs_load(priority_df, high_priority_jobs, best_effort
             for idx, best_effort_job in enumerate(best_effort_jobs):
 
                 if j == 0:
-                    latencies = np.array(all_latencies[high_priority_job][best_effort_job])
+                    latencies = np.array(tally_all_latencies[high_priority_job][best_effort_job])
                     x = idle_percentage[latencies != 0]
                     y = latencies[latencies != 0]
 
-                    ax.plot(x, y, label=get_best_effort_job_label_custom(best_effort_job), marker=markers[idx], markersize=20, linewidth=3)
+                    ax.plot(x, y, label=get_best_effort_job_label_custom(best_effort_job) + " - Tally", marker=markers[idx], markersize=20, linewidth=3)
+                    
+                    tgs_latencies = np.array(tgs_all_latencies[high_priority_job][best_effort_job])
+                    x = idle_percentage[tgs_latencies != 0]
+                    y = tgs_latencies[tgs_latencies != 0]
+                    ax.plot(x, y, label=get_best_effort_job_label_custom(best_effort_job) + "- TGS", marker=markers[idx], markersize=20, linewidth=3, linestyle='dashed')
+                    
                     # ax.set_xlabel('Idle Percentage (%)', fontsize=30)
                     ax.set_ylabel('Latency (ms)', fontsize=30)
 
@@ -741,11 +762,16 @@ def plot_latency_throughput_vs_load(priority_df, high_priority_jobs, best_effort
 
                 elif j == 1:
 
-                    throughputs = np.array(all_throughputs[high_priority_job][best_effort_job])
+                    throughputs = np.array(tally_all_throughputs[high_priority_job][best_effort_job])
                     x = idle_percentage[throughputs != 0]
                     y = throughputs[throughputs != 0]
-
                     ax.plot(x, y, label=get_best_effort_job_label_custom(best_effort_job), marker=markers[idx], markersize=20, linewidth=3)
+
+                    tgs_throughputs = np.array(tgs_all_throughputs[high_priority_job][best_effort_job])
+                    x = idle_percentage[tgs_throughputs != 0]
+                    y = tgs_throughputs[tgs_throughputs != 0]
+                    ax.plot(x, y, label=get_best_effort_job_label_custom(best_effort_job), marker=markers[idx], markersize=20, linewidth=3, linestyle='dashed')
+
                     ax.set_xlabel('Idle Percentage (%)', fontsize=30)
                     ax.set_ylabel('Normalized Throughput', fontsize=30)
                     ax.set_yticks(np.arange(0, 1.2, 0.2))
