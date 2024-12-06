@@ -559,7 +559,7 @@ def run_benchmark_suite(
             for j in range(len(vary_load_infer_benchmarks)):
                 for i in range(len(train_benchmarks)):
 
-                    if not use_tally_priority:
+                    if not use_tally_priority or not use_tgs:
                         continue
 
                     pair = [copy.copy(train_benchmarks[i]), copy.copy(vary_load_infer_benchmarks[j])]
